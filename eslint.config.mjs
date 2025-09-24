@@ -8,22 +8,22 @@ export default [
   // Ignorar arquivos gerados
   {
     ignores: [
-      '**/dist/**',
-      '**/node_modules/**',
-      '**/.next/**',
-      '**/coverage/**'
+      '/dist/',
+      '/node_modules/',
+      '/.next/',
+      '/coverage/'
     ]
   },
-  
+
   // Configuração base do ESLint
   js.configs.recommended,
-  
+
   // Configuração do TypeScript
   ...tseslint.configs.recommended,
-  
+
   // Configuração do Prettier
   prettierConfig,
-  
+
   // Configuração personalizada
   {
     plugins: {
@@ -46,8 +46,8 @@ export default [
         global: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
+        dirname: 'readonly',
+        filename: 'readonly',
         console: 'readonly',
         module: 'readonly',
         require: 'readonly',
@@ -59,10 +59,10 @@ export default [
       }
     }
   },
-  
+
   // Configuração específica para TypeScript nos packages
   {
-    files: ['packages/**/*.{ts,tsx}'],
+    files: ['packages/*/.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module'

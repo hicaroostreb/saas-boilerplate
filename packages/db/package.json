@@ -1,23 +1,29 @@
 {
   "name": "@your-org/db",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --watch",
-    "lint": "eslint . --ext .js,.ts,.tsx",
-    "format": "prettier --write ."
+    "lint": "eslint src --ext .js,.ts,.tsx",
+    "format": "prettier --write .",
+    "migrate": "drizzle-kit push",
+    "seed": "node dist/scripts/seed.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.0.0"
+    "@supabase/supabase-js": "^2.0.0",
+    "bcryptjs": "^3.0.2"
   },
   "peerDependencies": {
     "drizzle-orm": "*",
     "postgres": "*"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.0.0",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

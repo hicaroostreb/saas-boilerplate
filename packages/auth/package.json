@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --watch",
-    "lint": "eslint . --ext .js,.ts,.tsx",
+    "lint": "eslint src --ext .js,.ts,.tsx",
     "format": "prettier --write ."
   },
   "dependencies": {

@@ -1,5 +1,3 @@
-// packages/auth/src/lib/db/queries.ts
-
 import { db } from "@your-org/db/lib/db/drizzle";
 import { users, teams, teamMembers } from "@your-org/db/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
@@ -29,6 +27,7 @@ export type Member = {
     id: number;
     name: string | null;
     email: string;
+    passwordHash: string | null; // ADICIONADO
     createdAt: Date;
     deletedAt: Date | null;
   };
@@ -88,6 +87,7 @@ export async function getTeamForUser(
         id: users.id,
         name: users.name,
         email: users.email,
+        passwordHash: users.passwordHash, // ADICIONADO
         createdAt: users.createdAt,
         deletedAt: users.deletedAt,
       },

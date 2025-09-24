@@ -1,26 +1,24 @@
-// packages/auth/src/lib/auth/middleware.ts
-
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { InferModel } from "drizzle-orm";
-import { users, teams, teamMembers } from "@your-org/db/lib/db/schema";
-import { getUser, getTeamForUser } from "../db/queries";
+import { users } from "@your-org/db/lib/db/schema";
+import {
+  getUser,
+  getTeamForUser,
+  Team,
+  Member,
+  TeamDataWithMembers,
+} from "../db/queries";
 
 type User = InferModel<typeof users, "select">;
 
-export type Team = InferModel<typeof teams, "select">;
-export type Member = InferModel<typeof teamMembers, "select"> & {
-  user: InferModel<typeof users, "select">;
-};
-
-export type TeamDataWithMembers = Team & {
-  teamMembers: Member[];
-};
+// Usar os tipos importados do queries.ts em vez de redefinir
+export type { Team, Member, TeamDataWithMembers };
 
 export type ActionState = {
   error?: string;
   success?: string;
-  [key: string]: any;
+  [key: string]: unknown; // Evita 'any', mais seguro mesmo para valores diversos
 };
 
 type ValidatedActionFunction<S extends z.ZodType<any, any>, T> = (
