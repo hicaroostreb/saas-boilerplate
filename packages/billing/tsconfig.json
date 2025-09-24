@@ -1,0 +1,10 @@
+// packages/billing/tsconfig.json
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
+  "references": [{ "path": "../database" }, { "path": "../auth" }]
+}

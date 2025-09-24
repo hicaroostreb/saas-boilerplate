@@ -1,24 +1,31 @@
 {
-  "name": "saas-boilerplate",
+  "name": "@workspace/root",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "turbo run format",
     "test": "turbo run test",
+    "type-check": "turbo run type-check",
     "db:setup": "node scripts/setup.js",
-    "db:migrate": "pnpm --filter @your-org/db run migrate",
-    "db:seed": "pnpm --filter @your-org/db run seed",
+    "db:migrate": "pnpm --filter @workspace/database run migrate",
+    "db:seed": "pnpm --filter @workspace/database run seed",
+    "db:studio": "pnpm --filter @workspace/database run studio",
     "setup": "pnpm install && pnpm db:setup && pnpm db:migrate && pnpm db:seed"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "bcryptjs": "^3.0.2",
@@ -34,6 +41,8 @@
   "devDependencies": {
     "@types/node": "^24.5.2",
     "@types/stripe-v2": "^2.0.6",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

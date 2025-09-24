@@ -1,10 +1,10 @@
 // packages/payments/src/app/api/stripe/checkout/route.ts
 import { eq } from "drizzle-orm";
-import { db } from "@your-org/db/lib/db/drizzle";
-import { users, teams, teamMembers } from "@your-org/db/lib/db/schema";
-import { setSession } from "@your-org/auth/lib/auth/session";
+import { db } from "@workspace/database/lib/db/drizzle";
+import { users, teams, teamMembers } from "@workspace/database/lib/db/schema";
+import { setSession } from "@workspace/auth/lib/auth/session";
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@your-org/payments/lib/payments/stripe";
+import { stripe } from "@workspace/billing/lib/payments/stripe";
 import Stripe from "stripe";
 
 export async function GET(request: NextRequest) {

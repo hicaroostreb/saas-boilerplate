@@ -10,22 +10,22 @@
     "incremental": true,
     "declaration": true,
     "declarationMap": true,
-    "composite": false,
+    "composite": true,
     "jsx": "preserve",
     "baseUrl": ".",
     "types": ["node"],
     "paths": {
-      "@your-org/db": ["packages/db/src"],
-      "@your-org/db/*": ["packages/db/src/*"],
-      "@your-org/auth": ["packages/auth/src"],
-      "@your-org/auth/*": ["packages/auth/src/*"],
-      "@your-org/payments": ["packages/payments/src"],
-      "@your-org/payments/*": ["packages/payments/src/*"]
+      "@workspace/database": ["packages/database/src"],
+      "@workspace/database/*": ["packages/database/src/*"],
+      "@workspace/auth": ["packages/auth/src"],
+      "@workspace/auth/*": ["packages/auth/src/*"],
+      "@workspace/billing": ["packages/billing/src"],
+      "@workspace/billing/*": ["packages/billing/src/*"]
     }
   },
   "references": [
-    { "path": "packages/db" },
+    { "path": "packages/database" },
     { "path": "packages/auth" },
-    { "path": "packages/payments" }
+    { "path": "packages/billing" }
   ]
 }

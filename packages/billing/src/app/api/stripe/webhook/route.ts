@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import {
   handleSubscriptionChange,
   stripe,
-} from "@your-org/payments/lib/payments/stripe";
+} from "@workspace/billing/lib/payments/stripe";
 import { NextRequest, NextResponse } from "next/server";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;

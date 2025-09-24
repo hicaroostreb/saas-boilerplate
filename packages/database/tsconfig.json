@@ -1,4 +1,4 @@
-// packages/db/tsconfig.json
+// packages/database/tsconfig.json
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
