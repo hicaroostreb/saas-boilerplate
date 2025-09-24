@@ -3,6 +3,19 @@ import { users, teams, teamMembers } from "../lib/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
+/**
+ * Seed the database with a default user, team, and membership if they don't exist.
+ *
+ * Ensures a user with email `test@test.com` and password `admin123` exists (creates one if missing),
+ * ensures a "Default Team" owned by that user exists (creates if missing), and ensures the user is
+ * a member of that team with the "owner" role (adds membership if missing). Logs progress and
+ * outcomes to the console.
+ *
+ * Side effects:
+ * - Inserts into users, teams, and teamMembers tables as needed.
+ * - Writes console output.
+ * - On error, logs the error and exits the process with code 1.
+ */
 async function seed() {
   console.log("🌱 Seeding database...");
 

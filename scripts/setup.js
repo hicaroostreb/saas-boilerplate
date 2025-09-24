@@ -13,6 +13,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
 const execAsync = promisify(exec);
 
+/**
+ * Prompt the user with the given query and return their input.
+ *
+ * Creates a readline interface against process.stdin/out, displays the prompt,
+ * and resolves with the entered string after the interface is closed.
+ *
+ * @param {string} query - The prompt text displayed to the user.
+ * @return {Promise<string>} Resolves to the user's raw input.
+ */
 function question(query) {
   const rl = readline.createInterface({
     input: process.stdin,
@@ -27,6 +36,16 @@ function question(query) {
   );
 }
 
+/**
+ * Verify that the Stripe CLI is installed and authenticated.
+ *
+ * Checks for a working `stripe` executable and confirms authentication by running
+ * `stripe config --list`. If the CLI is missing, prints installation guidance and
+ * exits the process with code 1. If the CLI is present but not authenticated,
+ * prompts the user to run `stripe login`; if the user declines, exits with code 1.
+ *
+ * @return {Promise<boolean>} Resolves to `true` when the Stripe CLI is installed and authenticated.
+ */
 async function checkStripeCLI() {
   console.log('🔍 Step 1: Checking Stripe CLI...');
   try {
@@ -61,6 +80,22 @@ async function checkStripeCLI() {
   }
 }
 
+/**
+ * Sets up a PostgreSQL database for the project by either provisioning a local Docker Postgres
+ * or prompting for a remote DATABASE_URL.
+ *
+ * If the user chooses local Docker (answers 'L' or 'l'):
+ * - Verifies Docker is installed.
+ * - Writes a docker-compose.yml into the project root and runs `docker compose up -d`.
+ * - Returns the local connection string: `postgresql://postgres:postgres@localhost:54322/postgres`.
+ * - Calls `process.exit(1)` if Docker is not found.
+ *
+ * If the user chooses remote (any other answer):
+ * - Prompts the user for DATABASE_URL and returns the entered value.
+ *
+ * Side effects: may write files to the project root, run Docker commands, and exit the process.
+ * @return {Promise<string>} The DATABASE_URL to use.
+ */
 async function setupDatabase() {
   console.log('🗄️  Step 2: Database setup...');
   const choice = await question('Use local Docker Postgres (L) or remote (R)? (L/R): ');
@@ -106,12 +141,27 @@ volumes:
   }
 }
 
+/**
+ * Prompt the user to enter a Stripe Secret Key.
+ *
+ * Displays the Stripe dashboard URL for reference and returns the value entered by the user.
+ *
+ * @return {Promise<string>} The Stripe Secret Key entered by the user (e.g. `sk_test_...` or `sk_live_...`).
+ */
 async function getStripeSecretKey() {
   console.log('💳 Step 3: Stripe Secret Key...');
   console.log('Find at: https://dashboard.stripe.com/test/apikeys');
   return await question('Enter Stripe Secret Key: ');
 }
 
+/**
+ * Create a Stripe webhook by running `stripe listen --print-secret` and return the webhook secret.
+ *
+ * Runs the Stripe CLI command to start listening and extracts the first `whsec_...` secret from the command output.
+ *
+ * @return {string} The extracted Stripe webhook secret (e.g. `whsec_...`).
+ * @throws {Error} If the Stripe CLI command fails or a webhook secret cannot be extracted.
+ */
 async function createWebhook() {
   console.log('🪝 Step 4: Creating Stripe webhook...');
   try {
@@ -130,6 +180,22 @@ async function createWebhook() {
   }
 }
 
+/**
+ * Run the interactive SaaS boilerplate setup and write a `.env.local` file.
+ *
+ * Performs a multi-step initialization: verifies Stripe CLI availability and authentication, configures a database
+ * (offers local Docker Postgres or accepts a remote DATABASE_URL), collects the Stripe secret key, creates a Stripe
+ * webhook to obtain its signing secret, generates an application auth secret, and writes these values to
+ * `<project_root>/.env.local`.
+ *
+ * Side effects:
+ * - May create and start a local Docker Compose Postgres service (when chosen).
+ * - Writes a `.env.local` file in the project root.
+ * - Exits the process with code 0 if `.env.local` already exists, or with code 1 on failure.
+ *
+ * This function is asynchronous and returns a Promise that resolves when setup completes (or does not return if the
+ * process is exited).
+ */
 async function main() {
   console.log('🚀 SaaS Boilerplate Setup\n');
 

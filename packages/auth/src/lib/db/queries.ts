@@ -59,6 +59,16 @@ export async function getUser() {
   return user || null;
 }
 
+/**
+ * Retrieves a team and its members for the given user.
+ *
+ * Looks up the team membership for `userId`, fetches the corresponding team record,
+ * and returns the team data with a `teamMembers` array. Each member includes a nested
+ * `user` object (containing `id`, `name`, `email`, `passwordHash`, `createdAt`, and `deletedAt`).
+ *
+ * @param userId - ID of the user whose team should be retrieved
+ * @returns The team and its members as `TeamDataWithMembers`, or `null` if the user has no team or the team does not exist
+ */
 export async function getTeamForUser(
   userId: number,
 ): Promise<TeamDataWithMembers | null> {
