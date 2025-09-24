@@ -1,4 +1,4 @@
-// packages/auth/src/lib/db/schema.ts
+// packages/auth/src/lib/database/schema.ts
 
 import {
   pgTable,

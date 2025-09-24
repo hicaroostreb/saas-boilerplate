@@ -4,7 +4,7 @@ import { compare, hash } from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { InferModel } from "drizzle-orm";
-import { users } from "@your-org/db/lib/db/schema";
+import { users } from "@workspace/database/lib/db/schema";
 
 type SessionData = {
   user: { id: number };

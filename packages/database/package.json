@@ -1,6 +1,7 @@
 {
-  "name": "@workspace/auth",
+  "name": "@workspace/database",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -8,17 +9,23 @@
     "dev": "tsc --watch",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "migrate": "drizzle-kit push",
+    "seed": "node dist/scripts/seed.js",
+    "studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@workspace/database": "workspace:*"
+    "@supabase/supabase-js": "^2.0.0",
+    "bcryptjs": "^3.0.2"
   },
   "peerDependencies": {
-    "next-auth": "*",
-    "zod": "*"
+    "drizzle-orm": "*",
+    "postgres": "*"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.0.0",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

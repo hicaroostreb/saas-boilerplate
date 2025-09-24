@@ -45,6 +45,12 @@ importers:
       '@types/stripe-v2':
         specifier: ^2.0.6
         version: 2.0.6
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.44.1
+        version: 8.44.1(@typescript-eslint/parser@8.44.1(eslint@9.36.0)(typescript@5.9.2))(eslint@9.36.0)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^8.44.1
+        version: 8.44.1(eslint@9.36.0)(typescript@5.9.2)
       eslint:
         specifier: ^9.36.0
         version: 9.36.0
@@ -69,9 +75,9 @@ importers:
 
   packages/auth:
     dependencies:
-      '@your-org/db':
+      '@workspace/database':
         specifier: workspace:*
-        version: link:../db
+        version: link:../database
       next-auth:
         specifier: '*'
         version: 4.24.11(next@15.5.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -98,7 +104,38 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
-  packages/db:
+  packages/billing:
+    dependencies:
+      '@workspace/database':
+        specifier: workspace:*
+        version: link:../database
+      stripe:
+        specifier: '*'
+        version: 12.18.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24.5.2
+        version: 24.5.2
+      '@types/stripe-v2':
+        specifier: ^2.0.6
+        version: 2.0.6
+      eslint:
+        specifier: ^9.36.0
+        version: 9.36.0
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@9.36.0)
+      eslint-plugin-prettier:
+        specifier: ^5.5.4
+        version: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.36.0))(eslint@9.36.0)(prettier@3.6.2)
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.2
+
+  packages/database:
     dependencies:
       '@supabase/supabase-js':
         specifier: ^2.0.0
@@ -138,21 +175,11 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
-  packages/payments:
+  tooling/eslint-config:
     dependencies:
-      '@your-org/db':
-        specifier: workspace:*
-        version: link:../db
-      stripe:
-        specifier: '*'
-        version: 12.18.0
-    devDependencies:
-      '@types/node':
-        specifier: ^24.5.2
-        version: 24.5.2
-      '@types/stripe-v2':
-        specifier: ^2.0.6
-        version: 2.0.6
+      '@eslint/js':
+        specifier: ^9.36.0
+        version: 9.36.0
       eslint:
         specifier: ^9.36.0
         version: 9.36.0
@@ -168,6 +195,13 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.2
+      typescript-eslint:
+        specifier: ^8.44.1
+        version: 8.44.1(eslint@9.36.0)(typescript@5.9.2)
+
+  tooling/prettier-config: {}
+
+  tooling/typescript-config: {}
 
 packages:
 

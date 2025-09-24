@@ -1,5 +1,5 @@
-import { db } from "@your-org/db/lib/db/drizzle";
-import { users, teams, teamMembers } from "@your-org/db/lib/db/schema";
+import { db } from "@workspace/database/lib/db/drizzle";
+import { users, teams, teamMembers } from "@workspace/database/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { verifyToken } from "../auth/session";

@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/typescript-config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "base.json",
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-library.json"
+  ]
+}

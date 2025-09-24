@@ -1,5 +1,5 @@
-import { db } from "../lib/db/drizzle.js";
-import { users, teams, teamMembers } from "../lib/db/schema.js";
+import { db } from "../lib/db/drizzle";
+import { users, teams, teamMembers } from "../lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -64,7 +64,9 @@ async function seed() {
     const existingMember = await db
       .select()
       .from(teamMembers)
-      .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, user.id)))
+      .where(
+        and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, user.id)),
+      )
       .limit(1);
 
     if (existingMember.length === 0) {

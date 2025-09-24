@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { InferModel } from "drizzle-orm";
-import { users } from "@your-org/db/lib/db/schema";
+import { users } from "@workspace/database/lib/db/schema";
 import {
   getUser,
   getTeamForUser,
