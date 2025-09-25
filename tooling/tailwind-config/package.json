@@ -1,0 +1,22 @@
+{
+  "name": "@workspace/tailwind-config",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./base": "./base.js",
+    "./dashboard": "./dashboard.js",
+    "./marketing": "./marketing.js"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/forms": "^0.5.0",
+    "@tailwindcss/typography": "^0.5.0",
+    "tailwindcss-animate": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/tailwindcss": "^3.1.0"
+  }
+}

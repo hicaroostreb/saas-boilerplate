@@ -1,10 +1,13 @@
-// packages/billing/tsconfig.json
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tooling/typescript-config/react-library.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmit": false,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "references": [{ "path": "../database" }, { "path": "../auth" }]
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../database" }, { "path": "../auth" }, { "path": "../common" }],
+  "exclude": ["node_modules", "dist", "**/*.test.*"]
 }

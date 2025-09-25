@@ -6,20 +6,20 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build",
-    "dev": "tsc --watch",
+    "dev": "tsc --build --watch",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@workspace/database": "workspace:*"
-  },
-  "peerDependencies": {
-    "stripe": "*"
+    "@workspace/database": "workspace:*",
+    "@workspace/auth": "workspace:*",
+    "@workspace/common": "workspace:*",
+    "stripe": "^12.18.0",
+    "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {
-    "@types/node": "^24.5.2",
-    "@types/stripe-v2": "^2.0.6",
+    "@types/node": "^20.14.0",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

@@ -1,95 +1,65 @@
-import { db } from "../lib/db/drizzle";
-import { users, teams, teamMembers } from "../lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { config } from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Carregar .env.local da raiz
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+config({ path: path.resolve(__dirname, '../../../../.env.local') });
+
+import bcrypt from 'bcryptjs';
+import { db } from '../client.js'; // ← .js para ESM
+import { teamMembers, teams, users } from '../schema.js'; // ← .js para ESM
 
 async function seed() {
-  console.log("🌱 Seeding database...");
+  console.log('🌱 Starting seed...');
 
   try {
-    // Verificar se já existe usuário padrão
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, "test@test.com"))
-      .limit(1);
+    // Hash password
+    const hashedPassword = await bcrypt.hash('demo123456', 12);
 
-    let user;
-    if (existingUser.length > 0) {
-      console.log("ℹ️  Default user already exists: test@test.com");
-      user = existingUser[0];
-    } else {
-      // Criar usuário padrão
-      const hashedPassword = await bcrypt.hash("admin123", 10);
+    // Create demo user
+    const demoUser = await db
+      .insert(users)
+      .values({
+        name: 'Demo User',
+        email: 'demo@example.com',
+        passwordHash: hashedPassword,
+        role: 'owner',
+      })
+      .returning();
 
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email: "test@test.com",
-          name: "Test User",
-          passwordHash: hashedPassword,
-        })
-        .returning();
+    console.log('✅ Demo user created:', demoUser[0].email);
 
-      user = newUser;
-      console.log("✅ Created default user:", user.email);
-    }
+    // Create demo team
+    const demoTeam = await db
+      .insert(teams)
+      .values({
+        name: 'Demo Team',
+        ownerId: demoUser[0].id,
+        planName: 'free',
+        subscriptionStatus: 'active',
+      })
+      .returning();
 
-    // Verificar se já existe time padrão
-    const existingTeam = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.ownerId, user.id))
-      .limit(1);
+    console.log('✅ Demo team created:', demoTeam[0].name);
 
-    let team;
-    if (existingTeam.length > 0) {
-      console.log("ℹ️  Default team already exists for user");
-      team = existingTeam[0];
-    } else {
-      // Criar time padrão
-      const [newTeam] = await db
-        .insert(teams)
-        .values({
-          name: "Default Team",
-          ownerId: user.id,
-        })
-        .returning();
+    // Add user to team
+    await db.insert(teamMembers).values({
+      userId: demoUser[0].id,
+      teamId: demoTeam[0].id,
+      role: 'owner',
+    });
 
-      team = newTeam;
-      console.log("✅ Created default team:", team.name);
-    }
-
-    // Verificar se usuário já está no time
-    const existingMember = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, user.id)),
-      )
-      .limit(1);
-
-    if (existingMember.length === 0) {
-      // Adicionar usuário ao time
-      await db.insert(teamMembers).values({
-        teamId: team.id,
-        userId: user.id,
-        role: "owner",
-      });
-
-      console.log("✅ Added user to team");
-    } else {
-      console.log("ℹ️  User already member of team");
-    }
-
-    console.log("\n🎉 Seed completed!");
-    console.log("📋 Default login:");
-    console.log("Email: test@test.com");
-    console.log("Password: admin123");
+    console.log('✅ User added to team');
+    console.log('🎉 Seeding completed!');
+    console.log('📧 Login: demo@example.com');
+    console.log('🔑 Password: demo123456');
   } catch (error) {
-    console.error("❌ Seed failed:", error);
-    process.exit(1);
+    console.error('❌ Seeding failed:', error);
   }
+
+  process.exit(0);
 }
 
 seed();

@@ -1,6 +1,7 @@
 {
   "name": "@workspace/auth",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -11,14 +12,17 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@workspace/database": "workspace:*"
-  },
-  "peerDependencies": {
-    "next-auth": "*",
-    "zod": "*"
+    "next-auth": "5.0.0-beta.25",
+    "@auth/drizzle-adapter": "^1.7.0",
+    "@workspace/database": "workspace:*",
+    "bcryptjs": "^3.0.2",
+    "zod": "^3.25.76",
+    "react": "^19.0.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

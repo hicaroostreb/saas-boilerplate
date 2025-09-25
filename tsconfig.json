@@ -6,8 +6,8 @@
     { "path": "packages/database" },
     { "path": "packages/auth" },
     { "path": "packages/billing" },
-    // { "path": "apps/dashboard" },
-    // { "path": "apps/marketing" },
+    { "path": "apps/dashboard" },
+    { "path": "apps/marketing" },
     // { "path": "apps/public-api" }
   ]
 }
