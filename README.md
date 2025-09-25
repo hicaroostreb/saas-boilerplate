@@ -1,27 +1,39 @@
-# SaaS Boilerplate Monorepo
+# SaaS Boilerplate Enterprise Monorepo
 
-This is a **Turborepo monorepo** for building SaaS applications with modular packages for authentication, payments, and database management. Built with **Next.js**, **Stripe**, and **PostgreSQL**.
+This is a **Turborepo monorepo** for building SaaS applications with modular packages for authentication, payments, and database management. Built with **Next.js 15**, **Stripe**, and **PostgreSQL**.
 
 ## Features
 
 - 🏗️ **Monorepo architecture** with Turborepo for scalable development
-- 🔐 **Modular authentication** package with NextAuth.js
+- 🔐 **Modular authentication** package with Auth.js v5
 - 💳 **Stripe payments** package with subscriptions support
 - 🗄️ **Database package** with Drizzle ORM and PostgreSQL
-- 👥 **Multi-tenancy** with teams and role-based access control
+- 👥 **Multi-tenancy** with organizations and role-based access control
 - 📊 **Activity logging** system for user events
 - 🎯 **Type-safe** with TypeScript across all packages
 - 🔄 **Smart seeding** system (idempotent database setup)
+- ✅ **Enterprise quality** - 0 lint errors, production ready
 
 ## Architecture
 
 ```
 saas-boilerplate/
 ├── packages/
-│   ├── @your-org/db          # Database schema, migrations, and queries
-│   ├── @your-org/auth        # Authentication logic and middleware  
-│   └── @your-org/payments    # Stripe integration and billing
-└── apps/                     # Future Next.js applications
+│   ├── @workspace/auth          # Authentication logic and middleware
+│   ├── @workspace/billing       # Stripe integration and billing
+│   ├── @workspace/database      # Database schema, migrations, and queries
+│   ├── @workspace/ui            # Shared UI components
+│   ├── @workspace/common        # Shared utilities and types
+│   ├── @workspace/routes        # Route definitions
+│   └── tooling/
+│       ├── eslint-config        # Enterprise ESLint configuration
+│       ├── prettier-config      # Code formatting standards
+│       ├── tailwind-config      # Design system configuration
+│       ├── typescript-config    # TypeScript configurations
+│       └── requirements-check   # Setup validation tool
+└── apps/
+    ├── dashboard/               # Main SaaS application (Port 3000)
+    └── marketing/               # Landing page (Port 3001)
 ```
 
 ## Tech Stack
@@ -29,7 +41,7 @@ saas-boilerplate/
 - **Monorepo**: [Turborepo](https://turbo.build/)
 - **Framework**: [Next.js 15](https://nextjs.org/)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) + [Drizzle ORM](https://orm.drizzle.team/)
-- **Authentication**: [NextAuth.js v4](https://next-auth.js.org/)
+- **Authentication**: [Auth.js v5](https://authjs.dev/)
 - **Payments**: [Stripe](https://stripe.com/)
 - **Package Manager**: [pnpm](https://pnpm.io/)
 
@@ -38,40 +50,75 @@ saas-boilerplate/
 ```bash
 git clone <your-repo-url>
 cd saas-boilerplate
-pnpm install
 ```
+
+### Automated Setup (Recommended)
+
+Use the included setup script to configure everything automatically:
+
+```bash
+node scripts/setup.js
+```
+
+The setup script will guide you through:
+
+1. **Prerequisites Check** - Validates Node.js 18+, pnpm, Docker
+2. **Stripe CLI Setup** - Checks installation and authentication
+3. **Database Setup** - Local Docker PostgreSQL or remote database
+4. **Stripe Integration** - Secret key input and webhook creation
+5. **Environment Configuration** - Auto-generates `.env.local`
+6. **Monorepo Build** - Installs dependencies and builds packages
+7. **Database Schema** - Generates, pushes schema, and seeds data
+8. **Quality Validation** - Runs lint, type-check, and format checks
+
+### Manual Setup
+
+If you prefer manual setup:
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Check requirements
+pnpm check:requirements
+
+# 3. Build packages in order
+pnpm --filter "@workspace/database" run build
+pnpm --filter "@workspace/auth" run build
+pnpm --filter "@workspace/ui" run build
+pnpm --filter "@workspace/billing" run build
+
+# 4. Setup database
+pnpm --filter "@workspace/database" run push
+pnpm --filter "@workspace/database" run seed
+
+# 5. Start development
+pnpm turbo dev
+```
+
+## Prerequisites
+
+Before setup, ensure you have:
+
+- **Node.js 18+** - JavaScript runtime
+- **pnpm** - Package manager (`npm install -g pnpm`)
+- **Docker** - For local PostgreSQL (optional)
+- **Stripe CLI** - For webhook handling (`https://docs.stripe.com/stripe-cli`)
 
 ## Running Locally
 
-[Install](https://docs.stripe.com/stripe-cli) Stripe CLI and log in to your Stripe account:
+After setup, start the development servers:
 
 ```bash
-stripe login
+pnpm turbo dev
 ```
 
-Use the included setup script to create your `.env.local` file:
-
-```bash
-pnpm db:setup
-```
-
-Run the database migrations and seed the database with a default user and team:
-
-```bash
-pnpm db:migrate
-pnpm db:seed
-```
-
-This will create the following user and team:
-
-- **User**: `test@test.com`
-- **Password**: `admin123`
-
-You can also create new users through the `/sign-up` route when you add a Next.js application.
+- **Dashboard**: http://localhost:3000 (Main SaaS app)
+- **Marketing**: http://localhost:3001 (Landing page)
 
 ## Default Credentials
 
-After setup, you can use these test credentials:
+After setup, use these test credentials:
 
 - **Email**: `test@test.com`
 - **Password**: `admin123`
@@ -79,31 +126,32 @@ After setup, you can use these test credentials:
 ## Development Commands
 
 ```bash
-# Complete setup (alternative to individual commands)
-pnpm run setup
+# Start development servers
+pnpm turbo dev
 
 # Build all packages
-pnpm run build
+pnpm turbo build
 
-# Run linting
-pnpm run lint
-
-# Format code
-pnpm run format
+# Run quality checks (enterprise-grade)
+pnpm turbo lint        # 0 errors, 0 warnings
+pnpm turbo type-check  # 100% TypeScript validation
+pnpm turbo format      # Auto-format code
 
 # Database operations
-pnpm db:migrate    # Apply schema changes
-pnpm db:seed       # Populate test data
+pnpm --filter "@workspace/database" run generate  # Generate migrations
+pnpm --filter "@workspace/database" run push      # Push schema changes
+pnpm --filter "@workspace/database" run seed      # Seed test data
+pnpm --filter "@workspace/database" run studio    # Open database studio
 
 # Package-specific commands
-pnpm --filter @your-org/db run build
-pnpm --filter @your-org/auth run lint
-pnpm --filter @your-org/payments run test
+pnpm --filter "@workspace/auth" run build
+pnpm --filter "@workspace/ui" run dev
+pnpm --filter "@workspace/requirements-check" run check
 ```
 
 ## Testing Stripe Payments
 
-To test Stripe payments, use the following test card details:
+Use the following test card details:
 
 - **Card Number**: `4242 4242 4242 4242`
 - **Expiration**: Any future date
@@ -111,7 +159,7 @@ To test Stripe payments, use the following test card details:
 
 ## Local Stripe Webhooks
 
-You can listen for Stripe webhooks locally through their CLI to handle subscription change events:
+The setup script automatically configures webhooks, or run manually:
 
 ```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
@@ -121,70 +169,46 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 The database includes tables for:
 
-- **Users** - Authentication and user profiles with role-based permissions
-- **Teams** - Multi-tenant organization structure with Stripe integration
-- **Team Members** - Role-based team membership (owner, member)
+- **Users** - Authentication and user profiles
+- **Organizations** - Multi-tenant organization structure
+- **Members** - Role-based organization membership
 - **Activity Logs** - User action tracking and audit trails
-- **Invitations** - Team invitation system with email notifications
+- **Invitations** - Organization invitation system
 - **Stripe Integration** - Customer, subscription, and product data
 
 ## Package Details
 
-### `@your-org/db`
+### `@workspace/database`
 - Drizzle ORM configuration with PostgreSQL
 - Database schema definitions and relations
 - Migration scripts and seed data
 - Reusable queries and database utilities
 
-### `@your-org/auth`  
-- NextAuth.js configuration and providers
+### `@workspace/auth`
+- Auth.js v5 configuration and providers
 - Authentication middleware and session management
 - Protected route utilities and role validation
 - User registration and login flows
 
-### `@your-org/payments`
+### `@workspace/billing`
 - Stripe API integration and webhook handling
 - Subscription management and billing logic
 - Payment flow utilities and checkout sessions
 - Customer portal and invoice management
 
-## Project Structure Philosophy
+### `@workspace/ui`
+- Shared UI components with Tailwind CSS
+- Form components with validation
+- Consistent design system
+- shadcn/ui integration
 
-This monorepo follows **domain-driven design**:
-
-- 🔍 **Separation of concerns** - Each package handles a specific domain
-- 🔄 **Reusability** - Packages can be extracted to separate repositories
-- 🛡️ **Type safety** - Shared types across packages prevent integration errors
-- 📦 **Independent deployment** - Packages can be published independently
-
-## Adding New Applications
-
-To add a Next.js app that uses these packages:
-
-```bash
-# Create new app in apps/ directory
-cd apps/
-npx create-next-app@latest your-app-name
-
-# Add package dependencies to package.json
-{
-  "dependencies": {
-    "@your-org/db": "workspace:*",
-    "@your-org/auth": "workspace:*", 
-    "@your-org/payments": "workspace:*"
-  }
-}
-```
+### `@workspace/common`
+- Shared TypeScript types and utilities
+- Validation schemas with Zod
+- Error handling and formatting utilities
+- Constants and configuration
 
 ## Going to Production
-
-When you're ready to deploy your SaaS application to production, follow these steps:
-
-### Set up a production Stripe webhook
-
-1. Go to the Stripe Dashboard and create a new webhook for your production environment.
-2. Set the endpoint URL to your production API route (e.g., `https://yourdomain.com/api/stripe/webhook`).
-3. Select the events you want to listen for (e.g., `checkout.session.completed`, `customer.subscription.updated`).
 
 ### Environment Variables
 
@@ -194,6 +218,7 @@ Set these in your production environment:
 DATABASE_URL="your-production-postgres-url"
 NEXTAUTH_URL="https://yourdomain.com"
 NEXTAUTH_SECRET="production-secret-key"
+AUTH_SECRET="production-secret-key"
 STRIPE_SECRET_KEY="sk_live_..."
 STRIPE_WEBHOOK_SECRET="whsec_production_webhook"
 NEXT_PUBLIC_APP_URL="https://yourdomain.com"
@@ -202,22 +227,34 @@ NEXT_PUBLIC_APP_NAME="Your SaaS Name"
 
 ### Deployment Steps
 
-1. **Set up production database** (PostgreSQL on Vercel, Supabase, or similar)
+1. **Set up production database** (PostgreSQL on Vercel, Supabase, etc.)
 2. **Configure Stripe production webhooks** with your domain
 3. **Deploy to your platform** (Vercel, Railway, Fly.io, etc.)
-4. **Run migrations** in production:
+4. **Run database setup** in production:
    ```bash
-   pnpm db:migrate
+   pnpm --filter "@workspace/database" run push
+   pnpm --filter "@workspace/database" run seed
    ```
+
+## Enterprise Quality
+
+This monorepo maintains enterprise-grade quality standards:
+
+- ✅ **Zero lint errors** with strict ESLint configuration
+- 🎯 **100% type safety** with strict TypeScript
+- 📐 **Consistent formatting** with Prettier
+- 🔍 **Automated validation** with requirements check
+- 🚀 **Production ready** with optimized builds
 
 ## Contributing
 
 This boilerplate follows these principles:
 
 - 📝 **Conventional commits** for clear changelog
-- 🧪 **Test coverage** for critical paths  
+- 🧪 **Test coverage** for critical paths
 - 📚 **Documentation** for all public APIs
 - 🔍 **Type safety** with strict TypeScript
+- ✅ **Quality gates** - All checks must pass
 
 ## License
 
