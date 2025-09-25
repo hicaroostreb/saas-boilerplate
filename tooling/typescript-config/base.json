@@ -1,10 +1,14 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
   "compilerOptions": {
     "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
@@ -13,6 +17,11 @@
     "composite": true,
     "jsx": "preserve",
     "baseUrl": ".",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowJs": true,
+    "sourceMap": true,
     "types": ["node"]
-  }
+  },
+  "exclude": ["node_modules"]
 }

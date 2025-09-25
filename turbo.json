@@ -1,40 +1,208 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "ui": "tui",
+  "globalDependencies": [
+    "**/.env.*local",
+    ".env",
+    ".env.example",
+    "turbo.json",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "AUTH_SECRET",
+    "NEXTAUTH_URL",
+    "CI",
+    "VERCEL_ENV",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_PUBLISHABLE_KEY"
+  ],
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "inputs": [
+        "src/**",
+        "app/**",
+        "pages/**",
+        "components/**",
+        "lib/**",
+        "actions/**",
+        "schemas/**",
+        "public/**",
+        "next.config.*",
+        "tailwind.config.*",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        ".vercel/**",
+        "dist/**",
+        "build/**"
+      ],
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "AUTH_SECRET",
+        "NEXTAUTH_URL",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY"
+      ],
+      "cache": true,
+      "persistent": false
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "inputs": [
+        "src/**",
+        "app/**",
+        "pages/**",
+        "components/**",
+        "lib/**",
+        "actions/**",
+        "schemas/**",
+        "next.config.*",
+        "tailwind.config.*"
+      ],
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "AUTH_SECRET",
+        "NEXTAUTH_URL",
+        "PORT",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "outputs": []
+      "inputs": [
+        "src/**/*.{js,ts,tsx}",
+        "app/**/*.{js,ts,tsx}",
+        "pages/**/*.{js,ts,tsx}",
+        "components/**/*.{js,ts,tsx}",
+        "lib/**/*.{js,ts,tsx}",
+        "actions/**/*.{js,ts,tsx}",
+        "schemas/**/*.{js,ts,tsx}",
+        "eslint.config.js",
+        ".eslintrc.*",
+        "tsconfig.json"
+      ],
+      "outputs": [],
+      "cache": true,
+      "persistent": false
     },
     "format": {
       "dependsOn": ["^format"],
-      "outputs": []
+      "inputs": [
+        "src/**/*.{js,ts,tsx,json,md}",
+        "app/**/*.{js,ts,tsx,json,md}",
+        "pages/**/*.{js,ts,tsx,json,md}",
+        "components/**/*.{js,ts,tsx,json,md}",
+        "lib/**/*.{js,ts,tsx,json,md}",
+        ".prettierrc*",
+        "prettier.config.*"
+      ],
+      "outputs": [],
+      "cache": true,
+      "persistent": false
     },
     "test": {
-      "dependsOn": ["^test"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.{js,ts,tsx}",
+        "app/**/*.{js,ts,tsx}",
+        "__tests__/**",
+        "*.test.*",
+        "*.spec.*",
+        "jest.config.*",
+        "vitest.config.*"
+      ],
+      "outputs": [
+        "coverage/**",
+        "test-results/**"
+      ],
+      "cache": true,
+      "persistent": false
     },
     "type-check": {
       "dependsOn": ["^type-check"],
+      "inputs": [
+        "src/**/*.{ts,tsx}",
+        "app/**/*.{ts,tsx}",
+        "pages/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        "actions/**/*.{ts,tsx}",
+        "schemas/**/*.{ts,tsx}",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
+      "outputs": [],
+      "cache": true,
+      "persistent": false
+    },
+    "clean": {
+      "cache": false,
+      "persistent": false,
       "outputs": []
     },
     "db:migrate": {
-      "cache": false
+      "cache": false,
+      "persistent": false,
+      "env": ["DATABASE_URL"],
+      "inputs": [
+        "drizzle/**",
+        "migrations/**",
+        "drizzle.config.*"
+      ],
+      "outputs": []
     },
     "db:seed": {
-      "cache": false
+      "dependsOn": ["db:migrate"],
+      "cache": false,
+      "persistent": false,
+      "env": ["DATABASE_URL"],
+      "inputs": [
+        "seed/**",
+        "scripts/seed.*"
+      ],
+      "outputs": []
     },
     "db:studio": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["DATABASE_URL"],
+      "inputs": []
+    },
+    "deploy": {
+      "dependsOn": ["build", "lint", "type-check", "test"],
+      "cache": false,
+      "persistent": false,
+      "env": [
+        "NODE_ENV",
+        "VERCEL_TOKEN",
+        "VERCEL_ORG_ID",
+        "VERCEL_PROJECT_ID",
+        "DATABASE_URL",
+        "AUTH_SECRET",
+        "NEXTAUTH_URL",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY"
+      ],
+      "outputs": []
     }
+  },
+  "remoteCache": {
+    "signature": true,
+    "preflight": false
   }
 }

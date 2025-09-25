@@ -10,17 +10,18 @@
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "migrate": "drizzle-kit push",
-    "seed": "node dist/scripts/seed.js",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "migrate": "drizzle-kit migrate",
+    "seed": "tsx src/scripts/seed.ts",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
     "@supabase/supabase-js": "^2.0.0",
-    "bcryptjs": "^3.0.2"
-  },
-  "peerDependencies": {
-    "drizzle-orm": "*",
-    "postgres": "*"
+    "bcryptjs": "^3.0.2",
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
@@ -30,6 +31,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
+    "tsx": "^4.19.1",
     "typescript": "^5.9.2"
   }
 }

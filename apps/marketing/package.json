@@ -1,0 +1,57 @@
+{
+  "name": "@workspace/marketing",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "eslint . --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo node_modules coverage out",
+    "clean:cache": "rm -rf .next/cache .turbo/cache",
+    "clean:build": "rm -rf .next out",
+    "reset": "pnpm clean && pnpm install",
+    "analyze": "ANALYZE=true next build",
+    "export": "next build && next export",
+    "lighthouse": "lighthouse http://localhost:3000 --output json --output html --output-path ./lighthouse-report",
+    "seo:check": "next-sitemap && lighthouse http://localhost:3000 --only-categories=seo --output json"
+  },
+  "dependencies": {
+    "@workspace/ui": "workspace:*",
+    "framer-motion": "^11.0.0",
+    "next": "^15.5.4",
+    "next-seo": "^6.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@next/bundle-analyzer": "^15.5.4",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.36.0",
+    "lighthouse": "^11.0.0",
+    "next-sitemap": "^4.2.3",
+    "postcss": "^8.5.6",
+    "prettier-plugin-tailwindcss": "^0.5.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not IE 11",
+    "not op_mini all"
+  ]
+}

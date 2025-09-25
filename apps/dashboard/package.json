@@ -1,0 +1,56 @@
+{
+  "name": "@workspace/dashboard",
+  "version": "1.0.0",
+  "type": "module", 
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint . --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo node_modules coverage",
+    "clean:cache": "rm -rf .next/cache .turbo/cache",
+    "clean:build": "rm -rf .next out",
+    "reset": "pnpm clean && pnpm install",
+    "analyze": "ANALYZE=true next build",
+    "dev:debug": "NODE_OPTIONS='--inspect' next dev --port 3001"
+  },
+  "dependencies": {
+    "@workspace/auth": "workspace:*",
+    "@workspace/billing": "workspace:*",
+    "@workspace/common": "workspace:*", 
+    "@workspace/database": "workspace:*",
+    "@workspace/routes": "workspace:*",
+    "@workspace/ui": "workspace:*",
+    "drizzle-orm": "^0.44.5",
+    "nanoid": "^5.0.4",
+    "next": "^15.5.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "next-safe-action": "^7.9.8",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@next/bundle-analyzer": "^15.5.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.36.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  },
+  "browserslist": [
+    "defaults",
+    "not IE 11"
+  ]
+}

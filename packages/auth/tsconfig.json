@@ -1,11 +1,12 @@
-// packages/auth/tsconfig.json
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src"],
+  "include": ["src/**/*"],
   "references": [{ "path": "../database" }]
 }

@@ -151,6 +151,12 @@ vite.config.ts.timestamp-*
 packages/**/coverage/
 packages/**/.nyc_output/
 packages/**/node_modules/
+tooling/**/coverage/
+tooling/**/.nyc_output/
+tooling/**/node_modules/
+apps/**/coverage/
+apps/**/.nyc_output/
+apps/**/node_modules/
 
 # ===== DEVELOPMENT ENVIRONMENT =====
 
@@ -159,6 +165,7 @@ packages/**/node_modules/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # OS generated files
 .DS_Store
@@ -180,15 +187,26 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.db
+*.db-journal
 
 # Docker
-docker-compose.yml     # ADICIONAR - gerado pelo setup
+docker-compose.yml
 docker-compose.override.yml
+.docker/
 
 # ===== SAAS SPECIFIC =====
 
 # Stripe CLI webhooks
 stripe-webhook-events.log
+
+# Auth secrets (additional security)
+auth-secrets.json
+jwt-keys/
+
+# Uploads/Storage
+uploads/
+storage/
+public/uploads/
 
 # ===== TESTING & DEBUGGING =====
 
@@ -196,6 +214,49 @@ stripe-webhook-events.log
 test-results/
 playwright-report/
 test-results.xml
+lighthouse-report.*
 
 # Debug files
 *.map.js
+
+# ===== PRODUCTION & DEPLOYMENT =====
+
+# Vercel
+.vercel
+
+# Deployment configs (add as needed)
+.deployment/
+deploy-config.json
+
+# Bundle analysis
+.next/analyze/
+bundle-analyzer-report.html
+
+# Performance monitoring
+lighthouse-ci/
+web-vitals-report.json
+
+# ===== SECURITY =====
+
+# Security scan results
+security-report.json
+audit-results.json
+
+# Local certificates
+certificates/
+ssl/
+*.pem
+*.crt
+*.key
+
+# ===== CACHE & OPTIMIZATION =====
+
+# Image optimization cache
+.image-cache/
+.sharp-cache/
+
+# Font cache
+.font-cache/
+
+# CDN cache configs
+cdn-cache.json

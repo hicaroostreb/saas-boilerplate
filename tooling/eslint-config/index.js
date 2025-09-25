@@ -1,72 +1,106 @@
 import js from '@eslint/js';
-import prettier from 'eslint-plugin-prettier';
-import prettierConfig from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
+import turbo from 'eslint-plugin-turbo';
+import globals from 'globals';
 
-export default [
-  // Ignorar arquivos gerados
+/** @type {import('eslint').Linter.Config[]} */
+export default tseslint.config(
+  // Base recommended configs
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  
+  // Global ignores
   {
     ignores: [
-      '/dist/',
-      '/node_modules/',
-      '/.next/',
-      '/coverage/'
+      'dist/**',
+      'build/**', 
+      '.next/**',
+      '.turbo/**',
+      'node_modules/**',
+      '*.config.{js,mjs,cjs}',
+      'coverage/**',
+      '**/*.d.ts'
     ]
   },
 
-  // Configuração base do ESLint
-  js.configs.recommended,
-
-  // Configuração do TypeScript
-  ...tseslint.configs.recommended,
-
-  // Configuração do Prettier
-  prettierConfig,
-
-  // Configuração personalizada
+  // Main configuration
   {
-    plugins: {
-      prettier: prettier
-    },
-    rules: {
-      'prettier/prettier': 'error',
-      // Relaxar algumas regras TypeScript para desenvolvimento
-      '@typescript-eslint/no-explicit-any': 'warn', // warning em vez de error
-      '@typescript-eslint/no-unused-vars': 'warn',
-      '@typescript-eslint/no-empty-object-type': 'warn', // warning para {}
-      '@typescript-eslint/no-require-imports': 'warn', // permitir require() com warning
-      // Adicione suas regras customizadas aqui
-    },
+    files: ['**/*.{js,mjs,ts,tsx}'],
+    
     languageOptions: {
-      ecmaVersion: 2021,
+      ecmaVersion: 'latest',
       sourceType: 'module',
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      },
       globals: {
-        // Globals do Node.js
-        global: 'readonly',
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2021,
+        console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
-        dirname: 'readonly',
-        filename: 'readonly',
-        console: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-        exports: 'readonly',
-        // Web APIs disponíveis no Node.js
-        TextEncoder: 'readonly',
-        TextDecoder: 'readonly',
-        fetch: 'readonly'
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        global: 'readonly'
       }
+    },
+    
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+      'turbo': turbo
+    },
+    
+    rules: {
+      // Turbo específicas
+      'turbo/no-undeclared-env-vars': 'warn',
+      
+      // TypeScript específicas
+      '@typescript-eslint/no-unused-vars': ['error', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_'
+      }],
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/prefer-as-const': 'error',
+      '@typescript-eslint/no-inferrable-types': 'warn',
+      
+      // JavaScript/ES6+ específicas
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'eqeqeq': ['error', 'always'],
+      'curly': ['error', 'all'],
+      'no-duplicate-imports': 'error',
+      'no-unused-expressions': 'error',
+      'prefer-template': 'error',
+      'object-shorthand': 'error'
     }
   },
 
-  // Configuração específica para TypeScript nos packages
+  // TypeScript específico
   {
-    files: ['packages/*/.{ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: 'module'
-      // Removendo parserOptions.project temporariamente
-      // para evitar conflitos em monorepos
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      // Regras mais rigorosas para TypeScript
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-optional-chain': 'error'
+    }
+  },
+
+  // JavaScript específico (menos rigoroso)
+  {
+    files: ['**/*.{js,mjs}'],
+    rules: {
+      // Desabilitar regras TypeScript para arquivos JS puros
+      '@typescript-eslint/no-var-requires': 'off'
     }
   }
-];
+);

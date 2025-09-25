@@ -1,3 +1,7 @@
-export { db, supabase } from "./lib/db/drizzle";
-export * from "./lib/db/schema";
-export type { InferModel } from "drizzle-orm";
+// Main exports for the database package
+export { db } from './client';
+export * from './schema';
+
+// Re-export Drizzle utilities that might be needed
+export { and, asc, desc, eq, or, sql } from 'drizzle-orm';
+export type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
