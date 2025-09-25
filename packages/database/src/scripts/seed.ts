@@ -15,46 +15,46 @@ async function seed() {
   console.log('🌱 Starting seed...');
 
   try {
-    // Hash password
-    const hashedPassword = await bcrypt.hash('demo123456', 12);
+    // Hash password para corresponder ao README
+    const hashedPassword = await bcrypt.hash('admin123', 12);
 
-    // Create demo user
-    const demoUser = await db
+    // Create test user (igual ao README)
+    const testUser = await db
       .insert(users)
       .values({
-        name: 'Demo User',
-        email: 'demo@example.com',
+        name: 'Test User',
+        email: 'test@test.com',
         passwordHash: hashedPassword,
         role: 'owner',
       })
       .returning();
 
-    console.log('✅ Demo user created:', demoUser[0].email);
+    console.log('✅ Test user created:', testUser[0].email);
 
-    // Create demo team
-    const demoTeam = await db
+    // Create test team/organization (igual ao README)
+    const testTeam = await db
       .insert(teams)
       .values({
-        name: 'Demo Team',
-        ownerId: demoUser[0].id,
+        name: 'Test Organization',
+        ownerId: testUser[0].id,
         planName: 'free',
         subscriptionStatus: 'active',
       })
       .returning();
 
-    console.log('✅ Demo team created:', demoTeam[0].name);
+    console.log('✅ Test organization created:', testTeam[0].name);
 
     // Add user to team
     await db.insert(teamMembers).values({
-      userId: demoUser[0].id,
-      teamId: demoTeam[0].id,
+      userId: testUser[0].id,
+      teamId: testTeam[0].id,
       role: 'owner',
     });
 
-    console.log('✅ User added to team');
+    console.log('✅ User added to organization');
     console.log('🎉 Seeding completed!');
-    console.log('📧 Login: demo@example.com');
-    console.log('🔑 Password: demo123456');
+    console.log('📧 Login: test@test.com');
+    console.log('🔑 Password: admin123');
   } catch (error) {
     console.error('❌ Seeding failed:', error);
   }
