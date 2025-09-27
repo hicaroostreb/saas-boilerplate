@@ -26,8 +26,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
     "typescript": "^5.9.2"
   },
   "peerDependencies": {

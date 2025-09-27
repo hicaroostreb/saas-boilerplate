@@ -419,7 +419,7 @@ export async function getServerSession() {
   try {
     // ✅ Usar a função opcional que não redireciona
     const authContext = await getOptionalAuthContext();
-    
+
     if (!authContext?.session?.user) {
       return null;
     }
@@ -429,11 +429,10 @@ export async function getServerSession() {
         id: authContext.session.user.id,
         email: authContext.session.user.email,
         name: authContext.session.user.name,
-      }
+      },
     };
   } catch (error) {
     console.error('❌ ACHROMATIC: Error getting server session:', error);
     return null;
   }
 }
-

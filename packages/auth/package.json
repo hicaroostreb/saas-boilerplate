@@ -31,14 +31,14 @@
     "bcryptjs": "^3.0.2",
     "cookies": "^0.9.1",
     "next-auth": "5.0.0-beta.25",
-    "react": "^19.0.0",
+    "react": "^18.2.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/cookies": "^0.9.1",
-    "@types/node": "^20.0.0",
-    "@types/react": "^19.0.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.2.79",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

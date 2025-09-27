@@ -1,3 +1,10 @@
+# =============================================================================
+# ENTERPRISE MONOREPO GITIGNORE
+# NextJS + Turbo + Playwright + VS Code + GitHub Actions
+# =============================================================================
+
+# ===== NODE.JS & PACKAGE MANAGERS =====
+
 # Logs
 logs
 *.log
@@ -26,23 +33,23 @@ coverage
 # nyc test coverage
 .nyc_output
 
-# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+# Grunt intermediate storage
 .grunt
 
-# Bower dependency directory (https://bower.io/)
+# Bower dependency directory
 bower_components
 
 # node-waf configuration
 .lock-wscript
 
-# Compiled binary addons (https://nodejs.org/api/addons.html)
+# Compiled binary addons
 build/Release
 
 # Dependency directories
 node_modules/
 jspm_packages/
 
-# Snowpack dependency directory (https://snowpack.dev/)
+# Snowpack dependency directory
 web_modules/
 
 # TypeScript cache
@@ -70,39 +77,17 @@ web_modules/
 .env
 .env.*
 !.env.example
+!.env.template
 
-# parcel-bundler cache (https://parceljs.org/)
+# parcel-bundler cache
 .cache
 .parcel-cache
-
-# Next.js build output
-.next
-out
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
 
 # vuepress build output
 .vuepress/dist
 
 # vuepress v2.x temp and cache directory
 .temp
-
-# Sveltekit cache directory
-.svelte-kit/
-
-# vitepress build output
-**/.vitepress/dist
-
-# vitepress cache directory
-**/.vitepress/cache
-
-# Docusaurus cache and generated files
-.docusaurus
 
 # Serverless directories
 .serverless/
@@ -119,9 +104,6 @@ dist
 # TernJS port file
 .tern-port
 
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
 # yarn v3
 .pnp.*
 .yarn/*
@@ -131,14 +113,43 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
+# ===== NEXT.JS & REACT =====
+
+# Next.js build output
+.next
+out
+
+# Next.js cache
+.next/cache
+.next/server
+.next/standalone
+.next/static
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+
+# Vite build outputs
+dist/
+build/
+
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# ===== MONOREPO SPECIFIC =====
+# Bundle analysis
+.next/analyze/
+bundle-analyzer-report.html
+.webpack-bundle-analyzer/
 
-# Turbo
+# ===== MONOREPO SPECIFIC (TURBO) =====
+
+# Turbo build cache
 .turbo/
+.turbo-cache/
 
 # Build outputs in all packages
 **/dist/
@@ -151,17 +162,27 @@ vite.config.ts.timestamp-*
 packages/**/coverage/
 packages/**/.nyc_output/
 packages/**/node_modules/
+packages/**/.turbo/
+
 tooling/**/coverage/
 tooling/**/.nyc_output/
 tooling/**/node_modules/
+tooling/**/.turbo/
+
 apps/**/coverage/
 apps/**/.nyc_output/
 apps/**/node_modules/
+apps/**/.turbo/
 
 # ===== DEVELOPMENT ENVIRONMENT =====
 
-# IDE files
-.vscode/
+# VS Code - Keep project configs, ignore personal ones
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-workspace
+.vscode/.ropeproject/
+
+# Other IDEs
 .idea/
 *.swp
 *.swo
@@ -181,73 +202,129 @@ Thumbs.db
 *.temp
 *~
 
+# ===== CI/CD & GITHUB ACTIONS =====
+
+# GitHub Actions logs (local testing)
+.github/workflows/*.log
+github-actions-*.log
+action-artifacts/
+
+# CI/CD temporary files
+ci-temp/
+deploy-temp/
+
+# ===== REQUIREMENTS CHECK & DIAGNOSTICS =====
+
+# Requirements validation outputs
+requirements-report.json
+system-diagnostics.json
+environment-check.log
+
+# Node.js diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# System monitoring
+performance-*.json
+health-check-*.log
+
+# ===== TESTING & QA =====
+
+# Test results
+test-results/
+test-results-*/
+junit.xml
+test-report.xml
+
+# Playwright specific
+playwright-report/
+playwright/.cache/
+playwright-results/
+test-results.xml
+
+# Lighthouse reports
+lighthouse-report.*
+lighthouse-ci/
+web-vitals-report.json
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/
+.c8_output/
+
+# Visual regression testing
+__screenshots__/
+__image_snapshots__/
+
 # ===== DATABASE & SERVICES =====
 
-# Database
+# Database files
 *.sqlite
 *.sqlite3
 *.db
 *.db-journal
 
+# Redis dumps
+dump.rdb
+
 # Docker
 docker-compose.yml
 docker-compose.override.yml
 .docker/
+.dockerignore.local
 
-# ===== SAAS SPECIFIC =====
+# ===== SAAS & BUSINESS SPECIFIC =====
 
 # Stripe CLI webhooks
 stripe-webhook-events.log
+stripe-events.json
 
 # Auth secrets (additional security)
 auth-secrets.json
 jwt-keys/
+*.pem
+*.crt
+*.key
 
 # Uploads/Storage
 uploads/
 storage/
 public/uploads/
-
-# ===== TESTING & DEBUGGING =====
-
-# Test results
-test-results/
-playwright-report/
-test-results.xml
-lighthouse-report.*
-
-# Debug files
-*.map.js
+user-content/
 
 # ===== PRODUCTION & DEPLOYMENT =====
 
 # Vercel
 .vercel
 
-# Deployment configs (add as needed)
+# Netlify
+.netlify/
+
+# AWS
+.aws/
+
+# Deployment configs
 .deployment/
 deploy-config.json
+deployment-*.json
 
-# Bundle analysis
-.next/analyze/
-bundle-analyzer-report.html
+# CDN cache configs
+cdn-cache.json
 
-# Performance monitoring
-lighthouse-ci/
-web-vitals-report.json
-
-# ===== SECURITY =====
+# ===== SECURITY & MONITORING =====
 
 # Security scan results
 security-report.json
 audit-results.json
+vulnerability-report.json
 
 # Local certificates
 certificates/
 ssl/
-*.pem
-*.crt
-*.key
+
+# Secrets management
+.secrets/
+secrets.json
 
 # ===== CACHE & OPTIMIZATION =====
 
@@ -258,5 +335,82 @@ ssl/
 # Font cache
 .font-cache/
 
-# CDN cache configs
-cdn-cache.json
+# Build cache
+.build-cache/
+.compile-cache/
+
+# Performance profiling
+.prof/
+profile-*.json
+
+# ===== ENTERPRISE MONITORING =====
+
+# Application monitoring
+newrelic_agent.log
+datadog-*.log
+sentry-debug-meta/
+
+# Performance monitoring
+performance-*.json
+memory-usage-*.log
+
+# Analytics
+analytics-cache/
+metrics-temp/
+
+# ===== WORKSPACE SPECIFIC =====
+
+# Package manager workspaces
+.pnpm/
+.yarn/cache
+.yarn/unplugged
+
+# Lock files (keep main, ignore sub-packages if needed)
+# Uncomment if you want to ignore lock files in sub-packages
+# packages/*/pnpm-lock.yaml
+# apps/*/pnpm-lock.yaml
+
+# Workspace temporary files
+workspace-*.log
+monorepo-*.temp
+
+# ===== DEBUGGING & DEVELOPMENT TOOLS =====
+
+# Source maps (production)
+*.map.js
+
+# Debug files
+debug-*.log
+trace-*.json
+
+# Profiling
+*.prof
+heap-*.heapprofile
+cpu-*.cpuprofile
+
+# Development server logs
+dev-server-*.log
+webpack-dev-server.log
+
+# ===== MISCELLANEOUS =====
+
+# Backup files
+*.bak
+*.backup
+*-backup.*
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Documentation generation
+docs/build/
+.docusaurus
+
+# Storybook
+storybook-static/
+.storybook/build/
+
+# Changelog generation temp
+CHANGELOG.temp.md
