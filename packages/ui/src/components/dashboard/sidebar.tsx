@@ -260,7 +260,7 @@ export function DashboardSidebar({ organization, user, membership }: DashboardSi
                                         onError={(e) => {
                                           // Fallback to initials
                                           e.currentTarget.style.display = 'none';
-                                          e.currentTarget.nextElementSibling!.style.display = 'flex';
+                                          (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex';
                                         }}
                                       />
                                       <span 

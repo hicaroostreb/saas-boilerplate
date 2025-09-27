@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end testing suite for the SaaS boilerplate",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test debug.spec.js --headed",
+    "test:debug-mode": "playwright test --debug",
+    "test:smoke": "playwright test smoke.spec.js",
+    "test:auth": "playwright test --grep auth",
+    "test:password": "playwright test password-security.spec.js",
+    "test:email": "playwright test email-verification.spec.js",
+    "test:security": "playwright test password-security.spec.js email-verification.spec.js",
+    "test:all": "playwright test",
+    "install:browsers": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  },
+  "keywords": ["e2e", "testing", "playwright", "automation", "security"],
+  "author": "SaaS Team",
+  "license": "MIT"
+}
