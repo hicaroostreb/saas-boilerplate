@@ -1,46 +1,33 @@
-import { auth } from "@workspace/auth";
-import { NextResponse, NextRequest } from "next/server"; // ✅ CORREÇÃO: imports consolidados
+import { NextResponse, type NextRequest } from 'next/server';
 
-// ✅ Correção: Tipo específico em vez de any
-interface AuthenticatedRequest extends NextRequest {
-  auth?: {
-    user?: {
-      id?: string;
-      email?: string;
-      name?: string;
-    };
-  };
-}
-
-export default auth((req: AuthenticatedRequest) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+// ✅ ACHROMATIC APPROACH: Minimal middleware - no auth checks
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   
-  const isAuthPage = nextUrl.pathname.startsWith('/auth');
-  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth');
-  const _isPublicRoute = nextUrl.pathname === '/' && !isLoggedIn; // ✅ Correção: prefixo _ para unused var
+  // ✅ Handle static files and API routes only
+  const isApiRoute = pathname.startsWith('/api');
+  const isStaticFile = pathname.startsWith('/_next') || pathname === '/favicon.ico';
   
-  // Permitir rotas de API auth
-  if (isApiAuthRoute) {
+  // ✅ Let all requests through - auth checks happen at page/data level
+  if (isApiRoute || isStaticFile) {
     return NextResponse.next();
   }
   
-  // Redirecionar usuários logados para longe das páginas de auth
-  if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/', nextUrl));
-  }
-  
-  // Redirecionar usuários não logados para o login
-  if (!isLoggedIn && !isAuthPage) {
-    return NextResponse.redirect(new URL('/auth/sign-in', nextUrl));
-  }
-  
+  // ✅ ACHROMATIC: No auth checks in middleware
+  // "Only good for pre-checks" - we do auth checks near the data
+  console.log('🔧 Middleware: Allowing all traffic, auth checks at page level');
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes) 
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
-  runtime: 'nodejs'
 };

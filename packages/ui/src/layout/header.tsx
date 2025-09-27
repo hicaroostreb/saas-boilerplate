@@ -13,8 +13,8 @@ interface HeaderProps {
 
 export function Header({
   logoText = "Acme",
-  signInUrl = "/auth/signin",
-  signUpUrl = "/auth/signup",
+  signInUrl = "/auth/sign-in",
+  signUpUrl = "/auth/sign-up",
   className
 }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -24,6 +24,15 @@ export function Header({
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle("dark");
+    
+    // ÚNICA MUDANÇA: Adicionar background preto/branco
+    if (document.documentElement.classList.contains("dark")) {
+      document.documentElement.style.backgroundColor = '#000000';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.style.backgroundColor = '#ffffff';
+      localStorage.setItem('theme', 'light');
+    }
   };
 
   const toggleMobileMenu = () => {

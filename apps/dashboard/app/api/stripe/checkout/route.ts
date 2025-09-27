@@ -1,5 +1,5 @@
 import { stripe } from '@workspace/billing';
-import { db, teamMembers, teams, users } from '@workspace/database';
+import { db, users, memberships, organizations } from '@workspace/database';
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -48,37 +48,37 @@ export async function GET(request: NextRequest) {
       throw new Error("No user ID in session's client_reference_id.");
     }
 
+    // Corrigido: userId é string UUID, não Number
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, userId))
       .limit(1);
     if (!user) {
       throw new Error('User not found in database.');
     }
 
-    const [userTeam] = await db
-      .select({ teamId: teamMembers.teamId })
-      .from(teamMembers)
-      .where(eq(teamMembers.userId, user.id))
+    const [userMembership] = await db
+      .select({ organizationId: memberships.organizationId })
+      .from(memberships)
+      .where(eq(memberships.userId, user.id))
       .limit(1);
-    if (!userTeam) {
-      throw new Error('User is not associated with any team.');
+    if (!userMembership) {
+      throw new Error('User is not associated with any organization.');
     }
 
     await db
-      .update(teams)
+      .update(organizations)
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
-        stripeProductId: productId,
         planName: (plan.product as Stripe.Product).name,
         subscriptionStatus: subscription.status,
         updatedAt: new Date(),
       })
-      .where(eq(teams.id, userTeam.teamId));
+      .where(eq(organizations.id, userMembership.organizationId));
 
-    // Redirect to dashboard - user will be authenticated by middleware
+    // Redirect para dashboard - usuário autenticado por middleware
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling checkout:', error);

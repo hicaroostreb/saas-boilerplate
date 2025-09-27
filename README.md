@@ -32,8 +32,8 @@ saas-boilerplate/
 │       ├── typescript-config    # TypeScript configurations
 │       └── requirements-check   # Setup validation tool
 └── apps/
-    ├── dashboard/               # Main SaaS application (Port 3000)
-    └── marketing/               # Landing page (Port 3001)
+    ├── dashboard/               # Main SaaS application (Port 3001)
+    └── marketing/               # Landing page (Port 3000)
 ```
 
 ## Tech Stack
@@ -113,8 +113,8 @@ After setup, start the development servers:
 pnpm turbo dev
 ```
 
-- **Dashboard**: http://localhost:3000 (Main SaaS app)
-- **Marketing**: http://localhost:3001 (Landing page)
+- **Marketing**: http://localhost:3000 (Landing page)
+- **Dashboard**: http://localhost:3001 (Main SaaS app)
 
 ## Default Credentials
 

@@ -14,7 +14,10 @@
     "tooling/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --parallel",
+    "dev:marketing": "turbo dev --filter=@workspace/marketing",
+    "dev:dashboard": "turbo dev --filter=@workspace/dashboard",
+    "dev:apps": "turbo dev --filter='@workspace/marketing' --filter='@workspace/dashboard' --parallel",
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "turbo format",
@@ -23,22 +26,18 @@
     "clean": "turbo clean",
     "clean:all": "rm -rf node_modules apps/*/node_modules packages/*/node_modules tooling/*/node_modules .turbo apps/*/.next packages/*/dist",
     "reset": "pnpm clean:all && pnpm install",
-    
     "check:requirements": "pnpm --filter @workspace/requirements-check run check",
     "check:env": "pnpm check:requirements",
     "preinstall": "pnpm check:requirements || true",
-    
     "db:setup": "node scripts/setup.js",
     "db:migrate": "pnpm --filter @workspace/database run migrate",
     "db:seed": "pnpm --filter @workspace/database run seed",
     "db:studio": "pnpm --filter @workspace/database run studio",
     "db:push": "pnpm --filter @workspace/database run push",
     "db:generate": "pnpm --filter @workspace/database run generate",
-    
     "setup": "pnpm check:requirements && pnpm install && pnpm db:setup && pnpm db:migrate && pnpm db:seed",
     "setup:full": "pnpm setup",
-    
-    "test-auth": "pnpm --filter @workspace/dashboard run dev",
+    "test-auth": "pnpm dev:dashboard",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
@@ -46,16 +45,20 @@
     "deps:update": "pnpm update --recursive --latest"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "bcryptjs": "^3.0.2",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "jose": "^6.1.0",
     "next": "^15.5.4",
+    "next-auth": "5.0.0-beta.25",
     "next-safe-action": "^7.10.8",
     "nuqs": "^2.6.0",
     "postgres": "^3.4.7",
     "stripe": "^12.18.0",
+    "tailwind-merge": "^2.6.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -1,30 +1,140 @@
-import NextAuth from 'next-auth';
-import { redirect } from 'next/navigation';
+// packages/auth/src/index.ts - CLIENT-SAFE EXPORTS
+
 import { cache } from 'react';
-import { authConfig } from './config';
 
-// Abordagem simplificada
-export const { auth, handlers, signIn, signOut } = NextAuth(authConfig) as any;
+// ============================================
+// CLIENT-SAFE SESSION UTILITIES (PLACEHOLDERS)
+// ============================================
 
-// Função de cache
-export const dedupedAuth = cache(auth);
+export async function getSession() {
+  // Placeholder - real implementation in server
+  return null;
+}
 
-// Função para exigir autenticação (NOVA)
-export const requireAuth = async () => {
-  const session = await auth();
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    return false; // Placeholder - real implementation in server
+  } catch (error) {
+    console.error('❌ ACHROMATIC: Error in isAuthenticated:', error);
+    return false;
+  }
+}
 
-  if (!session?.user) {
-    redirect('/auth/sign-in');
+export async function getCurrentUserId(): Promise<string | null> {
+  try {
+    return null; // Placeholder - real implementation in server
+  } catch (error) {
+    console.error('❌ ACHROMATIC: Error in getCurrentUserId:', error);
+    return null;
+  }
+}
+
+// ============================================
+// CLIENT-SAFE VALIDATION FUNCTIONS
+// ============================================
+
+export function isValidSession(session: any): boolean {
+  return (
+    session &&
+    typeof session === 'object' &&
+    session.user &&
+    typeof session.user.id === 'string' &&
+    session.user.id.length > 0 &&
+    typeof session.user.email === 'string' &&
+    session.user.email.length > 0
+  );
+}
+
+export function hasOrganizationAccess(
+  membership: { role: string; isActive: boolean } | null
+): boolean {
+  return Boolean(membership?.isActive && membership?.role);
+}
+
+export function hasOrganizationPermission(
+  membership: {
+    role: string;
+    permissions?: string[] | null;
+    customPermissions?: Record<string, boolean> | null;
+  } | null,
+  permission: string
+): boolean {
+  if (!membership) return false;
+
+  if (membership.role === 'owner' || membership.role === 'admin') {
+    return true;
   }
 
-  return session;
-};
+  if (membership.customPermissions?.[permission] !== undefined) {
+    return membership.customPermissions[permission];
+  }
 
-// Re-exports
-export * from './context';
-export * from './password';
-export { authConfig };
+  if (membership.permissions?.includes(permission)) {
+    return true;
+  }
 
-// Types melhorados
-export type Session = Awaited<ReturnType<typeof auth>>;
-export type User = NonNullable<Session>['user'];
+  return false;
+}
+
+// ============================================
+// ACTIONS EXPORTS (Server Actions - Safe for Client Import)
+// ============================================
+
+export * from './lib/actions/change-password';
+export * from './lib/actions/revoke-session';
+export * from './lib/actions/sign-in';
+export * from './lib/actions/sign-out';
+
+// ============================================
+// CLIENT-SAFE UTILITIES
+// ============================================
+
+export * from './client';
+
+// ============================================
+// TYPES EXPORTS (Client-Safe)
+// ============================================
+
+export type {
+  AuthEventCategory,
+  AuthEventStatus,
+  AuthEventType,
+  SecurityLevel,
+  Session,
+  User,
+} from './types';
+
+// Basic types
+export interface EnterpriseAuthSession {
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    image: string | null;
+  };
+  enterprise: {
+    sessionId: string | null;
+    organizationId: string | null;
+    organizationSlug: string | null;
+    securityLevel: string;
+    isCredentialsUser: boolean;
+    provider: string;
+    twoFactorEnabled: boolean;
+    lastAccessedAt: Date | null;
+    deviceInfo: {
+      name: string | null;
+      type: string | null;
+      fingerprint: string | null;
+    } | null;
+    geolocation: {
+      country: string | null;
+      city: string | null;
+      timezone: string | null;
+    } | null;
+    riskScore: number;
+  };
+}
+
+// ============================================
+// NO NEXTAUTH OR DATABASE IMPORTS!
+// ============================================

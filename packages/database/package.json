@@ -4,12 +4,29 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "drizzle"
+  ],
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --watch",
+    "clean": "rm -rf dist",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/scripts/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:reset": "drizzle-kit drop && drizzle-kit push",
     "generate": "drizzle-kit generate",
     "push": "drizzle-kit push",
     "migrate": "drizzle-kit migrate",
@@ -33,5 +50,8 @@
     "prettier": "^3.6.2",
     "tsx": "^4.19.1",
     "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
   }
 }

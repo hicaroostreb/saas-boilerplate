@@ -317,7 +317,7 @@ async function main() {
 DATABASE_URL="${DATABASE_URL}"
 
 # Auth.js / NextAuth  
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:3001"
 NEXTAUTH_SECRET="${AUTH_SECRET}"
 AUTH_SECRET="${AUTH_SECRET}"
 

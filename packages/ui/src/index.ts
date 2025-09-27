@@ -1,18 +1,20 @@
 // Layout components
 export * from "./layout/header";
 
-// Auth components
-export * from "./auth/signup-form";
-export * from "./auth/signin-form";
+// Auth components  
 export * from "./auth/forgot-password-form";
 export * from "./auth/reset-password-form";
+export * from "./auth/signin-form";
+export * from "./auth/signup-form";
 
-// Components
+// UI components
 export * from "./components/password-strength";
 export * from "./components/sonner";
-
-// Theme components
 export * from "./components/theme-toggle";
+export * from "./components/theme-switcher";
 
-// Utility functions
+// Dashboard Components
+export * from './components/dashboard';
+
+// Utility exports
 export * from "./lib/utils";

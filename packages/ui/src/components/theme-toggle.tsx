@@ -2,12 +2,20 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
+import { cn } from "../lib/utils";
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  className?: string;
+}
+
+export function ThemeToggle({ className }: ThemeToggleProps = {}) {
   const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Inicializar tema na montagem do componente
   useEffect(() => {
+    setMounted(true);
+    
     const theme = localStorage.getItem('theme');
     const isDarkMode = theme === 'dark' || 
       (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -16,8 +24,10 @@ export function ThemeToggle() {
     
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#000000';
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.backgroundColor = '#ffffff';
     }
   }, []);
 
@@ -27,17 +37,27 @@ export function ThemeToggle() {
     
     if (newTheme) {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#000000';
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.backgroundColor = '#ffffff';
       localStorage.setItem('theme', 'light');
     }
   };
 
+  // Não renderizar até montar (evita hydration mismatch)
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <button
       onClick={toggleTheme}
-      className="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground size-9 bg-background fixed bottom-2 right-2 rounded-full"
+      className={cn(
+        "inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground size-9 bg-background",
+        className
+      )}
     >
       {/* Sun Icon */}
       <svg
