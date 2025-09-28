@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+echo "í¿—ï¸ Running pre-push build verification..."
+pnpm qa:build

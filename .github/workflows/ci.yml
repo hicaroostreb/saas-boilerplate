@@ -1,14 +1,23 @@
-name: CI Pipeline
-on: [push, pull_request]
+name: Enterprise CI Pipeline
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Weekly security audit (Sundays at midnight UTC)
+    - cron: "0 0 * * 0"
 
 jobs:
-  requirements-check:
+  quality-assurance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v2
         with:
           version: 9.12.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: "18.17.0"
@@ -17,11 +26,33 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Requirements Check (Strict)
-        run: pnpm check:requirements:strict
+      - name: Quality Assurance (CI)
+        run: pnpm qa:ci
 
-      - name: Build
-        run: pnpm build
+  security-audit:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 0 * * 0'
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Test
-        run: pnpm test:e2e
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18.17.0"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Security Audit (Weekly)
+        run: pnpm qa:security
+
+      - name: Create Security Report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-report
+          path: audit-report.json

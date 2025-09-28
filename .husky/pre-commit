@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+echo "íº€ Running pre-commit quality checks..."
+pnpm qa:fast
