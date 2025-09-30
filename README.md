@@ -1,265 +1,164 @@
-# SaaS Boilerplate Enterprise Monorepo
+# SaaS Boilerplate - Guia Técnico do Desenvolvedor
 
-This is a **Turborepo monorepo** for building SaaS applications with modular packages for authentication, payments, and database management. Built with **Next.js 15**, **Stripe**, and **PostgreSQL**.
+Este repositório é um monorepo Turborepo para o desenvolvimento de aplicações SaaS.
 
-## Features
-
-- 🏗️ **Monorepo architecture** with Turborepo for scalable development
-- 🔐 **Modular authentication** package with Auth.js v5
-- 💳 **Stripe payments** package with subscriptions support
-- 🗄️ **Database package** with Drizzle ORM and PostgreSQL
-- 👥 **Multi-tenancy** with organizations and role-based access control
-- 📊 **Activity logging** system for user events
-- 🎯 **Type-safe** with TypeScript across all packages
-- 🔄 **Smart seeding** system (idempotent database setup)
-- ✅ **Enterprise quality** - 0 lint errors, production ready
-
-## Architecture
+## Estrutura do Monorepo
 
 ```
 saas-boilerplate/
 ├── packages/
-│   ├── @workspace/auth          # Authentication logic and middleware
-│   ├── @workspace/billing       # Stripe integration and billing
-│   ├── @workspace/database      # Database schema, migrations, and queries
-│   ├── @workspace/ui            # Shared UI components
-│   ├── @workspace/common        # Shared utilities and types
-│   ├── @workspace/routes        # Route definitions
+│   ├── @workspace/auth          # Lógica de autenticação (Auth.js v5)
+│   ├── @workspace/billing       # Integração com Stripe
+│   ├── @workspace/database      # Schema (Drizzle ORM), migrações e queries
+│   ├── @workspace/ui            # Componentes de UI compartilhados (shadcn/ui)
+│   ├── @workspace/common        # Utilitários e tipos compartilhados
 │   └── tooling/
-│       ├── eslint-config        # Enterprise ESLint configuration
-│       ├── prettier-config      # Code formatting standards
-│       ├── tailwind-config      # Design system configuration
-│       ├── typescript-config    # TypeScript configurations
-│       └── requirements-check   # Setup validation tool
+│       ├── eslint-config        # Configuração do ESLint
+│       ├── prettier-config      # Configuração do Prettier
+│       ├── tailwind-config      # Configuração do Tailwind CSS
+│       └── typescript-config    # Configuração do TypeScript
 └── apps/
-    ├── dashboard/               # Main SaaS application (Port 3001)
-    └── marketing/               # Landing page (Port 3000)
+    ├── dashboard/               # Aplicação principal (localhost:3001)
+    └── marketing/               # Landing page (localhost:3000)
 ```
 
-## Tech Stack
+## Setup do Ambiente
 
-- **Monorepo**: [Turborepo](https://turbo.build/)
-- **Framework**: [Next.js 15](https://nextjs.org/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/) + [Drizzle ORM](https://orm.drizzle.team/)
-- **Authentication**: [Auth.js v5](https://authjs.dev/)
-- **Payments**: [Stripe](https://stripe.com/)
-- **Package Manager**: [pnpm](https://pnpm.io/)
+### Pré-requisitos
 
-## Getting Started
+*   **Node.js v18+**
+*   **pnpm** (`npm install -g pnpm`)
+*   **Docker** (Para banco de dados PostgreSQL local)
+*   **Stripe CLI** (Para webhooks locais)
+
+### 1. Instalação e Configuração
+
+O script de setup automatizado é o método recomendado. Ele validará os pré-requisitos, configurará o banco de dados, chaves de API e gerará os arquivos `.env`.
 
 ```bash
+# Clone o repositório
 git clone <your-repo-url>
 cd saas-boilerplate
-```
 
-### Automated Setup (Recommended)
-
-Use the included setup script to configure everything automatically:
-
-```bash
+# Execute o setup automatizado
 node scripts/setup.js
 ```
 
-The setup script will guide you through:
+### 2. Rodando Localmente
 
-1. **Prerequisites Check** - Validates Node.js 18+, pnpm, Docker
-2. **Stripe CLI Setup** - Checks installation and authentication
-3. **Database Setup** - Local Docker PostgreSQL or remote database
-4. **Stripe Integration** - Secret key input and webhook creation
-5. **Environment Configuration** - Auto-generates `.env.local`
-6. **Monorepo Build** - Installs dependencies and builds packages
-7. **Database Schema** - Generates, pushes schema, and seeds data
-8. **Quality Validation** - Runs lint, type-check, and format checks
-
-### Manual Setup
-
-If you prefer manual setup:
+Após o setup, inicie todos os aplicativos e pacotes em modo de desenvolvimento.
 
 ```bash
-# 1. Install dependencies
-pnpm install
+pnpm dev
+```
+*   **Marketing App**: `http://localhost:3000`
+*   **Dashboard App**: `http://localhost:3001`
 
-# 2. Check requirements
-pnpm check:requirements
+### Credenciais de Teste Padrão
 
-# 3. Build packages in order
-pnpm --filter "@workspace/database" run build
-pnpm --filter "@workspace/auth" run build
-pnpm --filter "@workspace/ui" run build
-pnpm --filter "@workspace/billing" run build
+*   **Email**: `test@test.com`
+*   **Password**: `admin123`
 
-# 4. Setup database
+---
+
+## Fluxo de Trabalho e Padrões de Qualidade
+
+Este projeto segue padrões enterprise rigorosos para garantir a qualidade e a manutenibilidade do código.
+
+### 1. Nomenclatura de Branches
+
+Siga o padrão `type/scope/short-description` para todas as branches.
+
+*   **`type`**: `refactor`, `feat`, `fix`, `chore`, `docs`.
+*   **`scope`**: Nome do pacote ou área afetada (`database`, `auth`, `ui`, `ci`).
+*   **`short-description`**: Descrição curta em kebab-case (ex: `create-user-repository`).
+
+**Exemplos:**
+*   `refactor/database/create-user-repository`
+*   `feat/billing/implement-subscription-cancel`
+*   `fix/ui/correct-button-variant-color`
+
+### 2. Ciclo de Verificação de Qualidade (Ordem Obrigatória)
+
+Todos os Pull Requests **devem passar** nos seguintes checks. Execute-os localmente para validar seu trabalho antes do push.
+
+```bash
+# 1. Formata todo o código (o mais rápido)
+pnpm format
+
+# 2. Encontra erros de qualidade de código
+pnpm lint
+
+# 3. Valida os tipos do TypeScript
+pnpm typecheck
+
+# 4. Roda testes unitários/integração
+pnpm test
+
+# 5. Compila a aplicação para produção (o mais lento)
+pnpm build
+```
+
+O pipeline de CI/CD executará esta sequência exata. Código que não passa em qualquer uma dessas etapas não será mesclado.
+
+---
+
+## Comandos Úteis
+
+### Comandos Gerais (via Turborepo)
+```bash
+# Iniciar todos os apps em modo de desenvolvimento
+pnpm dev
+
+# Construir todos os pacotes e apps para produção
+pnpm build
+
+# Rodar todos os testes
+pnpm test
+
+# Limpar todos os artefatos de build (node_modules, .turbo, dist)
+pnpm clean
+```
+
+### Operações de Banco de Dados (`@workspace/database`)
+```bash
+# Gerar um novo arquivo de migração a partir das mudanças no schema
+pnpm --filter "@workspace/database" run generate
+
+# Aplicar as migrações e empurrar o schema para o banco de dados
 pnpm --filter "@workspace/database" run push
+
+# Popular o banco de dados com dados de teste (idempotente)
 pnpm --filter "@workspace/database" run seed
 
-# 5. Start development
-pnpm turbo dev
+# Abrir o Drizzle Studio para visualizar e editar os dados
+pnpm --filter "@workspace/database" run studio
 ```
 
-## Prerequisites
-
-Before setup, ensure you have:
-
-- **Node.js 18+** - JavaScript runtime
-- **pnpm** - Package manager (`npm install -g pnpm`)
-- **Docker** - For local PostgreSQL (optional)
-- **Stripe CLI** - For webhook handling (`https://docs.stripe.com/stripe-cli`)
-
-## Running Locally
-
-After setup, start the development servers:
-
-```bash
-pnpm turbo dev
-```
-
-- **Marketing**: http://localhost:3000 (Landing page)
-- **Dashboard**: http://localhost:3001 (Main SaaS app)
-
-## Default Credentials
-
-After setup, use these test credentials:
-
-- **Email**: `test@test.com`
-- **Password**: `admin123`
-
-## Development Commands
-
-```bash
-# Start development servers
-pnpm turbo dev
-
-# Build all packages
-pnpm turbo build
-
-# Run quality checks (enterprise-grade)
-pnpm turbo lint        # 0 errors, 0 warnings
-pnpm turbo type-check  # 100% TypeScript validation
-pnpm turbo format      # Auto-format code
-
-# Database operations
-pnpm --filter "@workspace/database" run generate  # Generate migrations
-pnpm --filter "@workspace/database" run push      # Push schema changes
-pnpm --filter "@workspace/database" run seed      # Seed test data
-pnpm --filter "@workspace/database" run studio    # Open database studio
-
-# Package-specific commands
-pnpm --filter "@workspace/auth" run build
-pnpm --filter "@workspace/ui" run dev
-pnpm --filter "@workspace/requirements-check" run check
-```
-
-## Testing Stripe Payments
-
-Use the following test card details:
-
-- **Card Number**: `4242 4242 4242 4242`
-- **Expiration**: Any future date
-- **CVC**: Any 3-digit number
-
-## Local Stripe Webhooks
-
-The setup script automatically configures webhooks, or run manually:
-
+### Webhooks do Stripe
+O setup automatizado lida com isso. Para rodar manualmente, use o comando fornecido pelo Stripe CLI após o login, encaminhando para a porta da sua aplicação (neste caso, `3000` para a API route).
 ```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-## Database Schema
+---
 
-The database includes tables for:
+## Deployment em Produção
 
-- **Users** - Authentication and user profiles
-- **Organizations** - Multi-tenant organization structure
-- **Members** - Role-based organization membership
-- **Activity Logs** - User action tracking and audit trails
-- **Invitations** - Organization invitation system
-- **Stripe Integration** - Customer, subscription, and product data
-
-## Package Details
-
-### `@workspace/database`
-- Drizzle ORM configuration with PostgreSQL
-- Database schema definitions and relations
-- Migration scripts and seed data
-- Reusable queries and database utilities
-
-### `@workspace/auth`
-- Auth.js v5 configuration and providers
-- Authentication middleware and session management
-- Protected route utilities and role validation
-- User registration and login flows
-
-### `@workspace/billing`
-- Stripe API integration and webhook handling
-- Subscription management and billing logic
-- Payment flow utilities and checkout sessions
-- Customer portal and invoice management
-
-### `@workspace/ui`
-- Shared UI components with Tailwind CSS
-- Form components with validation
-- Consistent design system
-- shadcn/ui integration
-
-### `@workspace/common`
-- Shared TypeScript types and utilities
-- Validation schemas with Zod
-- Error handling and formatting utilities
-- Constants and configuration
-
-## Going to Production
-
-### Environment Variables
-
-Set these in your production environment:
-
-```env
-DATABASE_URL="your-production-postgres-url"
-NEXTAUTH_URL="https://yourdomain.com"
-NEXTAUTH_SECRET="production-secret-key"
-AUTH_SECRET="production-secret-key"
-STRIPE_SECRET_KEY="sk_live_..."
-STRIPE_WEBHOOK_SECRET="whsec_production_webhook"
-NEXT_PUBLIC_APP_URL="https://yourdomain.com"
-NEXT_PUBLIC_APP_NAME="Your SaaS Name"
-```
-
-### Deployment Steps
-
-1. **Set up production database** (PostgreSQL on Vercel, Supabase, etc.)
-2. **Configure Stripe production webhooks** with your domain
-3. **Deploy to your platform** (Vercel, Railway, Fly.io, etc.)
-4. **Run database setup** in production:
-   ```bash
-   pnpm --filter "@workspace/database" run push
-   pnpm --filter "@workspace/database" run seed
-   ```
-
-## Enterprise Quality
-
-This monorepo maintains enterprise-grade quality standards:
-
-- ✅ **Zero lint errors** with strict ESLint configuration
-- 🎯 **100% type safety** with strict TypeScript
-- 📐 **Consistent formatting** with Prettier
-- 🔍 **Automated validation** with requirements check
-- 🚀 **Production ready** with optimized builds
-
-## Contributing
-
-This boilerplate follows these principles:
-
-- 📝 **Conventional commits** for clear changelog
-- 🧪 **Test coverage** for critical paths
-- 📚 **Documentation** for all public APIs
-- 🔍 **Type safety** with strict TypeScript
-- ✅ **Quality gates** - All checks must pass
-
-## License
-
-MIT License - feel free to use this boilerplate for your SaaS projects!
-
-***
-
-**Built with ❤️ using Turborepo for scalable SaaS development**
+1.  **Variáveis de Ambiente:** Crie um arquivo `.env.production.local` ou configure as seguintes variáveis no seu provedor de hosting (Vercel, Railway, etc.):
+    ```env
+    DATABASE_URL="postgres://user:pass@host:port/db"
+    NEXTAUTH_URL="https://yourdomain.com"
+    NEXTAUTH_SECRET="gere_uma_chave_segura_com_openssl"
+    AUTH_SECRET="use_a_mesma_chave_acima"
+    STRIPE_SECRET_KEY="sk_live_..."
+    STRIPE_WEBHOOK_SECRET="whsec_..."
+    # ... outras variáveis necessárias
+    ```
+2.  **Configurar Webhook de Produção:** No dashboard do Stripe, aponte o webhook para `https://yourdomain.com/api/stripe/webhook`.
+3.  **Deploy:** Faça o deploy para a sua plataforma de preferência.
+4.  **Setup do Banco de Dados em Produção:** Execute os comandos de push e seed no ambiente de produção (a maioria das plataformas permite rodar comandos de build/release).
+    ```bash
+    pnpm --filter "@workspace/database" run push
+    # pnpm --filter "@workspace/database" run seed  // Opcional, se precisar de dados iniciais
+    ```

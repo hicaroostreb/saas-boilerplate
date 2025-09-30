@@ -38,13 +38,17 @@ if (!envLoaded) {
 }
 
 // ============================================
-// IMPORTS
+// IMPORTS - ✅ FIXED: Updated import paths
 // ============================================
 
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-import { closeConnection, db, healthCheck } from '../client.js';
-import { authAuditLogs, memberships, organizations, users } from '../schema.js';
+// ✅ FIXED: Import from new connection structure
+import { closeConnection, db, healthCheck } from '../connection/index.js';
+// ✅ FIXED: Import from new schemas structure
+import { users } from '../schemas/auth/index.js';
+import { memberships, organizations } from '../schemas/business/index.js';
+import { authAuditLogs } from '../schemas/security/index.js';
 
 // ============================================
 // MINIMAL SEED CONFIGURATION
@@ -113,44 +117,26 @@ async function seed() {
 
       // ✅ ENTERPRISE: Account status
       isActive: true,
+      isSuperAdmin: false,
+      isEmailVerified: true,
       lastLoginAt: null,
-
-      // ✅ ENTERPRISE: Security settings
-      twoFactorEnabled: SEED_DATA.user.twoFactorEnabled,
-      twoFactorSecret: null,
-      backupCodes: null,
-      securityLevel: SEED_DATA.user.securityLevel,
-
-      // ✅ ENTERPRISE: Password management
-      passwordChangedAt: now,
-      accountLockedAt: null,
-      accountLockedUntil: null,
-      failedLoginAttempts: 0,
+      lastLoginIp: null,
+      loginAttempts: '0',
+      lockedUntil: null,
 
       // ✅ ENTERPRISE: User preferences & metadata
-      preferences: {
-        theme: 'system',
-        language: 'en',
-        notifications: {
-          email: true,
-          push: true,
-          security: true,
-        },
-        privacy: {
-          profileVisible: true,
-          activityVisible: false,
-        },
-      },
-      metadata: {
-        source: 'seed',
-        createdBy: 'system',
-        initialSecurityLevel: SEED_DATA.user.securityLevel,
-        seedVersion: '1.0.0',
-      },
+      firstName: null,
+      lastName: null,
+      avatarUrl: null,
+      timezone: 'UTC',
+      locale: 'en',
+      emailNotifications: true,
+      marketingEmails: false,
 
       // ✅ ENTERPRISE: Timestamps
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     };
 
     const [testUser] = await db
@@ -158,7 +144,15 @@ async function seed() {
       .values(testUserRecord)
       .returning();
 
-    console.log(`  ✅ User created: ${testUser.email} (ID: ${testUser.id})`);
+    // ✅ CORRIGIDO: Verificação para testUser possivelmente undefined
+    if (testUser) {
+      console.log(`  ✅ User created: ${testUser.email} (ID: ${testUser.id})`);
+    }
+
+    // ✅ CORRIGIDO: Verificação para testUser antes de usar
+    if (!testUser) {
+      throw new Error('Failed to create test user');
+    }
 
     // ✅ ENTERPRISE: Create single test organization
     console.log('🏢 Creating test organization...');
@@ -172,64 +166,31 @@ async function seed() {
       ownerId: testUser.id,
 
       // ✅ ENTERPRISE: Branding & customization
-      logo: null,
+      logoUrl: null,
       website: null,
-      primaryColor: '#3b82f6', // Default blue
+      brandColor: '#3b82f6', // Default blue
 
-      // ✅ ENTERPRISE: Subscription & billing
-      planName: SEED_DATA.organization.planName,
-      subscriptionStatus: SEED_DATA.organization.subscriptionStatus,
-      subscriptionId: null,
-      billingEmail: null,
-      billingAddress: null,
+      // ✅ ENTERPRISE: Settings
+      isPublic: false,
+      allowJoinRequests: false,
+      requireApproval: true,
+      memberLimit: SEED_DATA.organization.maxMembers,
+      projectLimit: SEED_DATA.organization.maxProjects,
+      storageLimit: SEED_DATA.organization.maxStorage * 1024 * 1024, // Convert MB to bytes
+
+      // ✅ ENTERPRISE: Contact & billing
+      contactEmail: null,
+      contactPhone: null,
+      address: null,
       taxId: null,
+      industry: null,
+      companySize: null,
+      planType: SEED_DATA.organization.planName,
+      billingEmail: null,
 
-      // ✅ ENTERPRISE: Resource limits
-      maxMembers: SEED_DATA.organization.maxMembers,
-      maxProjects: SEED_DATA.organization.maxProjects,
-      maxStorage: SEED_DATA.organization.maxStorage,
-
-      // ✅ ENTERPRISE: Current usage
-      currentMembers: 1, // Just the owner
-      currentProjects: 0,
-      currentStorage: 0,
-
-      // ✅ ENTERPRISE: Organization status
+      // ✅ ENTERPRISE: Status
       isActive: true,
       isVerified: true,
-      isSuspended: false,
-      suspendedAt: null,
-      suspendedReason: null,
-
-      // ✅ ENTERPRISE: Settings & policies
-      settings: {
-        allowPublicSignup: false,
-        requireEmailVerification: true,
-        enforceSSO: false,
-        allowGuests: true,
-        defaultMemberRole: 'member',
-        sessionTimeout: 30 * 24 * 60 * 60, // 30 days
-      },
-      features: {
-        advancedReporting: false, // Free plan
-        customBranding: false, // Free plan
-        prioritySupport: false, // Free plan
-        apiAccess: false, // Free plan
-        webhooks: false, // Free plan
-        singleSignOn: false, // Free plan
-        auditLogs: false, // Free plan
-      },
-      securityPolicy: {
-        passwordMinLength: 8,
-        passwordRequireSpecial: true,
-        passwordRequireNumbers: true,
-        passwordRequireUppercase: true,
-        passwordMaxAge: 90, // days
-        sessionMaxAge: 30, // days
-        mfaRequired: false,
-        ipWhitelisting: false,
-        allowedDomains: null,
-      },
 
       // ✅ ENTERPRISE: Metadata
       metadata: {
@@ -242,6 +203,7 @@ async function seed() {
       // ✅ ENTERPRISE: Timestamps
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     };
 
     const [testOrg] = await db
@@ -249,9 +211,17 @@ async function seed() {
       .values(testOrgRecord)
       .returning();
 
-    console.log(
-      `  ✅ Organization created: ${testOrg.name} (ID: ${testOrg.id})`
-    );
+    // ✅ CORRIGIDO: Verificação para testOrg possivelmente undefined
+    if (testOrg) {
+      console.log(
+        `  ✅ Organization created: ${testOrg.name} (ID: ${testOrg.id})`
+      );
+    }
+
+    // ✅ CORRIGIDO: Verificação para testOrg antes de usar
+    if (!testOrg) {
+      throw new Error('Failed to create test organization');
+    }
 
     // ✅ ENTERPRISE: Create owner membership
     console.log('👥 Creating owner membership...');
@@ -261,19 +231,26 @@ async function seed() {
       id: membershipId,
       userId: testUser.id,
       organizationId: testOrg.id,
+
       role: 'owner' as const,
 
       // ✅ ENTERPRISE: Permissions & access
-      permissions: null, // Uses default owner permissions
-      customPermissions: null,
-
-      // ✅ ENTERPRISE: Invitation & joining
-      invitedBy: null, // Self-created as owner
-      invitedAt: null,
-      joinedAt: now,
+      permissions: null,
 
       // ✅ ENTERPRISE: Status
-      isActive: true,
+      status: 'active' as const,
+
+      // ✅ ENTERPRISE: Invitation & joining
+      invitedBy: null,
+      invitedAt: null,
+      acceptedAt: now,
+
+      // ✅ ENTERPRISE: Activity
+      lastActivityAt: null,
+
+      // ✅ ENTERPRISE: Custom fields
+      title: null,
+      department: null,
 
       // ✅ ENTERPRISE: Metadata
       metadata: {
@@ -286,6 +263,7 @@ async function seed() {
       // ✅ ENTERPRISE: Timestamps
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     };
 
     const [membership] = await db
@@ -293,58 +271,68 @@ async function seed() {
       .values(membershipRecord)
       .returning();
 
-    console.log(
-      `  ✅ Membership created: ${testUser.name} as ${membership.role}`
-    );
+    // ✅ CORRIGIDO: Verificação para membership possivelmente undefined
+    if (membership) {
+      console.log(
+        `  ✅ Membership created: ${testUser.name} as ${membership.role}`
+      );
+    }
 
     // ✅ ENTERPRISE: Create audit log for seed operation
     console.log('📊 Creating audit trail...');
     const auditLogRecord = {
       id: randomUUID(),
       userId: testUser.id,
-      sessionToken: null,
       organizationId: testOrg.id,
 
       // ✅ ENTERPRISE: Event classification
-      eventType: 'login' as const,
-      eventAction: 'seed_data_created',
-      eventStatus: 'success' as const,
-      eventCategory: 'admin' as const,
+      eventType: 'login_success' as const, // Era 'login', agora 'login_success'
+      riskLevel: 'low' as const,
 
       // ✅ ENTERPRISE: Context
       ipAddress: '127.0.0.1',
       userAgent: 'seed-script',
-      deviceFingerprint: null,
-      deviceInfo: null,
 
       // ✅ ENTERPRISE: Location
       country: null,
+      region: null,
       city: null,
-      timezone: null,
 
-      // ✅ ENTERPRISE: Security
-      riskScore: 0,
-      riskFactors: null,
-      securityFlags: null,
+      // ✅ ENTERPRISE: Device info
+      deviceId: null,
+      deviceType: null,
+      browserName: null,
+      browserVersion: null,
+      osName: null,
+      osVersion: null,
+
+      // ✅ ENTERPRISE: Session
+      sessionId: null,
+      sessionToken: null,
 
       // ✅ ENTERPRISE: Event data
-      eventData: {
-        source: 'seed',
-        operation: 'minimal_seed_complete',
+      success: true,
+      errorCode: null,
+      errorMessage: null,
+      resource: 'seed-operation',
+      action: 'minimal_seed_complete',
+
+      // ✅ ENTERPRISE: Raw data
+      requestHeaders: null,
+      responseData: {
         userEmail: testUser.email,
         organizationSlug: testOrg.slug,
         seedVersion: '1.0.0',
+      },
+      metadata: {
+        source: 'seed',
+        operation: 'minimal_seed_complete',
         timestamp: now.toISOString(),
       },
-      errorCode: null,
-      errorMessage: null,
 
-      // ✅ ENTERPRISE: Processing
-      timestamp: now,
-      source: 'seed-script',
-      requestId: null,
-      processed: true,
-      alertsSent: null,
+      // ✅ ENTERPRISE: Timestamps
+      createdAt: now,
+      expiresAt: null,
     };
 
     await db.insert(authAuditLogs).values(auditLogRecord);
@@ -365,33 +353,11 @@ async function seed() {
     console.log(`   📧 Email: ${SEED_DATA.user.email}`);
     console.log(`   🔒 Password: ${SEED_DATA.user.password}`);
     console.log(`   👑 Role: Owner`);
-    console.log(`   🛡️  Security Level: ${SEED_DATA.user.securityLevel}`);
-    console.log(
-      `   🔐 Two-Factor: ${SEED_DATA.user.twoFactorEnabled ? 'Enabled' : 'Disabled'}`
-    );
     console.log('');
     console.log('🏢 ORGANIZATION:');
     console.log(`   📛 Name: ${SEED_DATA.organization.name}`);
     console.log(`   🔗 Slug: ${SEED_DATA.organization.slug}`);
     console.log(`   📦 Plan: ${SEED_DATA.organization.planName}`);
-    console.log(`   ✅ Status: ${SEED_DATA.organization.subscriptionStatus}`);
-    console.log(`   👥 Max Members: ${SEED_DATA.organization.maxMembers}`);
-    console.log(`   📊 Max Projects: ${SEED_DATA.organization.maxProjects}`);
-    console.log(`   💾 Max Storage: ${SEED_DATA.organization.maxStorage}MB`);
-    console.log('');
-    console.log('🌐 ACCESS URLS:');
-    console.log('   🔐 Sign In: http://localhost:3001/auth/sign-in');
-    console.log('   🏠 Dashboard: http://localhost:3001/dashboard');
-    console.log(
-      `   📊 Organization: http://localhost:3001/${SEED_DATA.organization.slug}`
-    );
-    console.log('');
-    console.log('🛡️  ENTERPRISE FEATURES:');
-    console.log('   ✅ Enhanced user security');
-    console.log('   ✅ Organization-based access');
-    console.log('   ✅ Comprehensive audit logging');
-    console.log('   ✅ Enterprise-grade password policies');
-    console.log('   ✅ Resource usage tracking');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   } catch (error) {
     console.error('❌ Enterprise minimal seeding failed:', error);
@@ -404,41 +370,6 @@ async function seed() {
       });
     }
 
-    // ✅ ENTERPRISE: Enhanced error handling
-    if (error && typeof error === 'object' && 'code' in error) {
-      const dbError = error as any;
-
-      switch (dbError.code) {
-        case '23505':
-          console.error('🚫 Duplicate key error - data might already exist');
-          console.log(
-            '💡 Tip: Clear your database or use different email/slug values'
-          );
-          console.log(
-            "💡 Run: DELETE FROM users WHERE email = 'test@test.com';"
-          );
-          break;
-        case '23503':
-          console.error('🔗 Foreign key constraint error');
-          console.log(
-            '💡 Tip: Check table dependencies and schema consistency'
-          );
-          break;
-        case '42P01':
-          console.error('🗃️  Table does not exist error');
-          console.log('💡 Tip: Run database migrations first: pnpm db:push');
-          break;
-        case '42703':
-          console.error('🏗️  Column does not exist error');
-          console.log(
-            '💡 Tip: Update your database schema to match the latest version'
-          );
-          break;
-        default:
-          console.error(`🔍 Database error code: ${dbError.code}`);
-      }
-    }
-
     process.exit(1);
   } finally {
     console.log('🔌 Closing database connection...');
@@ -446,6 +377,15 @@ async function seed() {
   }
 
   process.exit(0);
+}
+
+// ============================================
+// EXPORT FOR SEEDER FRAMEWORK
+// ============================================
+
+export { seed };
+export async function runScript(): Promise<void> {
+  return seed();
 }
 
 // ============================================
@@ -480,8 +420,11 @@ process.on('SIGTERM', async () => {
 // Execute seed with comprehensive error handling
 console.log('🚀 Initializing Achromatic Enterprise minimal seed process...');
 
-seed().catch(async error => {
-  console.error('❌ Unexpected error during enterprise seeding:', error);
-  await closeConnection();
-  process.exit(1);
-});
+// ✅ FIXED: Only run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed().catch(async error => {
+    console.error('❌ Unexpected error during enterprise seeding:', error);
+    await closeConnection();
+    process.exit(1);
+  });
+}

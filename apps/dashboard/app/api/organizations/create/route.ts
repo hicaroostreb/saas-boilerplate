@@ -1,16 +1,19 @@
 // apps/dashboard/app/api/organizations/create/route.ts - ACHROMATIC ENTERPRISE ORGANIZATION CREATION
 
-import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { db, organizations, memberships } from '@workspace/database';
-import { eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { getServerSession } from '@workspace/auth/server';
+import { db, memberships, organizations } from '@workspace/database';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const createOrgSchema = z.object({
   name: z.string().min(1).max(64),
-  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^[a-z0-9-]+$/),
   includeExampleData: z.string().transform(val => val === 'true'),
 });
 
@@ -20,7 +23,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        {
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        },
         { status: 401 }
       );
     }
@@ -36,7 +42,13 @@ export async function POST(request: NextRequest) {
     const validation = createOrgSchema.safeParse(data);
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: validation.error.issues[0]?.message } },
+        {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: validation.error.issues[0]?.message,
+          },
+        },
         { status: 400 }
       );
     }
@@ -52,7 +64,13 @@ export async function POST(request: NextRequest) {
 
     if (existingOrg) {
       return NextResponse.json(
-        { success: false, error: { code: 'SLUG_EXISTS', message: 'This organization name is already taken' } },
+        {
+          success: false,
+          error: {
+            code: 'SLUG_EXISTS',
+            message: 'This organization name is already taken',
+          },
+        },
         { status: 409 }
       );
     }
@@ -61,29 +79,32 @@ export async function POST(request: NextRequest) {
     const organizationId = randomUUID();
     const now = new Date();
 
-    const [createdOrg] = await db.insert(organizations).values({
-      id: organizationId,
-      name,
-      slug,
-      ownerId: session.user.id,
-      isActive: true,
-      isVerified: true,
-      maxMembers: 10,
-      maxProjects: 5,
-      maxStorage: 1024 * 1024 * 1024, // 1GB
-      currentMembers: 1,
-      currentProjects: 0,
-      currentStorage: 0,
-      settings: {
-        includeExampleData,
-      },
-      createdAt: now,
-      updatedAt: now,
-    }).returning({
-      id: organizations.id,
-      name: organizations.name,
-      slug: organizations.slug,
-    });
+    const [createdOrg] = await db
+      .insert(organizations)
+      .values({
+        id: organizationId,
+        name,
+        slug,
+        ownerId: session.user.id,
+        isActive: true,
+        isVerified: true,
+        maxMembers: 10,
+        maxProjects: 5,
+        maxStorage: 1024 * 1024 * 1024, // 1GB
+        currentMembers: 1,
+        currentProjects: 0,
+        currentStorage: 0,
+        settings: {
+          includeExampleData,
+        },
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({
+        id: organizations.id,
+        name: organizations.name,
+        slug: organizations.slug,
+      });
 
     // ✅ CORREÇÃO: Create owner membership com campos obrigatórios
     await db.insert(memberships).values({
@@ -110,11 +131,16 @@ export async function POST(request: NextRequest) {
       organization: createdOrg,
       message: 'Organization created successfully',
     });
-
   } catch (error) {
     console.error('❌ ACHROMATIC: Organization creation error:', error);
     return NextResponse.json(
-      { success: false, error: { code: 'SYSTEM_ERROR', message: 'An unexpected error occurred' } },
+      {
+        success: false,
+        error: {
+          code: 'SYSTEM_ERROR',
+          message: 'An unexpected error occurred',
+        },
+      },
       { status: 500 }
     );
   }

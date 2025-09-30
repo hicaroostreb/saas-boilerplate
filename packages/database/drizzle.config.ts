@@ -1,12 +1,46 @@
 import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
-import path from 'path';
 
-// ✅ Carregar .env.local da raiz do projeto
-config({ path: path.resolve(__dirname, '../../.env.local') });
+// ============================================
+// ENVIRONMENT CONFIGURATION - ✅ FIXED: No __dirname
+// ============================================
+
+// ✅ ENTERPRISE: Multi-path .env loading strategy (ESM compatible)
+const envPaths = [
+  '../../.env.local', // From packages/database
+  '../../../.env.local', // Alternative depth
+  '.env.local', // Current directory
+];
+
+// Load environment with fallback strategy
+let envLoaded = false;
+for (const envPath of envPaths) {
+  try {
+    config({ path: envPath, override: false });
+    if (process.env.DATABASE_URL) {
+      console.log(`✅ Drizzle config loaded env from: ${envPath}`);
+      envLoaded = true;
+      break;
+    }
+  } catch (error) {
+    continue; // Try next path
+  }
+}
+
+if (!envLoaded) {
+  console.warn(
+    '⚠️  Drizzle config: No .env.local found, using system env vars'
+  );
+}
+
+// ============================================
+// DRIZZLE CONFIGURATION
+// ============================================
 
 export default defineConfig({
-  schema: './src/schema.ts',
+  // ✅ FIXED: New enterprise schema structure
+  schema: './src/schemas/index.ts', // Single entry point for all domains
+
   out: './drizzle',
   dialect: 'postgresql',
 
@@ -14,36 +48,70 @@ export default defineConfig({
     url: process.env.DATABASE_URL!,
   },
 
-  // ✅ ENTERPRISE: Configuration otimizadas
+  // ✅ ENTERPRISE: Environment-aware configuration
   verbose: process.env.NODE_ENV === 'development',
   strict: true,
 
-  // ✅ MIGRATIONS: Configurações robustas
+  // ✅ MIGRATIONS: Enhanced configuration
   migrations: {
-    table: 'drizzle_migrations',
+    table: '__drizzle_migrations', // Prefix to avoid conflicts
     schema: 'public',
   },
 
-  // ✅ INTROSPECTION: Para sync com banco existente
+  // ✅ INTROSPECTION: For sync with existing database
   introspect: {
     casing: 'snake_case',
   },
 
-  // ✅ TABLESFILTER: Evitar conflitos com outras tabelas
+  // ✅ ENTERPRISE: Comprehensive tables filter (updated)
   tablesFilter: [
+    // Auth domain
     'user',
     'account',
     'session',
     'verificationToken',
+
+    // Business domain
     'organizations',
     'memberships',
     'invitations',
     'projects',
     'contacts',
-    'activity_logs',
+
+    // Security domain
+    'auth_audit_logs',
+    'rate_limits',
     'password_reset_tokens',
+
+    // Activity domain
+    'activity_logs',
+
+    // System tables
+    '__drizzle_migrations',
   ],
 
-  // ✅ SCHEMA GENERATION: Para melhor DX
+  // ✅ SCHEMA GENERATION: Production-ready settings
   schemaFilter: ['public'],
+
+  // ✅ ENTERPRISE: Additional optimizations
+  breakpoints: true, // Enable migration breakpoints
 });
+
+// ============================================
+// CONFIGURATION VALIDATION
+// ============================================
+
+// Validate required environment variables
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is required');
+  process.exit(1);
+}
+
+// Log configuration summary in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Drizzle Kit Configuration:');
+  console.log(`   📊 Schema: ./src/schemas/index.ts`);
+  console.log(`   📁 Output: ./drizzle`);
+  console.log(`   🗃️  Database: PostgreSQL`);
+  console.log(`   📋 Tables: 12 tracked tables`);
+}

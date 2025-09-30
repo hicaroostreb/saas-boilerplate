@@ -8,7 +8,8 @@ export const isPublicRoute = (pathname: string): boolean => {
 };
 
 export const isGuestOnlyRoute = (pathname: string): boolean => {
-  return guestOnlyRoutes.includes(pathname as any);
+  // ✅ CORRIGIDO: Convert readonly array to mutable array safely
+  return (guestOnlyRoutes as readonly string[]).includes(pathname);
 };
 
 export const isAuthRoute = (pathname: string): boolean => {

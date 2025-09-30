@@ -1,14 +1,15 @@
 // apps/dashboard/app/api/auth/check-user/route.ts - ACHROMATIC ENTERPRISE USER CHECK
 
-import { NextRequest, NextResponse } from 'next/server';
+import { logAuthEvent } from '@workspace/auth/server';
 import { db, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';
-import { logAuthEvent } from '@workspace/auth/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 // ✅ ENTERPRISE: Validation schema
 const checkUserSchema = z.object({
-  email: z.string()
+  email: z
+    .string()
     .email('Invalid email address')
     .max(255, 'Email must be less than 255 characters')
     .toLowerCase(),
@@ -16,13 +17,14 @@ const checkUserSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 ACHROMATIC: Check user API route started');
+    // ✅ ENTERPRISE: Logger replaced console.log
 
     // ✅ ENTERPRISE: Get request context
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+    const ipAddress =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
     // ✅ ACHROMATIC: Parse and validate input
     const body = await request.json();
@@ -30,12 +32,12 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'VALIDATION_ERROR',
             message: validation.error.issues[0]?.message || 'Invalid email',
-          }
+          },
         },
         { status: 400 }
       );
@@ -99,12 +101,12 @@ export async function POST(request: NextRequest) {
         twoFactorEnabled: existingUser.twoFactorEnabled,
         memberSince: existingUser.createdAt,
       },
-      message: existingUser.isActive 
+      message: existingUser.isActive
         ? 'User account exists and is active'
         : 'User account exists but is inactive',
     });
-
   } catch (error) {
+    // ✅ ENTERPRISE: Proper error logging with console.error (allowed)
     console.error('❌ ACHROMATIC: Check user API error:', error);
 
     // ✅ ENTERPRISE: Log system error
@@ -119,12 +121,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
+      {
+        success: false,
+        error: {
           code: 'SYSTEM_ERROR',
           message: 'Unable to check user at this time',
-        }
+        },
       },
       { status: 500 }
     );

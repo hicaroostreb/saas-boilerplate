@@ -64,8 +64,8 @@ export interface EnterpriseUser extends User {
   securityLevel: SecurityLevel;
   twoFactorEnabled: boolean;
   lastLoginAt: Date | null;
-  preferences: Record<string, any> | null;
-  metadata: Record<string, any> | null;
+  preferences: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
 
   // ✅ ENTERPRISE: Computed properties
   isLocked?: boolean;
@@ -199,15 +199,15 @@ export interface AuthContext {
  */
 export interface OrganizationAuthContext extends AuthContext {
   organization: Organization & {
-    settings: Record<string, any> | null;
-    features: Record<string, any> | null;
-    securityPolicy: Record<string, any> | null;
+    settings: Record<string, unknown> | null;
+    features: Record<string, unknown> | null;
+    securityPolicy: Record<string, unknown> | null;
   };
   membership: Membership & {
     role: MemberRole;
     permissions: string[] | null;
     customPermissions: Record<string, boolean> | null;
-    metadata: Record<string, any> | null;
+    metadata: Record<string, unknown> | null;
   };
 
   // ✅ ENTERPRISE: Organization-specific capabilities
@@ -337,10 +337,10 @@ export interface EnterpriseAuditEvent {
   // ✅ ENTERPRISE: Security assessment
   riskScore: number;
   riskFactors: string[] | null;
-  securityFlags: Record<string, any> | null;
+  securityFlags: Record<string, unknown> | null;
 
   // ✅ ENTERPRISE: Event details
-  eventData: Record<string, any> | null;
+  eventData: Record<string, unknown> | null;
   errorCode?: string | null;
   errorMessage?: string | null;
 
@@ -351,7 +351,7 @@ export interface EnterpriseAuditEvent {
 
   // ✅ ENTERPRISE: Processing status
   processed: boolean;
-  alertsSent: Record<string, any> | null;
+  alertsSent: Record<string, unknown> | null;
 }
 
 /**
@@ -470,7 +470,7 @@ export interface SignInResult {
   error?: {
     code: AuthErrorCode;
     message: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   };
 
   // ✅ ENTERPRISE: Security context
@@ -518,7 +518,7 @@ export interface PermissionContext {
 
   // ✅ ENTERPRISE: Additional context
   resourceId?: string;
-  conditions?: Record<string, any>;
+  conditions?: Record<string, unknown>;
 }
 
 /**
@@ -591,16 +591,16 @@ export interface UserSessionSummary {
 /**
  * ✅ ACHROMATIC: Type guard for valid auth context
  */
-export function isValidAuthContext(context: any): context is AuthContext {
-  return (
+export function isValidAuthContext(context: unknown): context is AuthContext {
+  return Boolean(
     context &&
     typeof context === 'object' &&
-    context.session &&
-    context.user &&
-    typeof context.user.id === 'string' &&
-    typeof context.user.email === 'string' &&
-    context.user.isActive === true &&
-    context.isAuthenticated === true
+    (context as AuthContext).session &&
+    (context as AuthContext).user &&
+    typeof (context as AuthContext).user.id === 'string' &&
+    typeof (context as AuthContext).user.email === 'string' &&
+    (context as AuthContext).user.isActive === true &&
+    (context as AuthContext).isAuthenticated === true
   );
 }
 
@@ -608,16 +608,16 @@ export function isValidAuthContext(context: any): context is AuthContext {
  * ✅ ENTERPRISE: Type guard for organization context
  */
 export function isValidOrganizationContext(
-  context: any
+  context: unknown
 ): context is OrganizationAuthContext {
   return Boolean(
     isValidAuthContext(context) &&
-      context.organization &&
-      context.membership &&
-      typeof context.organization.id === 'string' &&
-      typeof context.membership.role === 'string' &&
-      context.membership.isActive === true &&
-      context.organization.isActive === true
+      (context as OrganizationAuthContext).organization &&
+      (context as OrganizationAuthContext).membership &&
+      typeof (context as OrganizationAuthContext).organization.id === 'string' &&
+      typeof (context as OrganizationAuthContext).membership.role === 'string' &&
+      (context as OrganizationAuthContext).membership.isActive === true &&
+      (context as OrganizationAuthContext).organization.isActive === true
   );
 }
 
@@ -625,31 +625,34 @@ export function isValidOrganizationContext(
  * ✅ ENTERPRISE: Type guard for enhanced session
  */
 export function isValidEnhancedSession(
-  session: any
+  session: unknown
 ): session is EnhancedSession {
-  return (
+  return Boolean(
     session &&
     typeof session === 'object' &&
-    session.user &&
-    typeof session.user.id === 'string' &&
-    typeof session.isExpired === 'boolean' &&
-    typeof session.isActive === 'boolean' &&
-    session.riskAssessment &&
-    typeof session.riskAssessment.score === 'number'
+    (session as EnhancedSession).user &&
+    typeof (session as EnhancedSession).user.id === 'string' &&
+    typeof (session as EnhancedSession).isExpired === 'boolean' &&
+    typeof (session as EnhancedSession).isActive === 'boolean' &&
+    (session as EnhancedSession).riskAssessment &&
+    typeof (session as EnhancedSession).riskAssessment.score === 'number'
   );
 }
 
 /**
  * ✅ ENTERPRISE: Type guard for device info
  */
-export function isValidDeviceInfo(deviceInfo: any): deviceInfo is DeviceInfo {
-  return (
+export function isValidDeviceInfo(
+  deviceInfo: unknown
+): deviceInfo is DeviceInfo {
+  return Boolean(
     deviceInfo &&
     typeof deviceInfo === 'object' &&
-    typeof deviceInfo.type === 'string' &&
-    ['mobile', 'desktop', 'tablet', 'unknown'].includes(deviceInfo.type)
+    typeof (deviceInfo as DeviceInfo).type === 'string' &&
+    ['mobile', 'desktop', 'tablet', 'unknown'].includes((deviceInfo as DeviceInfo).type)
   );
 }
+
 
 // ============================================
 // CONSTANTS & ENUMS
@@ -713,5 +716,6 @@ export type {
   Organization,
   Session,
   // Core types from database package
-  User,
+  User
 };
+

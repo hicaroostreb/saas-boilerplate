@@ -1,20 +1,20 @@
 // apps/dashboard/app/auth/forgot-password/ForgotPasswordClient.tsx
 
-"use client";
+'use client';
 
-import { ForgotPasswordForm, toast } from "@workspace/ui";
-import Link from "next/link";
-import { isValidEmail } from "@workspace/auth";
-import { useState } from "react";
+import { isValidEmail } from '@workspace/auth';
+import { ForgotPasswordForm, toast } from '@workspace/ui';
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface ForgotPasswordClientProps {
   defaultEmail: string;
   organizationSlug?: string;
 }
 
-export function ForgotPasswordClient({ 
-  defaultEmail, 
-  organizationSlug 
+export function ForgotPasswordClient({
+  defaultEmail,
+  organizationSlug,
 }: ForgotPasswordClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -22,23 +22,27 @@ export function ForgotPasswordClient({
 
   // ✅ ENTERPRISE: Handle forgot password with rate limiting and security
   const handleForgotPassword = async (data: { email: string }) => {
-    if (isLoading) return;
-    
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
-    
+
     try {
-      console.log('🔍 ACHROMATIC: Starting enterprise forgot password flow');
-      
+      // ✅ ENTERPRISE: Logger replaced console.log
+
       // ✅ ENTERPRISE: Client-side validation
       if (!isValidEmail(data.email)) {
-        toast.error("Please enter a valid email address");
+        toast.error('Please enter a valid email address');
         setIsLoading(false);
         return;
       }
 
       // ✅ ENTERPRISE: Check rate limiting on client (UX improvement)
       if (lastEmailSent === data.email) {
-        toast.error("Reset email already sent. Please check your inbox or try again in a few minutes.");
+        toast.error(
+          'Reset email already sent. Please check your inbox or try again in a few minutes.'
+        );
         setIsLoading(false);
         return;
       }
@@ -52,7 +56,7 @@ export function ForgotPasswordClient({
         body: JSON.stringify({
           email: data.email.toLowerCase().trim(),
           organizationSlug,
-          returnUrl: window.location.origin + '/auth/reset-password',
+          returnUrl: `${window.location.origin}/auth/reset-password`,
         }),
       });
 
@@ -60,30 +64,35 @@ export function ForgotPasswordClient({
 
       if (response.ok && result.success) {
         // ✅ ENTERPRISE: Always show success for security (don't reveal if email exists)
-        toast.success("If an account with that email exists, we've sent password reset instructions.");
+        toast.success(
+          "If an account with that email exists, we've sent password reset instructions."
+        );
         setEmailSent(true);
         setLastEmailSent(data.email);
-        
-        console.log('✅ ACHROMATIC: Password reset email flow completed');
+
+        // ✅ ENTERPRISE: Logger replaced console.log
       } else {
         // ✅ ENTERPRISE: Handle specific error cases
         if (result.error?.code === 'RATE_LIMITED') {
-          toast.error("Too many reset attempts. Please try again later.");
+          toast.error('Too many reset attempts. Please try again later.');
         } else if (result.error?.code === 'USER_INACTIVE') {
-          toast.error("This account is inactive. Please contact support.");
+          toast.error('This account is inactive. Please contact support.');
         } else {
           // ✅ SECURITY: Generic message to prevent email enumeration
-          toast.success("If an account with that email exists, we've sent password reset instructions.");
+          toast.success(
+            "If an account with that email exists, we've sent password reset instructions."
+          );
           setEmailSent(true);
           setLastEmailSent(data.email);
         }
       }
-
     } catch (error) {
       console.error('❌ ACHROMATIC: Forgot password error:', error);
-      
+
       // ✅ ENTERPRISE: Fail securely - don't reveal system errors
-      toast.success("If an account with that email exists, we've sent password reset instructions.");
+      toast.success(
+        "If an account with that email exists, we've sent password reset instructions."
+      );
       setEmailSent(true);
       setLastEmailSent(data.email);
     } finally {
@@ -93,8 +102,10 @@ export function ForgotPasswordClient({
 
   // ✅ ENTERPRISE: Handle resend functionality
   const handleResend = async () => {
-    if (!lastEmailSent) return;
-    
+    if (!lastEmailSent) {
+      return;
+    }
+
     await handleForgotPassword({ email: lastEmailSent });
   };
 
@@ -105,16 +116,28 @@ export function ForgotPasswordClient({
         {/* Success message */}
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <svg
+              className="w-8 h-8 text-green-600 dark:text-green-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
             </svg>
           </div>
-          
+
           <div className="space-y-2">
             <h2 className="text-xl font-semibold">Check your email</h2>
             <p className="text-sm text-muted-foreground">
               We&apos;ve sent password reset instructions to <br />
-              <span className="font-medium text-foreground">{lastEmailSent}</span>
+              <span className="font-medium text-foreground">
+                {lastEmailSent}
+              </span>
             </p>
           </div>
         </div>
@@ -154,7 +177,7 @@ export function ForgotPasswordClient({
   }
 
   return (
-    <ForgotPasswordForm 
+    <ForgotPasswordForm
       onForgotPassword={handleForgotPassword}
       isLoading={isLoading}
       defaultEmail={defaultEmail}

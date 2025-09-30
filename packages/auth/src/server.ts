@@ -1,6 +1,5 @@
 // packages/auth/src/server.ts - SERVER-ONLY FUNCTIONS
 
-import type { Membership, Organization } from '@workspace/database';
 import { db, memberships, organizations, users } from '@workspace/database';
 import { and, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -36,18 +35,33 @@ const enterpriseSessionService = EnterpriseSessionService;
 export async function getAuthContext() {
   const session = await dedupedAuth();
 
-  console.log('🔍 ACHROMATIC: getAuthContext detailed debug:', {
+  console.warn('🔍 ACHROMATIC: getAuthContext detailed debug:', {
     hasSession: !!session,
     hasUser: !!session?.user,
     userId: session?.user?.id,
     userEmail: session?.user?.email,
-    hasEnterprise: !!(session as any)?.enterprise,
-    isCredentialsUser: (session as any)?.enterprise?.isCredentialsUser,
-    enterpriseSessionId: (session as any)?.enterprise?.sessionId,
+    // ✅ CORRIGIDO: Linhas 43-56 - Usar 'unknown' primeiro
+    hasEnterprise: !!((session as unknown) as Record<string, unknown>).enterprise,
+    isCredentialsUser: ((session as unknown) as Record<string, unknown>).enterprise
+      ? (
+          ((session as unknown) as Record<string, unknown>).enterprise as Record<
+            string,
+            unknown
+          >
+        ).isCredentialsUser
+      : false,
+    enterpriseSessionId: ((session as unknown) as Record<string, unknown>).enterprise
+      ? (
+          ((session as unknown) as Record<string, unknown>).enterprise as Record<
+            string,
+            unknown
+          >
+        ).sessionId
+      : null,
   });
 
-  if (!session?.user?.id || !session?.user?.email) {
-    console.log('❌ ACHROMATIC: No valid session in context, redirecting');
+  if (!session?.user?.id || !session.user.email) {
+    console.warn('❌ ACHROMATIC: No valid session in context, redirecting');
     redirect('/auth/sign-in');
   }
 
@@ -70,23 +84,26 @@ export async function getAuthContext() {
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  if (!enhancedUser || !enhancedUser.isActive) {
-    console.log('❌ ACHROMATIC: User not found or inactive, redirecting');
+  if (!enhancedUser?.isActive) {
+    console.warn('❌ ACHROMATIC: User not found or inactive, redirecting');
     redirect('/auth/sign-in');
   }
 
   // ✅ ENTERPRISE: Get enhanced session data for credentials users
   let enterpriseSessionData: EnterpriseSessionData | null = null;
-  const enterpriseContext = (session as any)?.enterprise;
+  // ✅ CORRIGIDO: Linha 93 - Usar 'unknown' primeiro
+  const enterpriseContext = ((session as unknown) as Record<string, unknown>).enterprise as
+    | Record<string, unknown>
+    | undefined;
 
-  if (enterpriseContext?.isCredentialsUser && enterpriseContext?.sessionId) {
+  if (enterpriseContext?.isCredentialsUser && enterpriseContext.sessionId) {
     try {
       enterpriseSessionData = await enterpriseSessionService.validateSession(
-        enterpriseContext.sessionId
+        enterpriseContext.sessionId as string
       );
 
       if (!enterpriseSessionData) {
-        console.log('❌ ACHROMATIC: Enterprise session invalid, redirecting');
+        console.warn('❌ ACHROMATIC: Enterprise session invalid, redirecting');
         redirect('/auth/sign-in');
       }
     } catch (error) {
@@ -104,25 +121,39 @@ export async function getAuthContext() {
       user: {
         id: enhancedUser.id,
         email: enhancedUser.email,
-        name: enhancedUser.name || null,
-        image: enhancedUser.image || null,
+        name: enhancedUser.name ?? null,
+        image: enhancedUser.image ?? null,
         emailVerified: enhancedUser.emailVerified,
         isActive: enhancedUser.isActive,
         securityLevel:
-          (enhancedUser.securityLevel as SecurityLevel) || 'normal',
+          (enhancedUser.securityLevel as SecurityLevel) ?? 'normal',
         twoFactorEnabled: enhancedUser.twoFactorEnabled,
         lastLoginAt: enhancedUser.lastLoginAt,
-        preferences: enhancedUser.preferences as Record<string, any> | null,
+        preferences: enhancedUser.preferences
+          ? (enhancedUser.preferences as Record<string, unknown>)
+          : null,
       } as EnterpriseUser,
       enterprise: {
-        sessionId: enterpriseContext?.sessionId || null,
-        organizationId: enterpriseContext?.organizationId || null,
-        organizationSlug: enterpriseContext?.organizationSlug || null,
-        securityLevel: enterpriseContext?.securityLevel || 'normal',
-        isCredentialsUser: enterpriseContext?.isCredentialsUser || false,
-        provider: enterpriseContext?.provider || 'unknown',
+        sessionId: enterpriseContext?.sessionId
+          ? (enterpriseContext.sessionId as string)
+          : null,
+        organizationId: enterpriseContext?.organizationId
+          ? (enterpriseContext.organizationId as string)
+          : null,
+        organizationSlug: enterpriseContext?.organizationSlug
+          ? (enterpriseContext.organizationSlug as string)
+          : null,
+        securityLevel: enterpriseContext?.securityLevel
+          ? (enterpriseContext.securityLevel as SecurityLevel)
+          : 'normal',
+        isCredentialsUser: enterpriseContext?.isCredentialsUser
+          ? (enterpriseContext.isCredentialsUser as boolean)
+          : false,
+        provider: enterpriseContext?.provider
+          ? (enterpriseContext.provider as string)
+          : 'unknown',
         twoFactorEnabled: enhancedUser.twoFactorEnabled,
-        lastAccessedAt: enterpriseSessionData?.lastAccessedAt || null,
+        lastAccessedAt: enterpriseSessionData?.lastAccessedAt ?? null,
         deviceInfo: enterpriseSessionData
           ? {
               name: enterpriseSessionData.deviceName,
@@ -137,7 +168,7 @@ export async function getAuthContext() {
               timezone: enterpriseSessionData.timezone,
             }
           : null,
-        riskScore: enterpriseSessionData?.riskScore || 0,
+        riskScore: enterpriseSessionData?.riskScore ?? 0,
       },
     },
   } as const;
@@ -160,7 +191,7 @@ export async function getAuthOrganizationContext(slug?: string) {
       .limit(1);
     organizationId = org?.id;
   } else {
-    organizationId = session.enterprise.organizationId || undefined;
+    organizationId = session.enterprise.organizationId ?? undefined;
   }
 
   if (!organizationId) {
@@ -238,17 +269,24 @@ export async function getAuthOrganizationContext(slug?: string) {
     session,
     organization: {
       ...organization,
-      settings: organization.settings as Record<string, any> | null,
-      features: organization.features as Record<string, any> | null,
+      settings: organization.settings
+        ? (organization.settings as Record<string, unknown>)
+        : null,
+      features: organization.features
+        ? (organization.features as Record<string, unknown>)
+        : null,
     },
     membership: {
       ...membership,
-      permissions: membership.permissions as string[] | null,
-      customPermissions: membership.customPermissions as Record<
-        string,
-        boolean
-      > | null,
-      metadata: membership.metadata as Record<string, any> | null,
+      permissions: membership.permissions
+        ? (membership.permissions as string[])
+        : null,
+      customPermissions: membership.customPermissions
+        ? (membership.customPermissions as Record<string, boolean>)
+        : null,
+      metadata: membership.metadata
+        ? (membership.metadata as Record<string, unknown>)
+        : null,
     },
   } as const;
 }
@@ -258,13 +296,13 @@ export async function getOptionalAuthContext() {
   try {
     const session = await dedupedAuth();
 
-    console.log('🔍 ACHROMATIC: getOptionalAuthContext debug:', {
+    console.warn('🔍 ACHROMATIC: getOptionalAuthContext debug:', {
       hasSession: !!session,
       hasUser: !!session?.user,
       userId: session?.user?.id,
     });
 
-    if (!session?.user?.id || !session?.user?.email) {
+    if (!session?.user?.id || !session.user.email) {
       return null;
     }
 
@@ -286,11 +324,13 @@ export async function getOptionalAuthContext() {
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    if (!enhancedUser || !enhancedUser.isActive) {
+    if (!enhancedUser?.isActive) {
       return null;
     }
 
-    const enterpriseContext = (session as any)?.enterprise;
+    // ✅ CORRIGIDO: Linha 329 - Usar 'unknown' primeiro
+    const enterpriseContext = ((session as unknown) as Record<string, unknown>)
+      .enterprise as Record<string, unknown> | undefined;
 
     return {
       session: {
@@ -298,23 +338,37 @@ export async function getOptionalAuthContext() {
         user: {
           id: enhancedUser.id,
           email: enhancedUser.email,
-          name: enhancedUser.name || null,
-          image: enhancedUser.image || null,
+          name: enhancedUser.name ?? null,
+          image: enhancedUser.image ?? null,
           emailVerified: enhancedUser.emailVerified,
           isActive: enhancedUser.isActive,
           securityLevel:
-            (enhancedUser.securityLevel as SecurityLevel) || 'normal',
+            (enhancedUser.securityLevel as SecurityLevel) ?? 'normal',
           twoFactorEnabled: enhancedUser.twoFactorEnabled,
           lastLoginAt: enhancedUser.lastLoginAt,
-          preferences: enhancedUser.preferences as Record<string, any> | null,
+          preferences: enhancedUser.preferences
+            ? (enhancedUser.preferences as Record<string, unknown>)
+            : null,
         } as EnterpriseUser,
         enterprise: {
-          sessionId: enterpriseContext?.sessionId || null,
-          organizationId: enterpriseContext?.organizationId || null,
-          organizationSlug: enterpriseContext?.organizationSlug || null,
-          securityLevel: enterpriseContext?.securityLevel || 'normal',
-          isCredentialsUser: enterpriseContext?.isCredentialsUser || false,
-          provider: enterpriseContext?.provider || 'unknown',
+          sessionId: enterpriseContext?.sessionId
+            ? (enterpriseContext.sessionId as string)
+            : null,
+          organizationId: enterpriseContext?.organizationId
+            ? (enterpriseContext.organizationId as string)
+            : null,
+          organizationSlug: enterpriseContext?.organizationSlug
+            ? (enterpriseContext.organizationSlug as string)
+            : null,
+          securityLevel: enterpriseContext?.securityLevel
+            ? (enterpriseContext.securityLevel as SecurityLevel)
+            : 'normal',
+          isCredentialsUser: enterpriseContext?.isCredentialsUser
+            ? (enterpriseContext.isCredentialsUser as boolean)
+            : false,
+          provider: enterpriseContext?.provider
+            ? (enterpriseContext.provider as string)
+            : 'unknown',
           twoFactorEnabled: enhancedUser.twoFactorEnabled,
           riskScore: 0,
           lastAccessedAt: null,
@@ -330,31 +384,31 @@ export async function getOptionalAuthContext() {
 }
 
 // ✅ ENTERPRISE: Session management functions
-export async function revokeSession(sessionId: string, reason?: string) {
-  const { session } = await getAuthContext();
+export function revokeSession(sessionId: string, reason?: string) {
+  return getAuthContext().then(async ({ session }) => {
+    if (session.enterprise.isCredentialsUser && session.enterprise.sessionId) {
+      return enterpriseSessionService.revokeSession(
+        session.enterprise.sessionId,
+        session.user.id,
+        reason ?? 'user_request'
+      );
+    }
+  });
+}
 
-  if (session.enterprise.isCredentialsUser && session.enterprise.sessionId) {
-    await enterpriseSessionService.revokeSession(
-      session.enterprise.sessionId,
+export function revokeAllSessions(keepCurrent = true) {
+  return getAuthContext().then(async ({ session }) => {
+    return enterpriseSessionService.revokeAllUserSessions(
       session.user.id,
-      reason || 'user_request'
+      keepCurrent ? (session.enterprise.sessionId ?? undefined) : undefined
     );
-  }
+  });
 }
 
-export async function revokeAllSessions(keepCurrent: boolean = true) {
-  const { session } = await getAuthContext();
-
-  await enterpriseSessionService.revokeAllUserSessions(
-    session.user.id,
-    keepCurrent ? session.enterprise.sessionId || undefined : undefined
-  );
-}
-
-export async function getUserActiveSessions() {
-  const { session } = await getAuthContext();
-
-  return await enterpriseSessionService.getUserActiveSessions(session.user.id);
+export function getUserActiveSessions() {
+  return getAuthContext().then(async ({ session }) => {
+    return enterpriseSessionService.getUserActiveSessions(session.user.id);
+  });
 }
 
 // ============================================
@@ -369,7 +423,7 @@ export async function requireAuth() {
 export async function getCurrentUserOrganizations() {
   const { session } = await getAuthContext();
 
-  return await db
+  return db
     .select({
       id: organizations.id,
       name: organizations.name,
@@ -396,7 +450,8 @@ export async function getCurrentUserOrganizations() {
 export * from './audit';
 export * from './password';
 export * from './security';
-export * from './session';
+// ✅ ADICIONADO: Export da função revokeAllUserSessions
+export { revokeAllUserSessions } from './session';
 
 // ============================================
 // SERVER-ONLY TYPES
@@ -420,7 +475,7 @@ export async function getServerSession() {
     // ✅ Usar a função opcional que não redireciona
     const authContext = await getOptionalAuthContext();
 
-    if (!authContext?.session?.user) {
+    if (!authContext?.session.user) {
       return null;
     }
 

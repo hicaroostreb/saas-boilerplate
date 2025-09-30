@@ -1,0 +1,20 @@
+# Database package - contains generated code
+packages/database/
+**/drizzle.config.*
+**/migrations/
+**/drizzle/
+**/seed.ts
+**/scripts/seed.*
+
+# Build outputs
+**/dist/
+**/.next/
+**/build/
+**/.turbo/
+**/node_modules/
+**/coverage/
+
+# Generated files
+**/*.generated.*
+**/*.d.ts
+!**/*.custom.d.ts

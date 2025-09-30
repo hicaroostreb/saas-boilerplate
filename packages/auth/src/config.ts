@@ -3,7 +3,6 @@
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import {
   accounts,
-  authAuditLogs,
   db,
   memberships,
   organizations,
@@ -11,10 +10,8 @@ import {
   users,
   verificationTokens,
 } from '@workspace/database';
-import { randomUUID } from 'crypto';
-import { and, eq, gt, lt } from 'drizzle-orm';
-import type { NextAuthConfig } from 'next-auth';
-import NextAuth from 'next-auth';
+import { and, eq } from 'drizzle-orm';
+import NextAuth, { type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import { AuditService } from './audit';
@@ -28,33 +25,18 @@ import type {
   SecurityLevel,
 } from './types';
 
-// ============================================
-// SERVICE INSTANCES (CORRIGIDO)
-// ============================================
-
-// ✅ ACHROMATIC: Use singleton instances directly
 const enterpriseSessionService = EnterpriseSessionService;
 const auditService = AuditService;
 const securityService = SecurityService;
 
-// ✅ TODO: Rate limiting placeholder
 const rateLimitService = {
   async checkRateLimit(): Promise<boolean> {
     return false;
   },
-  async incrementRateLimit(): Promise<void> {
-    return;
-  },
+  async incrementRateLimit(): Promise<void> {},
 };
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-/**
- * ✅ ENTERPRISE: Get user role in organization
- */
-async function getUserRole(
+async function _getUserRole(
   userId: string,
   organizationId?: string
 ): Promise<string | null> {
@@ -73,16 +55,13 @@ async function getUserRole(
       )
       .limit(1);
 
-    return membership?.role || null;
+    return membership?.role ?? null;
   } catch (error) {
     console.error('Error fetching user role:', error);
     return null;
   }
 }
 
-/**
- * ✅ ENTERPRISE: Get user primary organization
- */
 async function getUserPrimaryOrganization(userId: string) {
   try {
     const [membership] = await db
@@ -112,10 +91,6 @@ async function getUserPrimaryOrganization(userId: string) {
     return null;
   }
 }
-
-// ============================================
-// NEXTAUTH CONFIG
-// ============================================
 
 export const authConfig: NextAuthConfig = {
   adapter: DrizzleAdapter(db, {
@@ -148,16 +123,16 @@ export const authConfig: NextAuthConfig = {
             eventCategory: 'auth' as AuthEventCategory,
             errorCode: 'MISSING_CREDENTIALS',
             errorMessage: 'Email or password not provided',
-            ipAddress: req?.headers?.get?.('x-forwarded-for') || 'unknown',
-            userAgent: req?.headers?.get?.('user-agent') || 'unknown',
+            ipAddress: req.headers.get('x-forwarded-for') ?? 'unknown',
+            userAgent: req.headers.get('user-agent') ?? 'unknown',
           });
           return null;
         }
 
         const email = credentials.email as string;
         const password = credentials.password as string;
-        const ipAddress = req?.headers?.get?.('x-forwarded-for') || 'unknown';
-        const userAgent = req?.headers?.get?.('user-agent') || 'unknown';
+        const ipAddress = req.headers.get('x-forwarded-for') ?? 'unknown';
+        const userAgent = req.headers.get('user-agent') ?? 'unknown';
 
         try {
           const isRateLimited = await rateLimitService.checkRateLimit();
@@ -197,7 +172,7 @@ export const authConfig: NextAuthConfig = {
             .where(eq(users.email, email))
             .limit(1);
 
-          if (!user || !user.passwordHash) {
+          if (!user?.passwordHash) {
             await rateLimitService.incrementRateLimit();
 
             await auditService.logAuthEvent({
@@ -250,7 +225,7 @@ export const authConfig: NextAuthConfig = {
             user.passwordHash
           );
           if (!isValidPassword) {
-            const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
+            const newFailedAttempts = (user.failedLoginAttempts ?? 0) + 1;
             const shouldLockAccount = newFailedAttempts >= 5;
 
             if (shouldLockAccount) {
@@ -308,8 +283,7 @@ export const authConfig: NextAuthConfig = {
             return null;
           }
 
-          // Reset failed attempts on successful login
-          if (user.failedLoginAttempts > 0) {
+          if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
             await db
               .update(users)
               .set({
@@ -330,10 +304,8 @@ export const authConfig: NextAuthConfig = {
               .where(eq(users.id, user.id));
           }
 
-          // ✅ CORRIGIDO: Parse device info first
           const deviceInfo = await securityService.parseDeviceInfo(userAgent);
 
-          // Create enterprise session
           const enterpriseSessionData =
             await enterpriseSessionService.createEnterpriseSessionForCredentials(
               user.id,
@@ -341,9 +313,9 @@ export const authConfig: NextAuthConfig = {
                 ipAddress,
                 userAgent,
                 deviceInfo: {
-                  name: deviceInfo.name || undefined,
+                  name: deviceInfo.name ?? undefined,
                   type: deviceInfo.type,
-                  fingerprint: deviceInfo.fingerprint || undefined,
+                  fingerprint: deviceInfo.fingerprint ?? undefined,
                 },
                 securityLevel: user.securityLevel as SecurityLevel,
               }
@@ -403,8 +375,8 @@ export const authConfig: NextAuthConfig = {
     }),
 
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
@@ -432,26 +404,29 @@ export const authConfig: NextAuthConfig = {
 
         if (account.provider === 'credentials') {
           token.isCredentialsUser = true;
-          token.enterpriseSessionId = (user as any).enterpriseSessionId;
-          token.securityLevel = (user as any).securityLevel || 'normal';
-          token.twoFactorEnabled = (user as any).twoFactorEnabled || false;
+          token.enterpriseSessionId = (
+            user as Record<string, unknown>
+          ).enterpriseSessionId;
+          token.securityLevel = ((user as Record<string, unknown>).securityLevel as SecurityLevel) ?? 'normal';
+          token.twoFactorEnabled = Boolean((user as Record<string, unknown>).twoFactorEnabled);
         } else {
           token.isCredentialsUser = false;
 
-          try {
-            const dbSession =
-              await enterpriseSessionService.enhanceSocialSession(
-                user.id!,
-                account.providerAccountId,
-                account.provider
-              );
-            token.enterpriseSessionId = dbSession?.sessionToken;
-          } catch (error) {
-            console.error('❌ Error enhancing social session:', error);
+          if (user.id) {
+            try {
+              const dbSession =
+                await enterpriseSessionService.enhanceSocialSession(
+                  user.id,
+                  account.providerAccountId,
+                  account.provider
+                );
+              token.enterpriseSessionId = dbSession?.sessionToken;
+            } catch (error) {
+              console.error('❌ Error enhancing social session:', error);
+            }
           }
         }
 
-        // ✅ CORRIGIDO: Check user.id before using
         if (user.id) {
           try {
             const membership = await getUserPrimaryOrganization(user.id);
@@ -477,7 +452,7 @@ export const authConfig: NextAuthConfig = {
             token.enterpriseSessionId as string
           );
           if (!sessionValid) {
-            console.log(
+            console.warn(
               '❌ ACHROMATIC: Enterprise session invalid, clearing token'
             );
             return {};
@@ -498,15 +473,15 @@ export const authConfig: NextAuthConfig = {
 
       session.user.id = token.userId as string;
 
-      (session as any).enterprise = {
-        sessionId: token.enterpriseSessionId,
-        organizationId: token.organizationId,
-        organizationSlug: token.organizationSlug,
-        role: token.role,
-        securityLevel: token.securityLevel || 'normal',
-        isCredentialsUser: token.isCredentialsUser || false,
-        provider: token.provider,
-        twoFactorEnabled: token.twoFactorEnabled || false,
+      ((session as unknown) as Record<string, unknown>).enterprise = {
+        sessionId: token.enterpriseSessionId ?? null,
+        organizationId: token.organizationId ?? null,
+        organizationSlug: token.organizationSlug ?? null,
+        role: token.role ?? null,
+        securityLevel: (token.securityLevel as SecurityLevel) ?? 'normal',
+        isCredentialsUser: Boolean(token.isCredentialsUser),
+        provider: token.provider ?? null,
+        twoFactorEnabled: Boolean(token.twoFactorEnabled),
       };
 
       if (token.isCredentialsUser && token.enterpriseSessionId) {
@@ -516,20 +491,19 @@ export const authConfig: NextAuthConfig = {
           );
 
           if (enterpriseData) {
-            (session as any).enterprise.lastAccessedAt =
-              enterpriseData.lastAccessedAt;
-            (session as any).enterprise.deviceInfo = {
+            const enterprise = ((session as unknown) as Record<string, unknown>).enterprise as Record<string, unknown>;
+            enterprise.lastAccessedAt = enterpriseData.lastAccessedAt;
+            enterprise.deviceInfo = {
               name: enterpriseData.deviceName,
               type: enterpriseData.deviceType,
               fingerprint: enterpriseData.deviceFingerprint,
             };
-            (session as any).enterprise.geolocation = {
+            enterprise.geolocation = {
               country: enterpriseData.country,
               city: enterpriseData.city,
               timezone: enterpriseData.timezone,
             };
-            (session as any).enterprise.riskScore =
-              enterpriseData.riskScore || 0;
+            enterprise.riskScore = enterpriseData.riskScore ?? 0;
           }
         } catch (error) {
           console.error('❌ Error fetching enterprise session data:', error);
@@ -541,27 +515,25 @@ export const authConfig: NextAuthConfig = {
 
     async signIn({ user, account, profile }) {
       try {
-        if (account?.provider !== 'credentials') {
-          if (user?.id) {
-            const [dbUser] = await db
-              .select({ isActive: users.isActive })
-              .from(users)
-              .where(eq(users.id, user.id))
-              .limit(1);
+        if (account?.provider !== 'credentials' && user?.id) {
+          const [dbUser] = await db
+            .select({ isActive: users.isActive })
+            .from(users)
+            .where(eq(users.id, user.id))
+            .limit(1);
 
-            if (dbUser && !dbUser.isActive) {
-              await auditService.logAuthEvent({
-                userId: user.id,
-                eventType: 'login' as AuthEventType,
-                eventAction: 'account_inactive_oauth',
-                eventStatus: 'failure' as AuthEventStatus,
-                eventCategory: 'security' as AuthEventCategory,
-                errorCode: 'ACCOUNT_INACTIVE',
-                errorMessage: `Inactive account attempted OAuth login via ${account?.provider}`,
-                eventData: { provider: account?.provider, profile },
-              });
-              return false;
-            }
+          if (dbUser && !dbUser.isActive) {
+            await auditService.logAuthEvent({
+              userId: user.id,
+              eventType: 'login' as AuthEventType,
+              eventAction: 'account_inactive_oauth',
+              eventStatus: 'failure' as AuthEventStatus,
+              eventCategory: 'security' as AuthEventCategory,
+              errorCode: 'ACCOUNT_INACTIVE',
+              errorMessage: `Inactive account attempted OAuth login via ${account?.provider ?? 'unknown'}`,
+              eventData: { provider: account?.provider ?? 'unknown', profile },
+            });
+            return false;
           }
         }
 
@@ -581,61 +553,62 @@ export const authConfig: NextAuthConfig = {
 
   events: {
     async signIn({ user, account, profile, isNewUser }) {
-      await auditService.logAuthEvent({
-        userId: user.id!,
-        eventType: 'login' as AuthEventType,
-        eventAction:
-          account?.provider === 'credentials'
-            ? 'credentials_signin'
-            : 'oauth_signin',
-        eventStatus: 'success' as AuthEventStatus,
-        eventCategory: 'auth' as AuthEventCategory,
-        eventData: {
-          provider: account?.provider,
-          isNewUser,
-          profileData: profile,
-        },
-      });
-
-      if (isNewUser) {
+      if (user.id) {
         await auditService.logAuthEvent({
-          userId: user.id!,
+          userId: user.id,
           eventType: 'login' as AuthEventType,
-          eventAction: 'new_user_created',
+          eventAction:
+            account?.provider === 'credentials'
+              ? 'credentials_signin'
+              : 'oauth_signin',
           eventStatus: 'success' as AuthEventStatus,
           eventCategory: 'auth' as AuthEventCategory,
           eventData: {
             provider: account?.provider,
-            email: user.email,
-            name: user.name,
+            isNewUser,
+            profileData: profile,
           },
         });
+
+        if (isNewUser) {
+          await auditService.logAuthEvent({
+            userId: user.id,
+            eventType: 'login' as AuthEventType,
+            eventAction: 'new_user_created',
+            eventStatus: 'success' as AuthEventStatus,
+            eventCategory: 'auth' as AuthEventCategory,
+            eventData: {
+              provider: account?.provider,
+              email: user.email,
+              name: user.name,
+            },
+          });
+        }
       }
     },
 
-    // ✅ CORRIGIDO: signOut event with proper type handling
-    async signOut(params: { session?: any; token?: any }) {
-      const { session, token } = params;
+    // ✅ CORRIGIDO: Linhas 597-598 - Variáveis duplicadas
+    async signOut(message: any) {
+      const { session, token } = message;
 
-      const userId = session?.user?.id || token?.userId;
-      const enterpriseSessionId =
-        session?.enterprise?.sessionId || token?.enterpriseSessionId;
+      const userId = (session?.user as Record<string, unknown>)?.id ?? (token?.userId as string);
+      const enterpriseSessionId = (session?.enterprise as Record<string, unknown>)?.sessionId ?? (token?.enterpriseSessionId as string);
 
       if (userId) {
         await auditService.logAuthEvent({
-          userId,
-          sessionToken: enterpriseSessionId,
+          userId: userId as string,
+          sessionToken: enterpriseSessionId as string,
           eventType: 'logout' as AuthEventType,
           eventAction: 'user_signout',
           eventStatus: 'success' as AuthEventStatus,
           eventCategory: 'auth' as AuthEventCategory,
         });
 
-        if (enterpriseSessionId && session?.enterprise?.isCredentialsUser) {
+        if (enterpriseSessionId && (session?.enterprise as Record<string, unknown>)?.isCredentialsUser) {
           try {
             await enterpriseSessionService.revokeSession(
-              enterpriseSessionId,
-              userId,
+              enterpriseSessionId as string,
+              userId as string,
               'user_signout'
             );
           } catch (error) {
@@ -646,33 +619,37 @@ export const authConfig: NextAuthConfig = {
     },
 
     async linkAccount({ user, account, profile }) {
-      await auditService.logAuthEvent({
-        userId: user.id!,
-        eventType: 'login' as AuthEventType,
-        eventAction: 'account_linked',
-        eventStatus: 'success' as AuthEventStatus,
-        eventCategory: 'auth' as AuthEventCategory,
-        eventData: {
-          provider: account.provider,
-          providerAccountId: account.providerAccountId,
-          profileData: profile,
-        },
-      });
+      if (user.id) {
+        await auditService.logAuthEvent({
+          userId: user.id,
+          eventType: 'login' as AuthEventType,
+          eventAction: 'account_linked',
+          eventStatus: 'success' as AuthEventStatus,
+          eventCategory: 'auth' as AuthEventCategory,
+          eventData: {
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            profileData: profile,
+          },
+        });
+      }
     },
 
     async createUser({ user }) {
-      await auditService.logAuthEvent({
-        userId: user.id!,
-        eventType: 'login' as AuthEventType,
-        eventAction: 'user_created',
-        eventStatus: 'success' as AuthEventStatus,
-        eventCategory: 'auth' as AuthEventCategory,
-        eventData: {
-          email: user.email,
-          name: user.name,
-          provider: 'unknown',
-        },
-      });
+      if (user.id) {
+        await auditService.logAuthEvent({
+          userId: user.id,
+          eventType: 'login' as AuthEventType,
+          eventAction: 'user_created',
+          eventStatus: 'success' as AuthEventStatus,
+          eventCategory: 'auth' as AuthEventCategory,
+          eventData: {
+            email: user.email,
+            name: user.name,
+            provider: 'unknown',
+          },
+        });
+      }
     },
   },
 
@@ -724,17 +701,13 @@ export const authConfig: NextAuthConfig = {
     },
     debug: (code, metadata) => {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔍 ACHROMATIC Auth Debug [${code}]:`, metadata);
+        console.warn(`🔍 ACHROMATIC Auth Debug [${code}]:`, metadata);
       }
     },
   },
 
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-// ============================================
-// NEXTAUTH INSTANCE & EXPORTS
-// ============================================
 
 const nextAuthInstance = NextAuth(authConfig);
 

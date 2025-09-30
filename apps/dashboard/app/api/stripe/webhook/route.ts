@@ -6,8 +6,13 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
 export async function POST(request: NextRequest) {
   if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET environment variable is not configured');
-    return NextResponse.json({ error: 'Webhook configuration error' }, { status: 500 });
+    console.error(
+      'STRIPE_WEBHOOK_SECRET environment variable is not configured'
+    );
+    return NextResponse.json(
+      { error: 'Webhook configuration error' },
+      { status: 500 }
+    );
   }
 
   const payload = await request.text();
@@ -15,7 +20,10 @@ export async function POST(request: NextRequest) {
 
   if (!signature) {
     console.error('Missing stripe-signature header');
-    return NextResponse.json({ error: 'Missing webhook signature' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing webhook signature' },
+      { status: 400 }
+    );
   }
 
   let event: Stripe.Event;
@@ -23,7 +31,10 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
-    return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Webhook signature verification failed' },
+      { status: 400 }
+    );
   }
 
   try {
@@ -40,6 +51,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Error processing webhook event:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

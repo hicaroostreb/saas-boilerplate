@@ -97,7 +97,7 @@ export class SecurityServiceClass {
       } else if (/Mac OS X/.test(userAgent)) {
         const match = userAgent.match(/Mac OS X ([\d_]+)/);
         deviceInfo.os = match
-          ? `macOS ${match[1].replace(/_/g, '.')}`
+          ? `macOS ${match[1]!.replace(/_/g, '.')}`
           : 'macOS';
         deviceInfo.platform = 'macOS';
       } else if (/Linux/.test(userAgent)) {
@@ -109,7 +109,7 @@ export class SecurityServiceClass {
         deviceInfo.platform = 'Android';
       } else if (/iPhone OS/.test(userAgent)) {
         const match = userAgent.match(/iPhone OS ([\d_]+)/);
-        deviceInfo.os = match ? `iOS ${match[1].replace(/_/g, '.')}` : 'iOS';
+        deviceInfo.os = match ? `iOS ${match[1]!.replace(/_/g, '.')}` : 'iOS';
         deviceInfo.platform = 'iOS';
       }
 
@@ -137,7 +137,7 @@ export class SecurityServiceClass {
 
         if (/iPhone/.test(userAgent)) {
           const model = this.extractiPhoneModel(userAgent);
-          deviceInfo.name = model || 'iPhone';
+          deviceInfo.name = model ?? 'iPhone';
         } else if (/Android/.test(userAgent)) {
           deviceInfo.name = 'Android Phone';
         } else {
@@ -151,7 +151,7 @@ export class SecurityServiceClass {
         deviceInfo.name = 'Tablet';
       } else {
         deviceInfo.type = 'desktop';
-        deviceInfo.name = `${deviceInfo.browser || 'Browser'} on ${deviceInfo.os || 'Desktop'}`;
+        deviceInfo.name = `${deviceInfo.browser ?? 'Browser'} on ${deviceInfo.os ?? 'Desktop'}`;
       }
 
       // ✅ ENTERPRISE: Generate secure device fingerprint
@@ -348,7 +348,7 @@ export class SecurityServiceClass {
       }
 
       // ✅ ENTERPRISE: MFA requirements
-      const riskScore = context.riskScore || 0;
+      const riskScore = context.riskScore ?? 0;
 
       if (user.twoFactorEnabled) {
         requiresMFA = true;
@@ -476,7 +476,7 @@ export class SecurityServiceClass {
       if (sessionData.lastAccessedAt) {
         const idleTime = Date.now() - sessionData.lastAccessedAt.getTime();
         const maxIdleTime = this.getMaxIdleTime(
-          sessionData.securityLevel || 'normal'
+          sessionData.securityLevel ?? 'normal'
         );
 
         if (idleTime > maxIdleTime) {
@@ -486,7 +486,7 @@ export class SecurityServiceClass {
       }
 
       // ✅ ENTERPRISE: Risk-based validation
-      const riskScore = sessionData.riskScore || 0;
+      const riskScore = sessionData.riskScore ?? 0;
       if (riskScore >= 80) {
         shouldRevoke = true;
         securityWarnings.push('Session risk score is too high');

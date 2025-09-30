@@ -2,7 +2,7 @@
 export const APP_CONFIG = {
   name: 'SaaS Boilerplate',
   description: 'Enterprise-grade SaaS boilerplate',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   supportEmail: 'support@saas-boilerplate.com',
   version: '1.0.0',
 } as const;

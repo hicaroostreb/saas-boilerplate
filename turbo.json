@@ -7,7 +7,10 @@
     ".env.example",
     "turbo.json",
     "package.json",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "eslint.config.js",
+    "prettier.config.js",
+    "tailwind.config.js"
   ],
   "globalEnv": [
     "NODE_ENV",
@@ -18,7 +21,9 @@
     "VERCEL_ENV",
     "STRIPE_WEBHOOK_SECRET",
     "STRIPE_SECRET_KEY",
-    "STRIPE_PUBLISHABLE_KEY"
+    "STRIPE_PUBLISHABLE_KEY",
+    "TURBO_TOKEN",
+    "TURBO_TEAM"
   ],
   "tasks": {
     "build": {
@@ -32,18 +37,13 @@
         "actions/**",
         "schemas/**",
         "public/**",
+        "styles/**",
         "next.config.*",
         "tailwind.config.*",
         "tsconfig.json",
         "package.json"
       ],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        ".vercel/**",
-        "dist/**",
-        "build/**"
-      ],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/standalone/**", ".vercel/**", "dist/**", "build/**"],
       "env": [
         "NODE_ENV",
         "DATABASE_URL",
@@ -51,10 +51,12 @@
         "NEXTAUTH_URL",
         "STRIPE_WEBHOOK_SECRET",
         "STRIPE_SECRET_KEY",
-        "STRIPE_PUBLISHABLE_KEY"
+        "STRIPE_PUBLISHABLE_KEY",
+        "VERCEL_ENV"
       ],
       "cache": true,
-      "persistent": false
+      "persistent": false,
+      "passThroughEnv": ["ANALYZE"]
     },
     "dev": {
       "cache": false,
@@ -67,8 +69,10 @@
         "lib/**",
         "actions/**",
         "schemas/**",
+        "styles/**",
         "next.config.*",
-        "tailwind.config.*"
+        "tailwind.config.*",
+        "tsconfig.json"
       ],
       "env": [
         "NODE_ENV",
@@ -79,7 +83,8 @@
         "STRIPE_WEBHOOK_SECRET",
         "STRIPE_SECRET_KEY",
         "STRIPE_PUBLISHABLE_KEY"
-      ]
+      ],
+      "outputLogs": "new-only"
     },
     "lint": {
       "dependsOn": ["^lint"],
@@ -93,44 +98,59 @@
         "schemas/**/*.{js,ts,tsx}",
         "eslint.config.js",
         ".eslintrc.*",
-        "tsconfig.json"
+        "tsconfig.json",
+        "package.json"
       ],
-      "outputs": [],
+      "outputs": [".eslintcache"],
       "cache": true,
-      "persistent": false
+      "persistent": false,
+      "outputLogs": "errors-only"
     },
     "format": {
       "dependsOn": ["^format"],
       "inputs": [
-        "src/**/*.{js,ts,tsx,json,md}",
-        "app/**/*.{js,ts,tsx,json,md}",
-        "pages/**/*.{js,ts,tsx,json,md}",
-        "components/**/*.{js,ts,tsx,json,md}",
-        "lib/**/*.{js,ts,tsx,json,md}",
+        "src/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "app/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "pages/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "components/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "lib/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "actions/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "schemas/**/*.{js,ts,tsx,json,md,yml,yaml}",
+        "**/*.{json,md,yml,yaml}",
         ".prettierrc*",
         "prettier.config.*"
       ],
       "outputs": [],
       "cache": true,
-      "persistent": false
+      "persistent": false,
+      "outputLogs": "errors-only"
     },
     "test": {
       "dependsOn": ["^build"],
       "inputs": [
         "src/**/*.{js,ts,tsx}",
         "app/**/*.{js,ts,tsx}",
+        "components/**/*.{js,ts,tsx}",
+        "lib/**/*.{js,ts,tsx}",
         "__tests__/**",
-        "*.test.*",
-        "*.spec.*",
+        "**/*.test.*",
+        "**/*.spec.*",
         "jest.config.*",
-        "vitest.config.*"
+        "vitest.config.*",
+        "setupTests.*"
       ],
-      "outputs": [
-        "coverage/**",
-        "test-results/**"
-      ],
+      "outputs": ["coverage/**", "test-results/**", "junit.xml"],
       "cache": true,
-      "persistent": false
+      "persistent": false,
+      "env": ["NODE_ENV", "CI"]
+    },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "inputs": ["tests/**", "e2e/**", "playwright.config.*", "global-setup.*", "global-teardown.*"],
+      "outputs": ["test-results/**", "playwright-report/**"],
+      "cache": false,
+      "persistent": false,
+      "env": ["NODE_ENV", "CI", "PLAYWRIGHT_BASE_URL", "DATABASE_URL", "AUTH_SECRET", "NEXTAUTH_URL"]
     },
     "type-check": {
       "dependsOn": ["^type-check"],
@@ -142,27 +162,35 @@
         "lib/**/*.{ts,tsx}",
         "actions/**/*.{ts,tsx}",
         "schemas/**/*.{ts,tsx}",
+        "types/**/*.{ts,tsx}",
         "tsconfig.json",
-        "tsconfig.*.json"
+        "tsconfig.*.json",
+        "next-env.d.ts"
       ],
-      "outputs": [],
+      "outputs": ["tsconfig.tsbuildinfo"],
       "cache": true,
-      "persistent": false
+      "persistent": false,
+      "outputLogs": "errors-only"
     },
     "clean": {
       "cache": false,
       "persistent": false,
-      "outputs": []
+      "outputs": [],
+      "inputs": []
+    },
+    "db:generate": {
+      "cache": true,
+      "persistent": false,
+      "env": ["DATABASE_URL"],
+      "inputs": ["drizzle/**", "schema/**", "drizzle.config.*"],
+      "outputs": ["migrations/**", "drizzle/**/*.d.ts"]
     },
     "db:migrate": {
+      "dependsOn": ["db:generate"],
       "cache": false,
       "persistent": false,
       "env": ["DATABASE_URL"],
-      "inputs": [
-        "drizzle/**",
-        "migrations/**",
-        "drizzle.config.*"
-      ],
+      "inputs": ["migrations/**", "drizzle.config.*"],
       "outputs": []
     },
     "db:seed": {
@@ -170,20 +198,71 @@
       "cache": false,
       "persistent": false,
       "env": ["DATABASE_URL"],
-      "inputs": [
-        "seed/**",
-        "scripts/seed.*"
-      ],
+      "inputs": ["seed/**", "scripts/seed.*"],
       "outputs": []
     },
     "db:studio": {
       "cache": false,
       "persistent": true,
       "env": ["DATABASE_URL"],
-      "inputs": []
+      "inputs": [],
+      "outputs": []
+    },
+    "db:push": {
+      "cache": false,
+      "persistent": false,
+      "env": ["DATABASE_URL"],
+      "inputs": ["drizzle/**", "schema/**", "drizzle.config.*"],
+      "outputs": []
+    },
+    "check:requirements": {
+      "cache": true,
+      "persistent": false,
+      "inputs": ["package.json", "pnpm-lock.yaml", ".nvmrc", ".node-version"],
+      "outputs": [],
+      "outputLogs": "errors-only"
+    },
+    "qa:fast": {
+      "dependsOn": ["format", "lint"],
+      "cache": true,
+      "persistent": false,
+      "inputs": [],
+      "outputs": [],
+      "outputLogs": "errors-only"
+    },
+    "qa:build": {
+      "dependsOn": ["qa:fast", "type-check", "build"],
+      "cache": true,
+      "persistent": false,
+      "inputs": [],
+      "outputs": [],
+      "outputLogs": "errors-only"
+    },
+    "qa:ci": {
+      "dependsOn": ["check:requirements", "qa:build", "test"],
+      "cache": true,
+      "persistent": false,
+      "inputs": [],
+      "outputs": [],
+      "outputLogs": "hash-only"
+    },
+    "qa:full": {
+      "dependsOn": ["qa:ci", "test:e2e", "qa:security"],
+      "cache": false,
+      "persistent": false,
+      "inputs": [],
+      "outputs": [],
+      "outputLogs": "full"
+    },
+    "qa:security": {
+      "cache": true,
+      "persistent": false,
+      "inputs": ["package.json", "pnpm-lock.yaml"],
+      "outputs": ["audit-report.*", "security-report.*"],
+      "outputLogs": "errors-only"
     },
     "deploy": {
-      "dependsOn": ["build", "lint", "type-check", "test"],
+      "dependsOn": ["qa:ci"],
       "cache": false,
       "persistent": false,
       "env": [
@@ -198,11 +277,14 @@
         "STRIPE_SECRET_KEY",
         "STRIPE_PUBLISHABLE_KEY"
       ],
-      "outputs": []
+      "inputs": [".vercel/**", "vercel.json"],
+      "outputs": [".vercel/**"]
     }
   },
   "remoteCache": {
     "signature": true,
-    "preflight": false
-  }
+    "preflight": false,
+    "timeout": 60
+  },
+  "cacheDir": ".turbo"
 }

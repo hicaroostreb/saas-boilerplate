@@ -1,31 +1,162 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ES2020",
+    // ✅ ENTERPRISE: Language and Environment
+    "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "preserve",
     "incremental": true,
+    "composite": true,
+
+    // ✅ ENTERPRISE: Module Resolution
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": false,
+
+    // ✅ ENTERPRISE: JavaScript Support
+    "allowJs": true,
+    "checkJs": false,
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
-    "jsx": "preserve",
+    "emitDeclarationOnly": false,
+    "sourceMap": true,
+
+    // ✅ ENTERPRISE: Emit Configuration
+    "outDir": "dist",
+    "removeComments": false,
+    "noEmit": false,
+    "importHelpers": true,
+    "downlevelIteration": true,
+
+    // ✅ ENTERPRISE: Interop Constraints
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+
+    // ✅ ENTERPRISE: Type Checking (STRICT MODE)
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noFallthroughCasesInSwitch": true,
+
+    // ✅ ENTERPRISE: Advanced Type Checking
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+
+    // ✅ ENTERPRISE: Module Detection
+    "moduleDetection": "auto",
+
+    // ✅ ENTERPRISE: Skip Library Checking (Performance)
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    // ✅ ENTERPRISE: Base Configuration
     "baseUrl": ".",
     "types": ["node"],
+
+    // ✅ ENTERPRISE: Path Mapping - SUA ESTRUTURA REAL
     "paths": {
+      // Packages
       "@workspace/database": ["packages/database/src"],
       "@workspace/database/*": ["packages/database/src/*"],
       "@workspace/auth": ["packages/auth/src"],
       "@workspace/auth/*": ["packages/auth/src/*"],
       "@workspace/billing": ["packages/billing/src"],
-      "@workspace/billing/*": ["packages/billing/src/*"]
-    }
+      "@workspace/billing/*": ["packages/billing/src/*"],
+      "@workspace/common": ["packages/common/src"],
+      "@workspace/common/*": ["packages/common/src/*"],
+      "@workspace/routes": ["packages/routes/src"],
+      "@workspace/routes/*": ["packages/routes/src/*"],
+      "@workspace/ui": ["packages/ui/src"],
+      "@workspace/ui/*": ["packages/ui/src/*"],
+      "@workspace/e2e": ["packages/e2e/src"],
+      "@workspace/e2e/*": ["packages/e2e/src/*"],
+
+      // Tooling
+      "@workspace/eslint-config": ["tooling/eslint-config/src"],
+      "@workspace/prettier-config": ["tooling/prettier-config/src"],
+      "@workspace/requirements-check": ["tooling/requirements-check/src"],
+      "@workspace/tailwind-config": ["tooling/tailwind-config/src"],
+      "@workspace/typescript-config": ["tooling/typescript-config/src"],
+
+      // Apps aliases
+      "@/*": ["apps/*/src/*"],
+      "~/*": ["./src/*"]
+    },
+
+    // ✅ ENTERPRISE: Plugin Configuration
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
+
+  // ✅ ENTERPRISE: Include/Exclude Patterns
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json", "next-env.d.ts", "**/*.d.ts"],
+  "exclude": [
+    "node_modules",
+    "**/.next",
+    "**/dist",
+    "**/build",
+    "**/.turbo",
+    "**/coverage",
+    "**/test-results",
+    "**/playwright-report",
+    "**/public",
+    "**/*.config.js",
+    "**/*.config.mjs"
+  ],
+
+  // ✅ ENTERPRISE: References - SUA ESTRUTURA REAL
   "references": [
+    // Packages
     { "path": "packages/database" },
     { "path": "packages/auth" },
-    { "path": "packages/billing" }
-  ]
+    { "path": "packages/billing" },
+    { "path": "packages/common" },
+    { "path": "packages/routes" },
+    { "path": "packages/ui" },
+    { "path": "packages/e2e" },
+
+    // Tooling
+    { "path": "tooling/eslint-config" },
+    { "path": "tooling/prettier-config" },
+    { "path": "tooling/requirements-check" },
+    { "path": "tooling/tailwind-config" },
+    { "path": "tooling/typescript-config" },
+
+    // Apps
+    { "path": "apps/dashboard" },
+    { "path": "apps/marketing" }
+  ],
+
+  // ✅ ENTERPRISE: Watch Options (Performance)
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "synchronousWatchDirectory": true,
+    "excludeDirectories": ["**/node_modules", "**/.git", "**/.next", "**/dist", "**/.turbo"]
+  },
+
+  // ✅ ENTERPRISE: Type Acquisition
+  "typeAcquisition": {
+    "enable": true,
+    "include": ["node", "jest", "playwright"],
+    "disableFilenameBasedTypeAcquisition": false
+  }
 }

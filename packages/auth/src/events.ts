@@ -27,7 +27,7 @@ export interface AuditEventData {
   ipAddress?: string | null;
   userAgent?: string | null;
   deviceFingerprint?: string | null;
-  deviceInfo?: Record<string, any> | null;
+  deviceInfo?: Record<string, unknown> | null;
 
   // ✅ ENTERPRISE: Geolocation
   country?: string | null;
@@ -37,10 +37,10 @@ export interface AuditEventData {
   // ✅ ENTERPRISE: Security & risk
   riskScore?: number;
   riskFactors?: string[];
-  securityFlags?: Record<string, any> | null;
+  securityFlags?: Record<string, unknown> | null;
 
   // ✅ ENTERPRISE: Event details
-  eventData?: Record<string, any> | null;
+  eventData?: Record<string, unknown> | null;
   errorCode?: string | null;
   errorMessage?: string | null;
 
@@ -50,7 +50,7 @@ export interface AuditEventData {
 
   // ✅ ENTERPRISE: Processing metadata
   processed?: boolean;
-  alertsSent?: Record<string, any> | null;
+  alertsSent?: Record<string, unknown> | null;
 }
 
 // ============================================
@@ -65,50 +65,50 @@ export class EventsAuditServiceClass {
     try {
       const auditLog: NewAuthAuditLog = {
         id: randomUUID(),
-        userId: event.userId || null,
-        sessionToken: event.sessionToken || null,
-        organizationId: event.organizationId || null,
+        userId: event.userId ?? null,
+        sessionToken: event.sessionToken ?? null,
+        organizationId: event.organizationId ?? null,
 
         // Event classification
         eventType: event.eventType,
         eventAction: event.eventAction,
-        eventStatus: event.eventStatus || 'success',
-        eventCategory: event.eventCategory || 'auth',
+        eventStatus: event.eventStatus ?? 'success',
+        eventCategory: event.eventCategory ?? 'auth',
 
         // Request context
-        ipAddress: event.ipAddress || null,
-        userAgent: event.userAgent || null,
-        deviceFingerprint: event.deviceFingerprint || null,
-        deviceInfo: event.deviceInfo || null,
+        ipAddress: event.ipAddress ?? null,
+        userAgent: event.userAgent ?? null,
+        deviceFingerprint: event.deviceFingerprint ?? null,
+        deviceInfo: event.deviceInfo ?? null,
 
         // Geolocation
-        country: event.country || null,
-        city: event.city || null,
-        timezone: event.timezone || null,
+        country: event.country ?? null,
+        city: event.city ?? null,
+        timezone: event.timezone ?? null,
 
         // Security assessment
-        riskScore: event.riskScore || 0,
+        riskScore: event.riskScore ?? 0,
         riskFactors: event.riskFactors
           ? JSON.stringify(event.riskFactors)
           : null,
-        securityFlags: event.securityFlags || null,
+        securityFlags: event.securityFlags ?? null,
 
         // Event data
-        eventData: event.eventData || null,
-        errorCode: event.errorCode || null,
-        errorMessage: event.errorMessage || null,
+        eventData: event.eventData ?? null,
+        errorCode: event.errorCode ?? null,
+        errorMessage: event.errorMessage ?? null,
 
         // Metadata
         timestamp: new Date(),
-        source: event.source || 'web',
-        requestId: event.requestId || null,
-        processed: event.processed || false,
-        alertsSent: event.alertsSent || null,
+        source: event.source ?? 'web',
+        requestId: event.requestId ?? null,
+        processed: event.processed ?? false,
+        alertsSent: event.alertsSent ?? null,
       };
 
       await db.insert(authAuditLogs).values(auditLog);
 
-      console.log(
+      console.warn(
         `✅ ACHROMATIC: Audit event logged: ${event.eventType}/${event.eventAction} - ${event.eventStatus}`
       );
     } catch (error) {
@@ -124,38 +124,38 @@ export class EventsAuditServiceClass {
     try {
       const auditLogs: NewAuthAuditLog[] = events.map(event => ({
         id: randomUUID(),
-        userId: event.userId || null,
-        sessionToken: event.sessionToken || null,
-        organizationId: event.organizationId || null,
+        userId: event.userId ?? null,
+        sessionToken: event.sessionToken ?? null,
+        organizationId: event.organizationId ?? null,
         eventType: event.eventType,
         eventAction: event.eventAction,
-        eventStatus: event.eventStatus || 'success',
-        eventCategory: event.eventCategory || 'auth',
-        ipAddress: event.ipAddress || null,
-        userAgent: event.userAgent || null,
-        deviceFingerprint: event.deviceFingerprint || null,
-        deviceInfo: event.deviceInfo || null,
-        country: event.country || null,
-        city: event.city || null,
-        timezone: event.timezone || null,
-        riskScore: event.riskScore || 0,
+        eventStatus: event.eventStatus ?? 'success',
+        eventCategory: event.eventCategory ?? 'auth',
+        ipAddress: event.ipAddress ?? null,
+        userAgent: event.userAgent ?? null,
+        deviceFingerprint: event.deviceFingerprint ?? null,
+        deviceInfo: event.deviceInfo ?? null,
+        country: event.country ?? null,
+        city: event.city ?? null,
+        timezone: event.timezone ?? null,
+        riskScore: event.riskScore ?? 0,
         riskFactors: event.riskFactors
           ? JSON.stringify(event.riskFactors)
           : null,
-        securityFlags: event.securityFlags || null,
-        eventData: event.eventData || null,
-        errorCode: event.errorCode || null,
-        errorMessage: event.errorMessage || null,
+        securityFlags: event.securityFlags ?? null,
+        eventData: event.eventData ?? null,
+        errorCode: event.errorCode ?? null,
+        errorMessage: event.errorMessage ?? null,
         timestamp: new Date(),
-        source: event.source || 'web',
-        requestId: event.requestId || null,
-        processed: event.processed || false,
-        alertsSent: event.alertsSent || null,
+        source: event.source ?? 'web',
+        requestId: event.requestId ?? null,
+        processed: event.processed ?? false,
+        alertsSent: event.alertsSent ?? null,
       }));
 
       await db.insert(authAuditLogs).values(auditLogs);
 
-      console.log(
+      console.warn(
         `✅ ACHROMATIC: Batch audit events logged: ${events.length} events`
       );
     } catch (error) {
@@ -168,16 +168,19 @@ export class EventsAuditServiceClass {
    */
   async getUserAuditTrail(
     userId: string,
-    limit: number = 100,
+    limit = 100,
     eventTypes?: AuthEventType[]
   ): Promise<AuthAuditLog[]> {
     try {
       let whereConditions = eq(authAuditLogs.userId, userId);
 
-      // ✅ CORRIGIDO - substituir todo o bloco if:
+      // ✅ CORRIGIDO: Verificar se eventTypeFilter existe antes do and()
       if (eventTypes && eventTypes.length > 0) {
         const eventTypeFilter = inArray(authAuditLogs.eventType, eventTypes);
-        whereConditions = and(whereConditions, eventTypeFilter) as any;
+        const newConditions = and(whereConditions, eventTypeFilter);
+        if (newConditions) {
+          whereConditions = newConditions;
+        }
       }
 
       return await db
@@ -192,12 +195,13 @@ export class EventsAuditServiceClass {
     }
   }
 
+
   /**
    * ✅ ENTERPRISE: Get organization audit trail
    */
   async getOrganizationAuditTrail(
     organizationId: string,
-    limit: number = 100
+    limit = 100
   ): Promise<AuthAuditLog[]> {
     try {
       return await db
@@ -229,7 +233,7 @@ export class EventsAuditServiceClass {
         })
         .where(inArray(authAuditLogs.id, eventIds));
 
-      console.log(
+      console.warn(
         `✅ ACHROMATIC: ${eventIds.length} events marked as processed`
       );
     } catch (error) {
@@ -258,7 +262,7 @@ export async function onSessionCreated(
   context: {
     ipAddress?: string;
     userAgent?: string;
-    deviceInfo?: Record<string, any>;
+    deviceInfo?: Record<string, unknown>;
     organizationId?: string;
     provider?: string;
     securityLevel?: string;
@@ -284,7 +288,7 @@ export async function onSessionCreated(
     country: context.geolocation?.country,
     city: context.geolocation?.city,
     timezone: context.geolocation?.timezone,
-    riskScore: context.riskScore || 0,
+    riskScore: context.riskScore ?? 0,
     eventData: {
       provider: context.provider,
       securityLevel: context.securityLevel,
@@ -315,7 +319,7 @@ export async function onSessionRevoked(
         isRevoked: true,
         revokedAt: new Date(),
         revokedReason: reason,
-        revokedBy: context.revokedBy || userId,
+        revokedBy: context.revokedBy ?? userId,
         updatedAt: new Date(),
       })
       .where(eq(sessions.sessionToken, sessionToken));
@@ -334,7 +338,7 @@ export async function onSessionRevoked(
       eventData: {
         reason,
         revokedBy: context.revokedBy,
-        forced: context.forced || false,
+        forced: context.forced ?? false,
       },
     });
   } catch (error) {
@@ -354,7 +358,7 @@ export async function onUserLogin(
     organizationId?: string;
     ipAddress?: string;
     userAgent?: string;
-    deviceInfo?: Record<string, any>;
+    deviceInfo?: Record<string, unknown>;
     securityLevel?: string;
     twoFactorUsed?: boolean;
     riskScore?: number;
@@ -379,11 +383,11 @@ export async function onUserLogin(
     country: context.geolocation?.country,
     city: context.geolocation?.city,
     timezone: context.geolocation?.timezone,
-    riskScore: context.riskScore || 0,
+    riskScore: context.riskScore ?? 0,
     eventData: {
       provider: context.provider,
       securityLevel: context.securityLevel,
-      twoFactorUsed: context.twoFactorUsed || false,
+      twoFactorUsed: context.twoFactorUsed ?? false,
     },
   });
 }
@@ -412,7 +416,7 @@ export async function onUserLogout(
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,
     eventData: {
-      reason: context.reason || 'user_initiated',
+      reason: context.reason ?? 'user_initiated',
     },
   });
 }
@@ -439,7 +443,7 @@ export async function onLoginFailure(context: {
     eventCategory: 'auth',
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,
-    riskScore: context.riskScore || 0,
+    riskScore: context.riskScore ?? 0,
     riskFactors: context.securityFlags,
     errorCode: context.errorCode,
     errorMessage: context.reason,
@@ -463,7 +467,7 @@ export async function onSecurityAlert(
     organizationId?: string;
     ipAddress?: string;
     userAgent?: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     riskScore?: number;
     securityFlags?: string[];
   } = {}
@@ -478,10 +482,10 @@ export async function onSecurityAlert(
     eventCategory: 'security',
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,
-    riskScore: context.riskScore || 50,
+    riskScore: context.riskScore ?? 50,
     riskFactors: context.securityFlags,
     securityFlags: {
-      severity: context.severity || 'medium',
+      severity: context.severity ?? 'medium',
       alertType,
     },
     eventData: context.details,

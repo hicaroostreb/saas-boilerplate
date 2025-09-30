@@ -1,13 +1,24 @@
 {
-  "extends": "../../tooling/typescript-config/react-library.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "dist",
     "rootDir": "src",
-    "noEmit": false,
-    "skipLibCheck": true
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@workspace/database": ["../database/src"],
+      "@workspace/database/*": ["../database/src/*"],
+      "@workspace/auth": ["../auth/src"],
+      "@workspace/auth/*": ["../auth/src/*"],
+      "@workspace/common": ["../common/src"],
+      "@workspace/common/*": ["../common/src/*"]
+    }
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../database" }, { "path": "../auth" }, { "path": "../common" }],
-  "exclude": ["node_modules", "dist", "**/*.test.*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
+  "references": [{ "path": "../database" }, { "path": "../auth" }, { "path": "../common" }]
 }

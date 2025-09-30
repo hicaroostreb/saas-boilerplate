@@ -1,9 +1,9 @@
 // apps/dashboard/app/api/auth/validate-reset-token/route.ts - ACHROMATIC VALIDATE RESET TOKEN
 
-import { NextRequest, NextResponse } from 'next/server';
+import { logAuthEvent } from '@workspace/auth/server';
 import { db, passwordResetTokens, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';
-import { logAuthEvent } from '@workspace/auth/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 // ✅ ENTERPRISE: Validation schema
@@ -14,9 +14,10 @@ const validateTokenSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // ✅ ENTERPRISE: Get request context
-    const ipAddress = request.headers.get('x-forwarded-for') ?? 
-                     request.headers.get('x-real-ip') ?? 
-                     'unknown';
+    const ipAddress =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
     const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
     // ✅ ACHROMATIC: Parse and validate input
@@ -25,12 +26,12 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid token format',
-          }
+          },
         },
         { status: 400 }
       );
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ ENTERPRISE: Log token validation attempt
     await logAuthEvent({
-      userId: resetTokenData?.userId ?? null,
+      userId: resetTokenData?.userId || null,
       eventType: 'password_reset',
       eventAction: 'validate_reset_token',
       eventStatus: resetTokenData ? 'success' : 'failure',
@@ -78,12 +79,12 @@ export async function POST(request: NextRequest) {
     // ✅ ENTERPRISE: Check if token exists
     if (!resetTokenData) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_INVALID',
             message: 'Invalid or non-existent reset token',
-          }
+          },
         },
         { status: 404 }
       );
@@ -107,13 +108,13 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_EXPIRED',
             message: 'Reset token has expired',
             expiredAt: resetTokenData.expiresAt,
-          }
+          },
         },
         { status: 410 }
       );
@@ -136,13 +137,13 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_USED',
             message: 'Reset token has already been used',
             usedAt: resetTokenData.usedAt,
-          }
+          },
         },
         { status: 410 }
       );
@@ -164,12 +165,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_REVOKED',
             message: 'Reset token has been revoked',
-          }
+          },
         },
         { status: 410 }
       );
@@ -193,12 +194,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'MAX_ATTEMPTS_EXCEEDED',
             message: 'Maximum validation attempts exceeded',
-          }
+          },
         },
         { status: 429 }
       );
@@ -220,12 +221,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'USER_INACTIVE',
             message: 'User account is inactive',
-          }
+          },
         },
         { status: 403 }
       );
@@ -233,7 +234,8 @@ export async function POST(request: NextRequest) {
 
     // ✅ ENTERPRISE: Extract organizationSlug from metadata safely
     const metadata = resetTokenData.metadata as Record<string, unknown> | null;
-    const organizationSlug = metadata?.organizationSlug as string | null ?? null;
+    const organizationSlug =
+      (metadata?.organizationSlug as string | null) || null;
 
     return NextResponse.json({
       success: true,
@@ -244,9 +246,7 @@ export async function POST(request: NextRequest) {
       attemptsRemaining: resetTokenData.maxAttempts - resetTokenData.attempts,
       message: 'Token is valid',
     });
-
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('❌ ACHROMATIC: Validate reset token API error:', error);
 
     // ✅ ENTERPRISE: Log system error
@@ -255,18 +255,18 @@ export async function POST(request: NextRequest) {
       eventAction: 'validate_reset_token_system_error',
       eventStatus: 'error',
       eventCategory: 'auth',
-      ipAddress: request.headers.get('x-forwarded-for') ?? 'unknown',
-      userAgent: request.headers.get('user-agent') ?? 'unknown',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });
 
     return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
+      {
+        success: false,
+        error: {
           code: 'SYSTEM_ERROR',
           message: 'An unexpected error occurred',
-        }
+        },
       },
       { status: 500 }
     );

@@ -1,6 +1,6 @@
 // packages/auth/src/context.ts - ACHROMATIC ENTERPRISE CONTEXT CORRIGIDO
 
-import type { Membership, Organization, User } from '@workspace/database';
+import type { Membership, Organization } from '@workspace/database';
 import { db, memberships, organizations, users } from '@workspace/database';
 import { and, eq } from 'drizzle-orm';
 import type { Session } from 'next-auth';
@@ -51,14 +51,14 @@ export interface AuthContext {
 
 export interface OrganizationContext extends AuthContext {
   organization: Organization & {
-    settings: Record<string, any> | null;
-    features: Record<string, any> | null;
+    settings: Record<string, unknown> | null;
+    features: Record<string, unknown> | null;
   };
   membership: Membership & {
     role: MemberRole;
     permissions: string[] | null;
     customPermissions: Record<string, boolean> | null;
-    metadata: Record<string, any> | null;
+    metadata: Record<string, unknown> | null;
   };
 }
 
@@ -115,10 +115,9 @@ async function getEnhancedUserData(
     if (!user) return null;
 
     // ✅ CORRIGIDO: Cast para EnterpriseUser com SecurityLevel
-    if (!user) return null;
     return {
       ...user,
-      securityLevel: (user.securityLevel as SecurityLevel) || 'normal',
+      securityLevel: (user.securityLevel as SecurityLevel) ?? 'normal',
     } as EnterpriseUser;
   } catch (error) {
     console.error('❌ ACHROMATIC: Error fetching enhanced user data:', error);
@@ -139,13 +138,14 @@ export async function getOptionalAuthContext(): Promise<AuthContext | null> {
 
     // ✅ ENTERPRISE: Get enhanced user data
     const enhancedUser = await getEnhancedUserData(session.user.id);
-    if (!enhancedUser || !enhancedUser.isActive) {
+    if (!enhancedUser?.isActive) {
       return null;
     }
 
     // ✅ ACHROMATIC: Extract enterprise context
-    const enterpriseContext: EnterpriseContext = (session as any)
-      ?.enterprise || {
+    const enterpriseContext: EnterpriseContext = ((
+      session as Record<string, unknown>
+    )?.enterprise as EnterpriseContext) ?? {
       sessionId: null,
       organizationId: null,
       organizationSlug: null,
@@ -188,7 +188,9 @@ export async function getRequiredAuthContext(): Promise<AuthContext> {
   const context = await getOptionalAuthContext();
 
   if (!context) {
-    console.log('❌ ACHROMATIC: No valid auth context, redirecting to sign-in');
+    console.warn(
+      '❌ ACHROMATIC: No valid auth context, redirecting to sign-in'
+    );
     redirect('/auth/sign-in');
   }
 
@@ -297,8 +299,8 @@ export async function getOrganizationContext(
       ...authContext,
       organization: {
         ...organization,
-        settings: organization.settings as Record<string, any> | null,
-        features: organization.features as Record<string, any> | null,
+        settings: organization.settings as Record<string, unknown> | null,
+        features: organization.features as Record<string, unknown> | null,
       },
       membership: {
         ...membership,
@@ -308,7 +310,7 @@ export async function getOrganizationContext(
           string,
           boolean
         > | null,
-        metadata: membership.metadata as Record<string, any> | null,
+        metadata: membership.metadata as Record<string, unknown> | null,
       },
     };
   } catch (error) {
@@ -332,7 +334,7 @@ export async function getUserOrganizations(): Promise<
   const authContext = await getRequiredAuthContext();
 
   try {
-    return await db
+    return db
       .select({
         organization: {
           id: organizations.id,
@@ -356,7 +358,7 @@ export async function getUserOrganizations(): Promise<
           eq(organizations.isActive, true)
         )
       )
-      .orderBy(memberships.createdAt); // ✅ CORRIGIDO: joinedAt → createdAt
+      .orderBy(memberships.createdAt);
   } catch (error) {
     console.error('❌ ACHROMATIC: Error getting user organizations:', error);
     return [];
@@ -379,7 +381,7 @@ export async function requireAuth(): Promise<Session> {
  * ✅ ACHROMATIC: Get auth context - this was the missing function
  */
 export async function getAuthContext(): Promise<AuthContext> {
-  return await getRequiredAuthContext();
+  return getRequiredAuthContext();
 }
 
 // ============================================
@@ -393,7 +395,7 @@ export function hasPermission(
   membership: OrganizationContext['membership'],
   permission: string
 ): boolean {
-  if (!membership || !membership.isActive) {
+  if (!membership?.isActive) {
     return false;
   }
 
@@ -407,11 +409,12 @@ export function hasPermission(
     membership.customPermissions &&
     permission in membership.customPermissions
   ) {
-    return membership.customPermissions[permission];
+    // ✅ CORRIGIDO: Linha 412 - Garantir que seja boolean
+    return membership.customPermissions[permission] ?? false;
   }
 
   // Check standard permissions
-  return membership.permissions?.includes(permission) || false;
+  return membership.permissions?.includes(permission) ?? false;
 }
 
 /**
@@ -421,7 +424,7 @@ export function hasRole(
   membership: OrganizationContext['membership'],
   ...roles: MemberRole[]
 ): boolean {
-  if (!membership || !membership.isActive) {
+  if (!membership?.isActive) {
     return false;
   }
 
@@ -533,34 +536,39 @@ export function getSessionRiskLevel(
 // ============================================
 
 /**
- * ✅ ACHROMATIC: Type guard for valid auth context
+ * ✅ CORRIGIDO: Linha 542 - Type guard sem type predicate incompatível
  */
-export function isValidAuthContext(context: any): context is AuthContext {
-  return (
-    context &&
-    typeof context === 'object' &&
-    context.session &&
-    context.user &&
-    typeof context.user.id === 'string' &&
-    typeof context.user.email === 'string' &&
-    context.user.isActive === true &&
-    context.isAuthenticated === true
+export function isValidAuthContext(
+  context: unknown
+): context is AuthContext {
+  if (!context || typeof context !== 'object') return false;
+  
+  const ctx = context as Record<string, unknown>;
+  return Boolean(
+    ctx.session &&
+    ctx.user &&
+    typeof (ctx.user as Record<string, unknown>).id === 'string' &&
+    typeof (ctx.user as Record<string, unknown>).email === 'string' &&
+    (ctx.user as Record<string, unknown>).isActive === true &&
+    ctx.isAuthenticated === true
   );
 }
 
 /**
- * ✅ ENTERPRISE: Type guard for organization context
+ * ✅ CORRIGIDO: Linha 560 - Type guard sem type predicate incompatível
  */
 export function isValidOrganizationContext(
-  context: any
+  context: unknown
 ): context is OrganizationContext {
+  if (!isValidAuthContext(context)) return false;
+  
+  const ctx = (context as unknown) as Record<string, unknown>;
   return Boolean(
-    isValidAuthContext(context) &&
-      context.organization &&
-      context.membership &&
-      typeof context.organization.id === 'string' &&
-      typeof context.membership.role === 'string' &&
-      context.membership.isActive === true &&
-      context.organization.isActive === true
+    ctx.organization &&
+    ctx.membership &&
+    typeof (ctx.organization as Record<string, unknown>).id === 'string' &&
+    typeof (ctx.membership as Record<string, unknown>).role === 'string' &&
+    (ctx.membership as Record<string, unknown>).isActive === true &&
+    (ctx.organization as Record<string, unknown>).isActive === true
   );
 }

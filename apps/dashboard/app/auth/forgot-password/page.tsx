@@ -1,8 +1,8 @@
 // apps/dashboard/app/auth/forgot-password/page.tsx - ACHROMATIC ENTERPRISE FORGOT PASSWORD
 
-import { ThemeToggle } from "@workspace/ui";
-import Link from "next/link";
-import { ForgotPasswordClient } from "./ForgotPasswordClient";
+import { ThemeToggle } from '@workspace/ui';
+import Link from 'next/link';
+import { ForgotPasswordClient } from './ForgotPasswordClient';
 
 interface ForgotPasswordPageProps {
   searchParams: Promise<{
@@ -11,21 +11,24 @@ interface ForgotPasswordPageProps {
   }>;
 }
 
-export default async function ForgotPasswordPage({ 
-  searchParams 
+export default async function ForgotPasswordPage({
+  searchParams,
 }: ForgotPasswordPageProps) {
   // ✅ NEXT.JS 15: Await searchParams
   const resolvedSearchParams = await searchParams;
-  
+
   // ✅ ENTERPRISE: Get URL parameters from resolved params
-  const email = resolvedSearchParams.email ?? '';
+  const email = resolvedSearchParams.email || '';
   const organizationSlug = resolvedSearchParams.org;
 
   return (
     <main className="h-screen dark:bg-background bg-gray-50 px-4">
       <div className="mx-auto w-full min-w-[320px] space-y-6 py-12 max-w-sm">
         {/* ✅ ACHROMATIC: Logo limpo */}
-        <Link href={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"} className="block w-fit mx-auto">
+        <Link
+          href={process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}
+          className="block w-fit mx-auto"
+        >
           <div className="flex items-center space-x-2">
             <div className="flex size-9 items-center justify-center p-1">
               <div className="flex size-7 items-center justify-center rounded-md border text-primary-foreground bg-primary">
@@ -54,7 +57,7 @@ export default async function ForgotPasswordPage({
         </Link>
 
         {/* ✅ CORREÇÃO: Deixar o ForgotPasswordClient renderizar seu próprio card */}
-        <ForgotPasswordClient 
+        <ForgotPasswordClient
           defaultEmail={email}
           organizationSlug={organizationSlug}
         />

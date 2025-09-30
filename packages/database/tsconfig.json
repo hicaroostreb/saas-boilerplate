@@ -8,8 +8,13 @@
     "declarationMap": true,
     "sourceMap": true,
     "incremental": true,
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "drizzle", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["dist", "node_modules", "drizzle", "**/*.test.*", "**/*.spec.*"],
+  "references": []
 }

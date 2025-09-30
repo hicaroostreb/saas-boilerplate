@@ -1,32 +1,21 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "es6"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": false,
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
     "declaration": true,
     "declarationMap": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    "sourceMap": true,
     "jsx": "preserve",
-    "incremental": true,
     "baseUrl": ".",
-    "outDir": "./dist",
-    "rootDir": "./src",
     "paths": {
-      "@/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@workspace/common": ["../common/src"],
+      "@workspace/common/*": ["../common/src/*"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
+  "references": [{ "path": "../common" }]
 }

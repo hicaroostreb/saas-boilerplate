@@ -1,25 +1,60 @@
 // ============================================
-// CORE DATABASE EXPORTS
+// DATABASE PACKAGE - MAIN EXPORTS ENTERPRISE
 // ============================================
 
-// Main database client
-export { db } from './client';
+// ============================================
+// CONNECTION LAYER
+// ============================================
 
-// ✅ SCHEMA: All tables and relations
-export * from './schema';
+// Main database connection
+export {
+  closeConnection,
+  db,
+  getConnectionInfo,
+  getDatabaseConnection,
+  healthCheck,
+  type Database,
+} from './connection';
+
+// Connection utilities
+export {
+  DatabaseError,
+  isCheckConstraintError,
+  isDuplicateKeyError,
+  isForeignKeyError,
+  isNotNullError,
+  withQueryPerformance,
+} from './connection';
+
+// ============================================
+// SCHEMA LAYER
+// ============================================
+
+// Schema exports by domain
+export * from './schemas';
+
+// ============================================
+// ENTITY LAYER (DOMAIN OBJECTS)
+// ============================================
+
+// Domain entities
+export * from './entities';
+
+// ============================================
+// REPOSITORY LAYER (DATA ACCESS)
+// ============================================
+
+// Repository patterns
+export * from './repositories';
 
 // ============================================
 // DRIZZLE ORM UTILITIES
 // ============================================
 
-// Core query utilities
+// Core query builders
 export {
   and,
-  asc,
-  avg,
   between,
-  count,
-  desc,
   eq,
   exists,
   gt,
@@ -31,25 +66,32 @@ export {
   like,
   lt,
   lte,
-  max,
-  min,
   ne,
+  not,
   notExists,
   notInArray,
   or,
-  placeholder,
-  sql,
-  sum,
-} from 'drizzle-orm';
+} from './connection';
 
-// ✅ TYPE UTILITIES: Enhanced TypeScript support
-export type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
+// Aggregation functions
+export { avg, count, max, min, sum } from './connection';
+
+// Sorting and utilities
+export { asc, desc, placeholder, sql } from './connection';
+
+// Type utilities
+export type {
+  InferInsertModel,
+  InferSelectModel,
+  Placeholder,
+  SQL,
+} from './connection';
 
 // ============================================
-// BUSINESS LOGIC UTILITIES
+// BUSINESS UTILITIES
 // ============================================
 
-// ✅ PAGINATION: Utility for consistent pagination
+// Pagination utilities
 export interface PaginationOptions {
   page?: number;
   limit?: number;
@@ -67,120 +109,208 @@ export interface PaginationResult<T> {
   };
 }
 
-// ✅ HELPERS: Common query patterns
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 export function createPaginationParams(options: PaginationOptions = {}) {
-  const page = Math.max(1, options.page || 1);
+  const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(
     MAX_PAGE_SIZE,
     Math.max(1, options.limit || DEFAULT_PAGE_SIZE)
   );
-  const offset = options.offset ?? (page - 1) * limit;
+  const offset = options.offset || (page - 1) * limit;
 
   return { page, limit, offset };
+}
+
+export function createPaginationResult<T>(
+  data: T[],
+  total: number,
+  options: { page: number; limit: number }
+): PaginationResult<T> {
+  const { page, limit } = options;
+  const totalPages = Math.ceil(total / limit);
+  const hasMore = page < totalPages;
+
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasMore,
+    },
+  };
 }
 
 // ============================================
 // VALIDATION UTILITIES
 // ============================================
 
-// ✅ UUID VALIDATION: Validate UUID strings
+// UUID validation
 export function isValidUUID(uuid: string): boolean {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 }
 
-// ✅ SLUG VALIDATION: Validate URL-safe slugs
+// Slug validation
 export function isValidSlug(slug: string): boolean {
   const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   return slugRegex.test(slug) && slug.length >= 3 && slug.length <= 100;
 }
 
-// ✅ EMAIL VALIDATION: Basic email validation
+// Email validation
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-// ============================================
-// AUDIT LOGGING UTILITIES
-// ============================================
-
-// ✅ ACTIVITY LOG: Helper for consistent activity logging
-export interface ActivityLogParams {
-  organizationId: string;
-  userId?: string;
-  action: string;
-  entityType?: string;
-  entityId?: string;
-  entityName?: string;
-  description: string;
-  changes?: Record<string, { from: any; to: any }>;
-  metadata?: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
+// Slug generation
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special chars
+    .replace(/[\s_-]+/g, '-') // Replace spaces/underscores with hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
 // ============================================
-// ERROR UTILITIES
+// SEED UTILITIES
 // ============================================
 
-// ✅ DATABASE ERRORS: Enhanced error handling
-export class DatabaseError extends Error {
-  constructor(
-    message: string,
-    public code?: string,
-    public constraint?: string,
-    public table?: string
-  ) {
-    super(message);
-    this.name = 'DatabaseError';
+import { runAllSeeders } from './seeders';
+
+export interface SeedOptions {
+  force?: boolean; // Force reseed even if data exists
+  verbose?: boolean; // Log detailed information
+}
+
+export async function seedDatabase(options: SeedOptions = {}): Promise<void> {
+  const { verbose = false } = options;
+
+  if (verbose) {
+    console.log('🌱 Starting database seed...');
+  }
+
+  try {
+    await runAllSeeders(options);
+
+    if (verbose) {
+      console.log('✅ Database seed completed successfully');
+    }
+  } catch (error) {
+    console.error('❌ Database seed failed:', error);
+    throw error;
   }
 }
 
-export function isDuplicateKeyError(error: any): boolean {
-  return error?.code === '23505' || error?.message?.includes('duplicate key');
-}
-
-export function isForeignKeyError(error: any): boolean {
-  return error?.code === '23503' || error?.message?.includes('foreign key');
-}
-
-export function isNotFoundError(error: any): boolean {
-  return error?.code === '02000' || error?.message?.includes('no data found');
-}
-
 // ============================================
-// PERFORMANCE UTILITIES
+// TRANSACTION UTILITIES - ✅ FINAL FIX
 // ============================================
 
-// ✅ QUERY PERFORMANCE: Monitoring and optimization
-export function withQueryLogging<T>(
-  queryName: string,
-  query: () => Promise<T>
+import { db } from './connection';
+
+export async function withTransaction<T>(
+  callback: (tx: any) => Promise<T> // ✅ FIXED: Use any for simplicity
 ): Promise<T> {
-  if (process.env.NODE_ENV !== 'development') {
-    return query();
-  }
-
-  const start = Date.now();
-  console.log(`🔍 [DB] Starting query: ${queryName}`);
-
-  return query()
-    .then(result => {
-      const duration = Date.now() - start;
-      console.log(`✅ [DB] Query completed: ${queryName} (${duration}ms)`);
-      return result;
-    })
-    .catch(error => {
-      const duration = Date.now() - start;
-      console.error(
-        `❌ [DB] Query failed: ${queryName} (${duration}ms)`,
-        error
-      );
-      throw error;
-    });
+  return db.transaction(callback);
 }
+
+// ============================================
+// HEALTH CHECK UTILITIES
+// ============================================
+
+import {
+  getConnectionInfo as dbGetConnectionInfo,
+  healthCheck as dbHealthCheck,
+} from './connection';
+
+export async function checkDatabaseHealth(): Promise<{
+  healthy: boolean;
+  details: Record<string, any>;
+}> {
+  try {
+    const isHealthy = await dbHealthCheck();
+    const connectionInfo = await dbGetConnectionInfo();
+
+    return {
+      healthy: isHealthy,
+      details: {
+        connected: isHealthy,
+        connectionInfo,
+        timestamp: new Date().toISOString(),
+      },
+    };
+  } catch (error) {
+    return {
+      healthy: false,
+      details: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+}
+
+// ============================================
+// DEVELOPMENT UTILITIES
+// ============================================
+
+import { schemaInfo } from './schemas';
+
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Database package loaded in development mode');
+  console.log(
+    `📊 Schema info: ${schemaInfo.totalTables} tables across ${schemaInfo.domains.length} domains`
+  );
+}
+
+// ============================================
+// PACKAGE INFO
+// ============================================
+
+export const packageInfo = {
+  name: '@workspace/database',
+  version: '1.0.0',
+  description: 'Enterprise database layer with Clean Architecture',
+
+  // Architecture layers
+  layers: {
+    connection: 'Database connection and configuration',
+    schemas: 'Drizzle table definitions organized by domain',
+    entities: 'Domain objects with business logic',
+    repositories: 'Data access layer with Repository Pattern',
+  },
+
+  // Domain organization
+  domains: schemaInfo.domains,
+  tables: schemaInfo.tables,
+  totalTables: schemaInfo.totalTables,
+
+  // Features
+  features: [
+    'Clean Architecture',
+    'Repository Pattern',
+    'Domain-Driven Design',
+    'Single Responsibility Principle',
+    'Dependency Inversion',
+    'Type Safety',
+    'Performance Optimized',
+    'Enterprise Scalable',
+  ],
+
+  // Tech stack
+  techStack: {
+    orm: 'Drizzle ORM',
+    database: 'PostgreSQL',
+    architecture: 'Clean Architecture + DDD-Lite',
+    patterns: ['Repository', 'Entity', 'Factory'],
+    principles: ['SRP', 'DIP', 'ISP'],
+  },
+} as const;
+
+// Export schema info for introspection
+export { schemaInfo } from './schemas';

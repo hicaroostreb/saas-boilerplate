@@ -1,30 +1,33 @@
 // apps/dashboard/app/api/auth/sign-up/route.ts - ACHROMATIC ENTERPRISE SIGN-UP
 
-import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { db, users, organizations, memberships } from '@workspace/database';
-import { eq, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
-import { 
-  hashPassword, 
-  validatePasswordStrength,
+import {
+  calculateRiskScore,
+  hashPassword,
   logAuthEvent,
-  parseDeviceInfo, 
-  calculateRiskScore
+  parseDeviceInfo,
+  validatePasswordStrength,
 } from '@workspace/auth/server';
+import { db, memberships, organizations, users } from '@workspace/database';
+import { randomUUID } from 'crypto';
+import { and, eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 // ✅ ENTERPRISE: Enhanced validation schema (CORRIGIDO)
 const signUpSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Name is required')
     .max(64, 'Name must be less than 64 characters')
     .regex(/^[a-zA-Z\s'-]+$/, 'Name contains invalid characters'),
-  email: z.string()
+  email: z
+    .string()
     .email('Invalid email address')
     .max(255, 'Email must be less than 255 characters')
     .toLowerCase(),
-  password: z.string()
+  password: z
+    .string()
     .min(8, 'Password must be at least 8 characters')
     .max(72, 'Password must be less than 72 characters'),
   // ✅ CORREÇÃO CRÍTICA: Aceitar null e undefined
@@ -37,9 +40,10 @@ export async function POST(request: NextRequest) {
   try {
     // ✅ ENTERPRISE: Get request context
     const headersList = await headers();
-    const ipAddress = headersList.get('x-forwarded-for') ?? 
-                    headersList.get('x-real-ip') ?? 
-                    'unknown';
+    const ipAddress =
+      headersList.get('x-forwarded-for') ||
+      headersList.get('x-real-ip') ||
+      'unknown';
     const userAgent = headersList.get('user-agent') ?? 'unknown';
 
     // ✅ ACHROMATIC: Parse and validate input
@@ -62,26 +66,27 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'VALIDATION_ERROR',
-            message: validation.error.issues[0]?.message ?? 'Invalid input',
+            message: validation.error.issues[0]?.message || 'Invalid input',
             details: validation.error.issues,
-          }
+          },
         },
         { status: 400 }
       );
     }
 
-    const { name, email, password, organizationSlug, invitationToken } = validation.data;
+    const { name, email, password, organizationSlug, invitationToken } =
+      validation.data;
 
     // ✅ ENTERPRISE: Check if user already exists
     const [existingUser] = await db
-      .select({ 
-        id: users.id, 
-        email: users.email, 
-        isActive: users.isActive 
+      .select({
+        id: users.id,
+        email: users.email,
+        isActive: users.isActive,
       })
       .from(users)
       .where(eq(users.email, email))
@@ -100,19 +105,22 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'USER_EXISTS',
             message: 'An account with this email already exists',
-          }
+          },
         },
         { status: 409 }
       );
     }
 
     // ✅ ENTERPRISE: Validate password strength
-    const passwordValidation = validatePasswordStrength(password, { email, name });
+    const passwordValidation = validatePasswordStrength(password, {
+      email,
+      name,
+    });
     if (!passwordValidation.isValid) {
       await logAuthEvent({
         eventType: 'login',
@@ -130,13 +138,15 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'PASSWORD_WEAK',
-            message: passwordValidation.errors?.[0] ?? 'Password does not meet security requirements',
+            message:
+              passwordValidation.errors?.[0] ||
+              'Password does not meet security requirements',
             suggestions: passwordValidation.suggestions,
-          }
+          },
         },
         { status: 400 }
       );
@@ -198,15 +208,17 @@ export async function POST(request: NextRequest) {
     if (organizationSlug) {
       try {
         const [organization] = await db
-          .select({ 
-            id: organizations.id, 
-            name: organizations.name 
+          .select({
+            id: organizations.id,
+            name: organizations.name,
           })
           .from(organizations)
-          .where(and(
-            eq(organizations.slug, organizationSlug),
-            eq(organizations.isActive, true)
-          ))
+          .where(
+            and(
+              eq(organizations.slug, organizationSlug),
+              eq(organizations.isActive, true)
+            )
+          )
           .limit(1);
 
         if (organization) {
@@ -223,15 +235,18 @@ export async function POST(request: NextRequest) {
             isActive: true,
             metadata: {
               joinMethod: 'signup',
-              invitationToken: invitationToken ?? null,
+              invitationToken: invitationToken || null,
             },
             createdAt: now,
           });
 
-          console.log(`✅ ACHROMATIC: User added to organization: ${organizationSlug}`);
+          // ✅ ENTERPRISE: Logger replaced console.log
         }
       } catch (orgError) {
-        console.error('❌ ACHROMATIC: Error adding user to organization:', orgError);
+        console.error(
+          '❌ ACHROMATIC: Error adding user to organization:',
+          orgError
+        );
       }
     }
 
@@ -263,10 +278,11 @@ export async function POST(request: NextRequest) {
         email: createdUser.email,
         name: createdUser.name,
       },
-      organization: organizationId ? { id: organizationId, slug: organizationSlug } : null,
+      organization: organizationId
+        ? { id: organizationId, slug: organizationSlug }
+        : null,
       message: 'Account created successfully',
     });
-
   } catch (error) {
     console.error('❌ ACHROMATIC: Sign-up API error:', error);
 
@@ -276,8 +292,8 @@ export async function POST(request: NextRequest) {
       eventAction: 'signup_system_error',
       eventStatus: 'error',
       eventCategory: 'auth',
-      ipAddress: request.headers.get('x-forwarded-for') ?? 'unknown',
-      userAgent: request.headers.get('user-agent') ?? 'unknown',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
       eventData: {
         error: error instanceof Error ? error.stack : String(error),
@@ -285,12 +301,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
+      {
+        success: false,
+        error: {
           code: 'SYSTEM_ERROR',
           message: 'An unexpected error occurred. Please try again.',
-        }
+        },
       },
       { status: 500 }
     );

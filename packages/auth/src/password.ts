@@ -105,13 +105,15 @@ export async function hashPassword(
 
   try {
     switch (algorithm) {
-      case 'bcrypt':
+      case 'bcrypt': {
         return await bcrypt.hash(password, saltRounds);
+      }
 
-      case 'scrypt':
+      case 'scrypt': {
         const salt = randomBytes(32).toString('hex');
         const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
         return `scrypt:${salt}:${derivedKey.toString('hex')}`;
+      }
 
       default:
         throw new Error(`Unsupported hashing algorithm: ${algorithm}`);
@@ -133,7 +135,13 @@ export async function verifyPassword(
     // ✅ ENTERPRISE: Handle different hashing algorithms
     if (hashedPassword.startsWith('scrypt:')) {
       const [, salt, hash] = hashedPassword.split(':');
+      
+      // ✅ CORRIGIDO: Linha 138 - Validar salt antes do uso
+      if (!salt) throw new Error('Salt is required');
       const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+      
+      // ✅ CORRIGIDO: Linha 139 - Validar hash antes do uso
+      if (!hash) throw new Error('Hash is required');
       const expectedHash = Buffer.from(hash, 'hex');
 
       // ✅ SECURITY: Timing-safe comparison
@@ -180,37 +188,43 @@ export function validatePasswordStrength(
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumbers = /[0-9]/.test(password);
-  const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
-    password
-  );
+  const hasSpecialChars = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
   const specialCharCount = (
-    password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g) || []
+    password.match(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g) ?? []
   ).length;
 
   if (PASSWORD_CONFIG.strength.requireUppercase && !hasUppercase) {
     errors.push('Password must contain at least one uppercase letter');
-  } else if (hasUppercase) {
-    score += 15;
+  } else {
+    if (hasUppercase) {
+      score += 15;
+    }
   }
 
   if (PASSWORD_CONFIG.strength.requireLowercase && !hasLowercase) {
     errors.push('Password must contain at least one lowercase letter');
-  } else if (hasLowercase) {
-    score += 15;
+  } else {
+    if (hasLowercase) {
+      score += 15;
+    }
   }
 
   if (PASSWORD_CONFIG.strength.requireNumbers && !hasNumbers) {
     errors.push('Password must contain at least one number');
-  } else if (hasNumbers) {
-    score += 15;
+  } else {
+    if (hasNumbers) {
+      score += 15;
+    }
   }
 
   if (PASSWORD_CONFIG.strength.requireSpecialChars && !hasSpecialChars) {
     errors.push(
       'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
     );
-  } else if (hasSpecialChars) {
-    score += 15;
+  } else {
+    if (hasSpecialChars) {
+      score += 15;
+    }
   }
 
   if (specialCharCount >= PASSWORD_CONFIG.strength.minSpecialChars) {
@@ -255,9 +269,10 @@ export function validatePasswordStrength(
   // ✅ ENTERPRISE: Personal information checks
   if (context.email) {
     const emailParts = context.email.toLowerCase().split('@')[0];
+    // ✅ CORRIGIDO: Linhas 267-268 - Guard clauses para emailParts
     if (
-      lowercasePassword.includes(emailParts) ||
-      emailParts.includes(lowercasePassword)
+      (emailParts && lowercasePassword.includes(emailParts)) ||
+      (emailParts?.includes(lowercasePassword))
     ) {
       errors.push('Password should not contain parts of your email address');
       score = Math.max(0, score - 20);
@@ -314,7 +329,7 @@ export function validatePasswordStrength(
   }
 
   // ✅ ENTERPRISE: Estimated crack time
-  const estimatedCrackTime = estimateCrackTime(password, score);
+  const estimatedCrackTime = estimateCrackTime(password);
 
   return {
     isValid: errors.length === 0,
@@ -344,17 +359,22 @@ export async function validatePasswordReuse(
       PASSWORD_CONFIG.security.preventReuse
     );
 
-    for (let i = 0; i < maxCheck; i++) {
-      const isMatch = await verifyPassword(
-        newPassword,
-        previousPasswordHashes[i]
-      );
-      if (isMatch) {
-        return {
-          isValid: false,
-          error: `Password cannot be the same as your last ${PASSWORD_CONFIG.security.preventReuse} passwords`,
-        };
-      }
+    // ✅ CORRIGIDO: Linha 359 - Filtrar hashes válidos e usar Promise.all
+    const validHashes = previousPasswordHashes
+      .slice(0, maxCheck)
+      .filter(hash => hash != null);
+    
+    const verificationPromises = validHashes.map(hash =>
+      verifyPassword(newPassword, hash)
+    );
+
+    const results = await Promise.all(verificationPromises);
+
+    if (results.some(isMatch => isMatch)) {
+      return {
+        isValid: false,
+        error: `Password cannot be the same as your last ${PASSWORD_CONFIG.security.preventReuse} passwords`,
+      };
     }
 
     return { isValid: true };
@@ -377,7 +397,7 @@ export function isPasswordExpired(passwordChangedAt: Date): boolean {
 /**
  * ✅ ENTERPRISE: Generate secure random password
  */
-export function generateSecurePassword(length: number = 16): string {
+export function generateSecurePassword(length = 16): string {
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
   const numbers = '0123456789';
@@ -412,7 +432,7 @@ export function generateSecurePassword(length: number = 16): string {
 /**
  * ✅ ENTERPRISE: Estimate password crack time
  */
-function estimateCrackTime(password: string, score: number): string {
+function estimateCrackTime(password: string): string {
   const combinations = calculatePasswordCombinations(password);
   const guessesPerSecond = 1000000000; // 1 billion guesses per second (GPU)
 
@@ -443,7 +463,7 @@ function calculatePasswordCombinations(password: string): number {
   if (/[a-z]/.test(password)) characterSpace += 26;
   if (/[A-Z]/.test(password)) characterSpace += 26;
   if (/[0-9]/.test(password)) characterSpace += 10;
-  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password))
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password))
     characterSpace += 32;
 
   return Math.pow(characterSpace, password.length);

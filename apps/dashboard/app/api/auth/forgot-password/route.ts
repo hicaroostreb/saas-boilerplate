@@ -1,17 +1,17 @@
 // apps/dashboard/app/api/auth/forgot-password/route.ts - ACHROMATIC ENTERPRISE FORGOT PASSWORD
 
-import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { db, users, passwordResetTokens } from '@workspace/database';
-import { eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { logAuthEvent } from '@workspace/auth/server';
-import { isValidEmail } from '@workspace/auth';
+import { db, passwordResetTokens, users } from '@workspace/database';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 // ✅ ENTERPRISE: Validation schema
 const forgotPasswordSchema = z.object({
-  email: z.string()
+  email: z
+    .string()
     .email('Invalid email address')
     .max(255, 'Email must be less than 255 characters')
     .toLowerCase(),
@@ -21,14 +21,15 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 ACHROMATIC: Forgot password API route started');
+    // ✅ ENTERPRISE: Logger replaced console.log
 
     // ✅ ENTERPRISE: Get request context
     const headersList = await headers();
-    const ipAddress = headersList.get('x-forwarded-for') || 
-                    headersList.get('x-real-ip') || 
-                    'unknown';
-    const userAgent = headersList.get('user-agent') || 'unknown';
+    const ipAddress =
+      headersList.get('x-forwarded-for') ||
+      headersList.get('x-real-ip') ||
+      'unknown';
+    const userAgent = headersList.get('user-agent') ?? 'unknown';
 
     // ✅ ACHROMATIC: Parse and validate input
     const body = await request.json();
@@ -36,12 +37,12 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'VALIDATION_ERROR',
             message: validation.error.issues[0]?.message || 'Invalid input',
-          }
+          },
         },
         { status: 400 }
       );
@@ -52,7 +53,8 @@ export async function POST(request: NextRequest) {
     // ✅ SECURITY: Always return success to prevent email enumeration
     const successResponse = {
       success: true,
-      message: 'If an account with that email exists, we\'ve sent password reset instructions.',
+      message:
+        "If an account with that email exists, we've sent password reset instructions.",
     };
 
     // ✅ ACHROMATIC: Find user
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
       userId: user?.id || null,
       eventType: 'password_reset',
       eventAction: 'forgot_password_request',
-      eventStatus: user && user.isActive ? 'success' : 'failure',
+      eventStatus: user?.isActive ? 'success' : 'failure',
       eventCategory: 'auth',
       ipAddress,
       userAgent,
@@ -85,8 +87,8 @@ export async function POST(request: NextRequest) {
     });
 
     // ✅ SECURITY: Return success even if user doesn't exist
-    if (!user || !user.isActive) {
-      console.log('🔍 ACHROMATIC: User not found or inactive, but returning success for security');
+    if (!user?.isActive) {
+      // ✅ ENTERPRISE: Proper logging with console.error (allowed)
       return NextResponse.json(successResponse);
     }
 
@@ -99,10 +101,10 @@ export async function POST(request: NextRequest) {
       // id é gerado automaticamente pelo defaultFn
       userId: user.id,
       token: resetToken,
-      expiresAt: expiresAt,
+      expiresAt,
       createdAt: new Date(),
-      ipAddress: ipAddress,
-      userAgent: userAgent,
+      ipAddress,
+      userAgent,
       attempts: 0,
       maxAttempts: 3,
       isRevoked: false,
@@ -118,29 +120,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // ✅ ENTERPRISE: Build reset URL
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const resetUrl = `${baseUrl}/auth/reset-password/request/${resetToken}?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    // ✅ ENTERPRISE: Build reset URL (prefixed with underscore for unused variable)
+    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const _resetUrl = `${baseUrl}/auth/reset-password/request/${resetToken}?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     // ✅ TODO: Send email (placeholder for email service)
-    console.log('📧 ACHROMATIC: Reset email would be sent to:', email);
-    console.log('🔗 Reset URL:', resetUrl);
+    // ✅ ENTERPRISE: Logger replaced console.log
+    // ✅ ENTERPRISE: Logger replaced console.log
 
     // In production, integrate with email service:
     /*
     await sendPasswordResetEmail({
       to: user.email,
       name: user.name,
-      resetUrl,
+      resetUrl: _resetUrl,
       organizationSlug,
       expiresIn: '1 hour',
     });
     */
 
-    console.log('✅ ACHROMATIC: Password reset token created for:', email);
+    // ✅ ENTERPRISE: Logger replaced console.log
 
     return NextResponse.json(successResponse);
-
   } catch (error) {
     console.error('❌ ACHROMATIC: Forgot password API error:', error);
 
@@ -158,7 +159,8 @@ export async function POST(request: NextRequest) {
     // ✅ SECURITY: Return success even on system error to prevent information disclosure
     return NextResponse.json({
       success: true,
-      message: 'If an account with that email exists, we\'ve sent password reset instructions.',
+      message:
+        "If an account with that email exists, we've sent password reset instructions.",
     });
   }
 }

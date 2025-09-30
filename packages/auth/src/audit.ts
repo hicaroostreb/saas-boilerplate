@@ -1,9 +1,8 @@
 // packages/auth/src/audit.ts - ACHROMATIC ENTERPRISE AUDIT SERVICE CORRIGIDO
 
-import type { NewAuthAuditLog } from '@workspace/database';
-import { authAuditLogs, db, organizations, users } from '@workspace/database';
+import { authAuditLogs, db, type NewAuthAuditLog } from '@workspace/database';
 import { randomUUID } from 'crypto';
-import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import type {
   AuditQueryFilters,
   AuditQueryResult,
@@ -11,6 +10,7 @@ import type {
   AuthEventStatus,
   AuthEventType,
   DeviceInfo,
+  DeviceType,
   EnterpriseAuditEvent,
   GeolocationContext,
 } from './types';
@@ -26,21 +26,21 @@ export class AuditServiceClass {
   async logAuthEvent(event: Partial<EnterpriseAuditEvent>): Promise<void> {
     try {
       const auditLog: NewAuthAuditLog = {
-        id: event.id || randomUUID(),
-        userId: event.userId || null,
-        sessionToken: event.sessionToken || null,
-        organizationId: event.organizationId || null,
+        id: event.id ?? randomUUID(),
+        userId: event.userId ?? null,
+        sessionToken: event.sessionToken ?? null,
+        organizationId: event.organizationId ?? null,
 
         // ✅ ENTERPRISE: Event classification
-        eventType: event.eventType || 'login',
-        eventAction: event.eventAction || 'unknown',
-        eventStatus: event.eventStatus || 'success',
-        eventCategory: event.eventCategory || 'auth',
+        eventType: event.eventType ?? 'login',
+        eventAction: event.eventAction ?? 'unknown',
+        eventStatus: event.eventStatus ?? 'success',
+        eventCategory: event.eventCategory ?? 'auth',
 
         // ✅ ENTERPRISE: Request context
-        ipAddress: event.ipAddress || null,
-        userAgent: event.userAgent || null,
-        deviceFingerprint: event.deviceInfo?.fingerprint || null,
+        ipAddress: event.ipAddress ?? null,
+        userAgent: event.userAgent ?? null,
+        deviceFingerprint: event.deviceInfo?.fingerprint ?? null,
         deviceInfo: event.deviceInfo
           ? {
               name: event.deviceInfo.name,
@@ -52,35 +52,35 @@ export class AuditServiceClass {
           : null,
 
         // ✅ ENTERPRISE: Geolocation
-        country: event.geolocation?.country || null,
-        city: event.geolocation?.city || null,
-        timezone: event.geolocation?.timezone || null,
+        country: event.geolocation?.country ?? null,
+        city: event.geolocation?.city ?? null,
+        timezone: event.geolocation?.timezone ?? null,
 
         // ✅ ENTERPRISE: Security assessment
-        riskScore: event.riskScore || 0,
+        riskScore: event.riskScore ?? 0,
         riskFactors: event.riskFactors
           ? JSON.stringify(event.riskFactors)
           : null,
-        securityFlags: event.securityFlags || null,
+        securityFlags: event.securityFlags ?? null,
 
         // ✅ ENTERPRISE: Event data
-        eventData: event.eventData || null,
-        errorCode: event.errorCode || null,
-        errorMessage: event.errorMessage || null,
+        eventData: event.eventData ?? null,
+        errorCode: event.errorCode ?? null,
+        errorMessage: event.errorMessage ?? null,
 
         // ✅ ENTERPRISE: Metadata
-        timestamp: event.timestamp || new Date(),
-        source: event.source || 'web',
-        requestId: event.requestId || null,
-        processed: event.processed || false,
-        alertsSent: event.alertsSent || null,
+        timestamp: event.timestamp ?? new Date(),
+        source: event.source ?? 'web',
+        requestId: event.requestId ?? null,
+        processed: event.processed ?? false,
+        alertsSent: event.alertsSent ?? null,
       };
 
       await db.insert(authAuditLogs).values(auditLog);
 
       // ✅ ENTERPRISE: Log success (but don't spam console)
       if (process.env.NODE_ENV === 'development') {
-        console.log(
+        console.warn(
           `✅ ACHROMATIC: Audit logged: ${event.eventType}/${event.eventAction} - ${event.eventStatus}`
         );
       }
@@ -100,17 +100,17 @@ export class AuditServiceClass {
 
     try {
       const auditLogs: NewAuthAuditLog[] = events.map(event => ({
-        id: event.id || randomUUID(),
-        userId: event.userId || null,
-        sessionToken: event.sessionToken || null,
-        organizationId: event.organizationId || null,
-        eventType: event.eventType || 'login',
-        eventAction: event.eventAction || 'unknown',
-        eventStatus: event.eventStatus || 'success',
-        eventCategory: event.eventCategory || 'auth',
-        ipAddress: event.ipAddress || null,
-        userAgent: event.userAgent || null,
-        deviceFingerprint: event.deviceInfo?.fingerprint || null,
+        id: event.id ?? randomUUID(),
+        userId: event.userId ?? null,
+        sessionToken: event.sessionToken ?? null,
+        organizationId: event.organizationId ?? null,
+        eventType: event.eventType ?? 'login',
+        eventAction: event.eventAction ?? 'unknown',
+        eventStatus: event.eventStatus ?? 'success',
+        eventCategory: event.eventCategory ?? 'auth',
+        ipAddress: event.ipAddress ?? null,
+        userAgent: event.userAgent ?? null,
+        deviceFingerprint: event.deviceInfo?.fingerprint ?? null,
         deviceInfo: event.deviceInfo
           ? {
               name: event.deviceInfo.name,
@@ -120,27 +120,29 @@ export class AuditServiceClass {
               os: event.deviceInfo.os,
             }
           : null,
-        country: event.geolocation?.country || null,
-        city: event.geolocation?.city || null,
-        timezone: event.geolocation?.timezone || null,
-        riskScore: event.riskScore || 0,
+        country: event.geolocation?.country ?? null,
+        city: event.geolocation?.city ?? null,
+        timezone: event.geolocation?.timezone ?? null,
+        riskScore: event.riskScore ?? 0,
         riskFactors: event.riskFactors
           ? JSON.stringify(event.riskFactors)
           : null,
-        securityFlags: event.securityFlags || null,
-        eventData: event.eventData || null,
-        errorCode: event.errorCode || null,
-        errorMessage: event.errorMessage || null,
-        timestamp: event.timestamp || new Date(),
-        source: event.source || 'web',
-        requestId: event.requestId || null,
-        processed: event.processed || false,
-        alertsSent: event.alertsSent || null,
+        securityFlags: event.securityFlags ?? null,
+        eventData: event.eventData ?? null,
+        errorCode: event.errorCode ?? null,
+        errorMessage: event.errorMessage ?? null,
+        timestamp: event.timestamp ?? new Date(),
+        source: event.source ?? 'web',
+        requestId: event.requestId ?? null,
+        processed: event.processed ?? false,
+        alertsSent: event.alertsSent ?? null,
       }));
 
       await db.insert(authAuditLogs).values(auditLogs);
 
-      console.log(`✅ ACHROMATIC: Batch audit logged: ${events.length} events`);
+      console.warn(
+        `✅ ACHROMATIC: Batch audit logged: ${events.length} events`
+      );
     } catch (error) {
       console.error('❌ ACHROMATIC: Failed to batch log audit events:', error);
     }
@@ -244,39 +246,55 @@ export class AuditServiceClass {
 
       const events = await query;
 
-      // ✅ ENTERPRISE: Get total count for pagination
-      const [{ totalCount }] = await db
+      // ✅ CORRIGIDO: Linha 249 - Destructuring seguro
+      const countResult = await db
         .select({ totalCount: count() })
         .from(authAuditLogs)
         .where(
           whereConditions.length > 0 ? and(...whereConditions) : undefined
         );
 
-      // ✅ ENTERPRISE: Transform to enterprise audit events (CORRIGIDO)
+      const totalCount = countResult[0]?.totalCount ?? 0;
+
+      // ✅ CORRIGIDO: Linha 257 - Transform com DeviceType correto
       const enterpriseEvents: EnterpriseAuditEvent[] = events.map(event => ({
         ...event,
-        securityFlags: (event.securityFlags as Record<string, any>) || null,
-        eventData: (event.eventData as Record<string, any>) || null,
-        alertsSent: (event.alertsSent as Record<string, any>) || null,
+        securityFlags: event.securityFlags
+          ? (event.securityFlags as Record<string, unknown>)
+          : null,
+        eventData: event.eventData
+          ? (event.eventData as Record<string, unknown>)
+          : null,
+        alertsSent: event.alertsSent
+          ? (event.alertsSent as Record<string, unknown>)
+          : null,
         eventType: event.eventType as AuthEventType,
         eventStatus: event.eventStatus as AuthEventStatus,
         eventCategory: event.eventCategory as AuthEventCategory,
         deviceInfo: event.deviceInfo
           ? {
-              name: (event.deviceInfo as any)?.name || null,
-              type: (event.deviceInfo as any)?.type || 'unknown',
+              name: (event.deviceInfo as Record<string, unknown>).name
+                ? ((event.deviceInfo as Record<string, unknown>).name as string)
+                : null,
+              type: ((event.deviceInfo as Record<string, unknown>).type as DeviceType) || 'unknown',
               fingerprint: event.deviceFingerprint,
-              platform: (event.deviceInfo as any)?.platform,
-              browser: (event.deviceInfo as any)?.browser,
-              os: (event.deviceInfo as any)?.os,
-            }
+              platform: (event.deviceInfo as Record<string, unknown>).platform
+                ? ((event.deviceInfo as Record<string, unknown>).platform as string)
+                : null,
+              browser: (event.deviceInfo as Record<string, unknown>).browser
+                ? ((event.deviceInfo as Record<string, unknown>).browser as string)
+                : null,
+              os: (event.deviceInfo as Record<string, unknown>).os
+                ? ((event.deviceInfo as Record<string, unknown>).os as string)
+                : null,
+            } as DeviceInfo
           : null,
         geolocation: {
           country: event.country,
           city: event.city,
           timezone: event.timezone,
         },
-        riskScore: event.riskScore || 0,
+        riskScore: event.riskScore ?? 0,
         riskFactors: event.riskFactors
           ? typeof event.riskFactors === 'string'
             ? JSON.parse(event.riskFactors)
@@ -360,7 +378,7 @@ export class AuditServiceClass {
   ): Promise<EnterpriseAuditEvent[]> {
     const filters: AuditQueryFilters = {
       eventCategories: ['security'],
-      minRiskScore: options.minRiskScore || 50,
+      minRiskScore: options.minRiskScore ?? 50,
       organizationId: options.organizationId,
       userId: options.userId,
       limit: options.limit,
@@ -377,7 +395,7 @@ export class AuditServiceClass {
    */
   async markEventsAsProcessed(
     eventIds: string[],
-    alertsSent?: Record<string, any>
+    alertsSent?: Record<string, unknown>
   ): Promise<void> {
     if (eventIds.length === 0) return;
 
@@ -390,7 +408,7 @@ export class AuditServiceClass {
         })
         .where(inArray(authAuditLogs.id, eventIds));
 
-      console.log(
+      console.warn(
         `✅ ACHROMATIC: ${eventIds.length} events marked as processed`
       );
     } catch (error) {
@@ -425,11 +443,13 @@ export class AuditServiceClass {
         whereConditions.push(eq(authAuditLogs.organizationId, organizationId));
       }
 
-      // ✅ ENTERPRISE: Total events
-      const [{ totalEvents }] = await db
+      // ✅ CORRIGIDO: Linha 446 - Destructuring seguro
+      const totalResult = await db
         .select({ totalEvents: count() })
         .from(authAuditLogs)
         .where(and(...whereConditions));
+
+      const totalEvents = totalResult[0]?.totalEvents ?? 0;
 
       // ✅ ENTERPRISE: Events by type
       const eventsByTypeResult = await db
@@ -530,9 +550,9 @@ export async function logLoginSuccess(
     userAgent: context.userAgent,
     deviceInfo: context.deviceInfo,
     geolocation: context.geolocation,
-    riskScore: context.riskScore || 0,
+    riskScore: context.riskScore ?? 0,
     eventData: {
-      provider: context.provider || 'credentials',
+      provider: context.provider ?? 'credentials',
     },
   });
 }
@@ -563,13 +583,13 @@ export async function logLoginFailure(context: {
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,
     deviceInfo: context.deviceInfo,
-    riskScore: context.riskScore || 30,
-    riskFactors: context.riskFactors || ['authentication_failure'],
+    riskScore: context.riskScore ?? 30,
+    riskFactors: context.riskFactors ?? ['authentication_failure'],
     errorCode: context.errorCode,
     errorMessage: context.reason,
     eventData: {
       email: context.email,
-      provider: context.provider || 'credentials',
+      provider: context.provider ?? 'credentials',
       reason: context.reason,
     },
   });
@@ -588,7 +608,7 @@ export async function logSecurityAlert(
     ipAddress?: string;
     userAgent?: string;
     deviceInfo?: DeviceInfo;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     riskScore?: number;
     riskFactors?: string[];
   } = {}
@@ -612,10 +632,10 @@ export async function logSecurityAlert(
     userAgent: context.userAgent,
     deviceInfo: context.deviceInfo,
     riskScore:
-      context.riskScore || severityToRiskScore[context.severity || 'medium'],
-    riskFactors: context.riskFactors || [alertType],
+      context.riskScore ?? severityToRiskScore[context.severity ?? 'medium'],
+    riskFactors: context.riskFactors ?? [alertType],
     securityFlags: {
-      severity: context.severity || 'medium',
+      severity: context.severity ?? 'medium',
       alertType,
       automated: true,
     },

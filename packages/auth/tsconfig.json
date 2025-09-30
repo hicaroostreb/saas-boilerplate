@@ -5,8 +5,23 @@
     "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@workspace/database": ["../database/src"],
+      "@workspace/database/*": ["../database/src/*"],
+      "@workspace/common": ["../common/src"],
+      "@workspace/common/*": ["../common/src/*"],
+      "@workspace/ui": ["../ui/src"],
+      "@workspace/ui/*": ["../ui/src/*"],
+      "@workspace/billing": ["../billing/src"],
+      "@workspace/billing/*": ["../billing/src/*"],
+      "@workspace/routes": ["../routes/src"],
+      "@workspace/routes/*": ["../routes/src/*"]
+    }
   },
   "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
   "references": [{ "path": "../database" }]
 }

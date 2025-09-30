@@ -1,35 +1,40 @@
 // apps/dashboard/app/api/auth/reset-password/route.ts - ACHROMATIC ENTERPRISE RESET PASSWORD
 
-import { NextRequest, NextResponse } from 'next/server';
+import {
+  hashPassword,
+  logAuthEvent,
+  revokeAllUserSessions,
+  validatePasswordReuse,
+  validatePasswordStrength
+} from '@workspace/auth/server';
 import { db, passwordResetTokens, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';
-import { 
-  hashPassword, 
-  validatePasswordStrength, 
-  validatePasswordReuse,
-  logAuthEvent,
-  revokeAllUserSessions 
-} from '@workspace/auth/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 // ✅ ENTERPRISE: Validation schema
-const resetPasswordSchema = z.object({
-  token: z.string().uuid('Invalid token format'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password must be less than 72 characters'),
-  confirmPassword: z.string().min(1, 'Password confirmation is required'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+const resetPasswordSchema = z
+  .object({
+    token: z.string().uuid('Invalid token format'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(72, 'Password must be less than 72 characters'),
+    confirmPassword: z.string().min(1, 'Password confirmation is required'),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export async function POST(request: NextRequest) {
   try {
     // ✅ ENTERPRISE: Get request context
-    const ipAddress = request.headers.get('x-forwarded-for') ?? 
-                     request.headers.get('x-real-ip') ?? 
-                     'unknown';
+    const ipAddress =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
     const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
     // ✅ ACHROMATIC: Parse and validate input
@@ -38,13 +43,13 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'VALIDATION_ERROR',
-            message: validation.error.issues[0]?.message ?? 'Invalid input',
+            message: validation.error.issues[0]?.message || 'Invalid input',
             details: validation.error.issues,
-          }
+          },
         },
         { status: 400 }
       );
@@ -87,12 +92,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_INVALID',
             message: 'Invalid reset token',
-          }
+          },
         },
         { status: 404 }
       );
@@ -112,12 +117,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_EXPIRED',
             message: 'Reset token has expired',
-          }
+          },
         },
         { status: 410 }
       );
@@ -137,12 +142,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_USED',
             message: 'Reset token has already been used',
-          }
+          },
         },
         { status: 410 }
       );
@@ -162,12 +167,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'TOKEN_REVOKED',
             message: 'Reset token has been revoked',
-          }
+          },
         },
         { status: 410 }
       );
@@ -187,12 +192,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'MAX_ATTEMPTS_EXCEEDED',
             message: 'Maximum reset attempts exceeded',
-          }
+          },
         },
         { status: 429 }
       );
@@ -201,12 +206,12 @@ export async function POST(request: NextRequest) {
     // ✅ ENTERPRISE: Check user is active
     if (!resetTokenData.userIsActive) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'USER_INACTIVE',
             message: 'User account is inactive',
-          }
+          },
         },
         { status: 403 }
       );
@@ -215,13 +220,14 @@ export async function POST(request: NextRequest) {
     // ✅ ENTERPRISE: Validate password strength
     const strengthValidation = validatePasswordStrength(password, {
       email: resetTokenData.userEmail,
-      name: resetTokenData.userName ?? undefined,
+      name: resetTokenData.userName || undefined,
     });
 
     if (!strengthValidation.isValid) {
       // ✅ INCREMENT ATTEMPTS
-      await db.update(passwordResetTokens)
-        .set({ 
+      await db
+        .update(passwordResetTokens)
+        .set({
           attempts: resetTokenData.attempts + 1,
         })
         .where(eq(passwordResetTokens.id, resetTokenData.tokenId));
@@ -241,13 +247,15 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
+        {
+          success: false,
+          error: {
             code: 'PASSWORD_WEAK',
-            message: strengthValidation.errors?.[0] ?? 'Password does not meet security requirements',
+            message:
+              strengthValidation.errors?.[0] ||
+              'Password does not meet security requirements',
             suggestions: strengthValidation.suggestions,
-          }
+          },
         },
         { status: 400 }
       );
@@ -257,12 +265,15 @@ export async function POST(request: NextRequest) {
     let reuseValidation = { isValid: true };
 
     if (resetTokenData.currentPasswordHash) {
-      reuseValidation = await validatePasswordReuse(password, [resetTokenData.currentPasswordHash]);
-      
+      reuseValidation = await validatePasswordReuse(password, [
+        resetTokenData.currentPasswordHash,
+      ]);
+
       if (!reuseValidation.isValid) {
         // ✅ INCREMENT ATTEMPTS
-        await db.update(passwordResetTokens)
-          .set({ 
+        await db
+          .update(passwordResetTokens)
+          .set({
             attempts: resetTokenData.attempts + 1,
           })
           .where(eq(passwordResetTokens.id, resetTokenData.tokenId));
@@ -279,12 +290,12 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(
-          { 
-            success: false, 
-            error: { 
+          {
+            success: false,
+            error: {
               code: 'PASSWORD_REUSED',
               message: 'Cannot reuse recent passwords',
-            }
+            },
           },
           { status: 400 }
         );
@@ -299,7 +310,7 @@ export async function POST(request: NextRequest) {
         eventCategory: 'auth',
         ipAddress,
         userAgent,
-        eventData: { 
+        eventData: {
           email: resetTokenData.userEmail,
           note: 'OAuth user setting password for first time',
         },
@@ -313,7 +324,8 @@ export async function POST(request: NextRequest) {
     // ✅ ACHROMATIC: Update user password and mark token as used
     await Promise.all([
       // Update user password
-      db.update(users)
+      db
+        .update(users)
         .set({
           passwordHash: newPasswordHash,
           passwordChangedAt: now,
@@ -323,10 +335,11 @@ export async function POST(request: NextRequest) {
           updatedAt: now,
         })
         .where(eq(users.id, resetTokenData.userId)),
-      
+
       // Mark token as used
-      db.update(passwordResetTokens)
-        .set({ 
+      db
+        .update(passwordResetTokens)
+        .set({
           usedAt: now,
           attempts: resetTokenData.attempts + 1,
         })
@@ -341,10 +354,14 @@ export async function POST(request: NextRequest) {
         'password_reset'
       );
       // eslint-disable-next-line no-console
-      console.log(`✅ ACHROMATIC: ${revokedCount} sessions revoked after password reset`);
+      console.log(
+        `✅ ACHROMATIC: ${revokedCount} sessions revoked after password reset`
+      );
     } catch (sessionError) {
-      // eslint-disable-next-line no-console
-      console.error('❌ ACHROMATIC: Error revoking sessions after password reset:', sessionError);
+      console.error(
+        '❌ ACHROMATIC: Error revoking sessions after password reset:',
+        sessionError
+      );
       // Don't fail the password reset if session revocation fails
     }
 
@@ -372,9 +389,7 @@ export async function POST(request: NextRequest) {
         name: resetTokenData.userName,
       },
     });
-
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('❌ ACHROMATIC: Reset password API error:', error);
 
     // ✅ ENTERPRISE: Log system error
@@ -383,18 +398,18 @@ export async function POST(request: NextRequest) {
       eventAction: 'reset_password_system_error',
       eventStatus: 'error',
       eventCategory: 'auth',
-      ipAddress: request.headers.get('x-forwarded-for') ?? 'unknown',
-      userAgent: request.headers.get('user-agent') ?? 'unknown',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });
 
     return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
+      {
+        success: false,
+        error: {
           code: 'SYSTEM_ERROR',
           message: 'An unexpected error occurred',
-        }
+        },
       },
       { status: 500 }
     );

@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { toast } from "@workspace/ui";
+import { toast } from '@workspace/ui';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface TeamInvitation {
   email: string;
@@ -12,7 +13,7 @@ interface TeamInvitation {
 export function OrganizationOnboardingClient() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Step 1 data
   const [organizationData, setOrganizationData] = useState({
     name: '',
@@ -36,7 +37,7 @@ export function OrganizationOnboardingClient() {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
-    
+
     setOrganizationData(prev => ({ ...prev, name, slug }));
   };
 
@@ -45,15 +46,16 @@ export function OrganizationOnboardingClient() {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '')
       .replace(/-+/g, '-');
-    
+
     setOrganizationData(prev => ({ ...prev, slug }));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error("Logo file must be less than 5MB");
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        toast.error('Logo file must be less than 5MB');
         return;
       }
       setOrganizationData(prev => ({ ...prev, logo: file }));
@@ -64,13 +66,17 @@ export function OrganizationOnboardingClient() {
     setInvitations(prev => [...prev, { email: '', role: 'MEMBER' }]);
   };
 
-  const updateInvitation = (index: number, field: keyof TeamInvitation, value: string) => {
-    setInvitations(prev => prev.map((inv, i) => 
-      i === index ? { ...inv, [field]: value } : inv
-    ));
+  const updateInvitation = (
+    index: number,
+    field: keyof TeamInvitation,
+    value: string
+  ) => {
+    setInvitations(prev =>
+      prev.map((inv, i) => (i === index ? { ...inv, [field]: value } : inv))
+    );
   };
 
-  const removeInvitation = (index: number) => {
+  const _removeInvitation = (index: number) => {
     if (invitations.length > 1) {
       setInvitations(prev => prev.filter((_, i) => i !== index));
     }
@@ -79,7 +85,7 @@ export function OrganizationOnboardingClient() {
   const handleNextStep = () => {
     if (step === 1) {
       if (!organizationData.name || !organizationData.slug) {
-        toast.error("Please fill in all required fields");
+        toast.error('Please fill in all required fields');
         return;
       }
       setStep(2);
@@ -94,8 +100,11 @@ export function OrganizationOnboardingClient() {
       const organizationFormData = new FormData();
       organizationFormData.append('name', organizationData.name);
       organizationFormData.append('slug', organizationData.slug);
-      organizationFormData.append('includeExampleData', organizationData.includeExampleData.toString());
-      
+      organizationFormData.append(
+        'includeExampleData',
+        organizationData.includeExampleData.toString()
+      );
+
       if (organizationData.logo) {
         organizationFormData.append('logo', organizationData.logo);
       }
@@ -108,42 +117,47 @@ export function OrganizationOnboardingClient() {
       const orgResult = await orgResponse.json();
 
       if (!orgResponse.ok || !orgResult.success) {
-        toast.error(orgResult.error?.message || "Failed to create organization");
+        toast.error(
+          orgResult.error?.message || 'Failed to create organization'
+        );
         return;
       }
 
       // Send invitations (only non-empty emails)
       const validInvitations = invitations.filter(inv => inv.email.trim());
-      
+
       if (validInvitations.length > 0) {
-        const invitationResponse = await fetch('/api/organizations/invitations/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            organizationId: orgResult.organization.id,
-            invitations: validInvitations,
-          }),
-        });
+        const invitationResponse = await fetch(
+          '/api/organizations/invitations/send',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              organizationId: orgResult.organization.id,
+              invitations: validInvitations,
+            }),
+          }
+        );
 
         if (!invitationResponse.ok) {
-          console.warn("Failed to send some invitations");
+          console.warn('Failed to send some invitations');
           // Don't block the flow, just warn
         }
       }
 
-      toast.success("Organization created successfully!");
+      toast.success('Organization created successfully!');
       // Redirect to the new organization
       window.location.href = `/organizations/${organizationData.slug}/home`;
-
     } catch (error) {
-      console.error("Organization creation error:", error);
-      toast.error("An unexpected error occurred. Please try again.");
+      console.error('Organization creation error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isStep1Valid = organizationData.name.trim() && organizationData.slug.trim();
+  const isStep1Valid =
+    organizationData.name.trim() && organizationData.slug.trim();
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -179,8 +193,15 @@ export function OrganizationOnboardingClient() {
       {/* Back Button */}
       <Link
         className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 absolute left-4 top-4"
-        href={step === 1 ? "/organizations" : "#"}
-        onClick={step === 2 ? (e) => { e.preventDefault(); setStep(1); } : undefined}
+        href={step === 1 ? '/organizations' : '#'}
+        onClick={
+          step === 2
+            ? e => {
+                e.preventDefault();
+                setStep(1);
+              }
+            : undefined
+        }
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -205,8 +226,12 @@ export function OrganizationOnboardingClient() {
         <div className="w-48 space-y-4">
           <p className="text-sm text-muted-foreground">Step {step} of 2</p>
           <div className="flex flex-row gap-2">
-            <div className={`h-1 w-full rounded-[1px] ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-            <div className={`h-1 w-full rounded-[1px] ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
+            <div
+              className={`h-1 w-full rounded-[1px] ${step >= 1 ? 'bg-primary' : 'bg-muted'}`}
+            />
+            <div
+              className={`h-1 w-full rounded-[1px] ${step >= 2 ? 'bg-primary' : 'bg-muted'}`}
+            />
           </div>
         </div>
 
@@ -217,7 +242,8 @@ export function OrganizationOnboardingClient() {
               Add your organization
             </h1>
             <p className="text-sm text-muted-foreground lg:text-base">
-              We just need some basic info to get your organization set up. You&apos;ll be able to edit this later.
+              We just need some basic info to get your organization set up.
+              You&apos;ll be able to edit this later.
             </p>
 
             {/* Logo Upload */}
@@ -236,9 +262,11 @@ export function OrganizationOnboardingClient() {
                     />
                     <span className="relative flex shrink-0 overflow-hidden size-[72px] rounded-md">
                       {organizationData.logo ? (
-                        <img
+                        <Image
                           src={URL.createObjectURL(organizationData.logo)}
                           alt="Logo preview"
+                          width={72}
+                          height={72}
                           className="size-[72px] rounded-md object-cover"
                         />
                       ) : (
@@ -266,7 +294,9 @@ export function OrganizationOnboardingClient() {
                 </div>
                 <div className="flex flex-col space-y-1">
                   <span className="text-sm">Upload your logo</span>
-                  <span className="text-xs text-muted-foreground">*.png, *.jpeg files up to 5 MB</span>
+                  <span className="text-xs text-muted-foreground">
+                    *.png, *.jpeg files up to 5 MB
+                  </span>
                 </div>
               </div>
             </div>
@@ -320,12 +350,23 @@ export function OrganizationOnboardingClient() {
                 type="button"
                 role="switch"
                 aria-checked={organizationData.includeExampleData}
-                data-state={organizationData.includeExampleData ? "checked" : "unchecked"}
+                data-state={
+                  organizationData.includeExampleData ? 'checked' : 'unchecked'
+                }
                 className="peer inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
-                onClick={() => setOrganizationData(prev => ({ ...prev, includeExampleData: !prev.includeExampleData }))}
+                onClick={() =>
+                  setOrganizationData(prev => ({
+                    ...prev,
+                    includeExampleData: !prev.includeExampleData,
+                  }))
+                }
               >
                 <span
-                  data-state={organizationData.includeExampleData ? "checked" : "unchecked"}
+                  data-state={
+                    organizationData.includeExampleData
+                      ? 'checked'
+                      : 'unchecked'
+                  }
                   className="pointer-events-none block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0"
                 />
               </button>
@@ -350,7 +391,8 @@ export function OrganizationOnboardingClient() {
           <div className="flex w-full flex-col gap-4">
             <h1 className="text-3xl font-medium">Invite your team</h1>
             <p className="text-base text-muted-foreground">
-              Add team members to get started. You can always invite more people later.
+              Add team members to get started. You can always invite more people
+              later.
             </p>
 
             <div className="flex flex-col space-y-2">
@@ -377,14 +419,18 @@ export function OrganizationOnboardingClient() {
                       placeholder="user@email.com"
                       type="email"
                       value={invitation.email}
-                      onChange={(e) => updateInvitation(index, 'email', e.target.value)}
+                      onChange={e =>
+                        updateInvitation(index, 'email', e.target.value)
+                      }
                     />
                   </div>
                   <div className="space-y-2 w-44">
                     <select
                       className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       value={invitation.role}
-                      onChange={(e) => updateInvitation(index, 'role', e.target.value)}
+                      onChange={e =>
+                        updateInvitation(index, 'role', e.target.value)
+                      }
                     >
                       <option value="MEMBER">Member</option>
                       <option value="ADMIN">Admin</option>
@@ -402,7 +448,7 @@ export function OrganizationOnboardingClient() {
                 disabled={isLoading}
                 onClick={handleFinish}
               >
-                {isLoading ? "Creating..." : "Finish"}
+                {isLoading ? 'Creating...' : 'Finish'}
               </button>
             </div>
           </div>
