@@ -1,4 +1,8 @@
-// Subscription plans configuration
+// packages/common/src/domain/billing/constants/billing.constants.ts
+
+/**
+ * Interface que define a estrutura de um plano de assinatura
+ */
 export interface Plan {
   id: string;
   name: string;
@@ -11,12 +15,15 @@ export interface Plan {
     teams: number;
     members: number;
     storage: number; // GB
-    apiCalls: number; // per month
+    apiCalls: number; // por mês
   };
   features: string[];
   popular?: boolean;
 }
 
+/**
+ * Configuração dos planos de assinatura disponíveis
+ */
 export const PLANS: Record<string, Plan> = {
   free: {
     id: 'free',
@@ -89,4 +96,15 @@ export const PLANS: Record<string, Plan> = {
       'SLA guarantee',
     ],
   },
+} as const;
+
+/**
+ * Constantes de domínio para billing
+ */
+export const BILLING_LIMITS = {
+  MAX_SUBSCRIPTION_CHANGES_PER_MONTH: 3,
+  TRIAL_DURATION_DAYS: 14,
+  GRACE_PERIOD_DAYS: 7,
+  MIN_PLAN_PRICE: 0,
+  MAX_PLAN_PRICE: 999,
 } as const;
