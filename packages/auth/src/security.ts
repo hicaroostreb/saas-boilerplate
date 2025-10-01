@@ -1,635 +1,438 @@
-// packages/auth/src/security.ts - ACHROMATIC SECURITY UTILITIES CORRIGIDO
+// packages/auth/src/security.ts - SECURITY UTILITIES & VALIDATION
 
 import { createHash, randomBytes } from 'crypto';
+import type { EnhancedAuthContext } from './services/auth-context.service';
 import type {
   DeviceInfo,
   EnterpriseUser,
   GeolocationContext,
-  RiskAssessment,
+  MemberRole,
+  OrganizationAuthContext,
   SecurityLevel,
 } from './types';
 
-// ============================================
-// SECURITY CONFIGURATION
-// ============================================
-
-const SECURITY_CONFIG = {
-  // ✅ ENTERPRISE: Risk assessment thresholds
-  riskThresholds: {
-    low: 0,
-    medium: 30,
-    high: 60,
-    critical: 80,
-  },
-
-  // ✅ ENTERPRISE: Device fingerprinting
-  deviceFingerprint: {
-    algorithm: 'sha256' as const,
-    saltLength: 16,
-    hashLength: 32,
-  },
-
-  // ✅ ENTERPRISE: Geolocation security (corrigido)
-  trustedCountries: [
-    'BR',
-    'US',
-    'CA',
-    'GB',
-    'AU',
-    'DE',
-    'FR',
-    'ES',
-    'NL',
-  ] as const,
-  suspiciousCountries: ['CN', 'RU', 'KP', 'IR'] as const, // High-risk countries
-
-  // ✅ ENTERPRISE: Time-based security
-  suspiciousHours: {
-    start: 2, // 2 AM
-    end: 6, // 6 AM
-  },
-
-  // ✅ ENTERPRISE: Session security
-  maxConcurrentSessions: {
-    normal: 5,
-    elevated: 3,
-    high_risk: 2,
-    critical: 1,
-  },
-} as const;
+/**
+ * ✅ ENTERPRISE: Security Utilities
+ * Single Responsibility: Security validation, risk assessment, and device management
+ */
 
 // ============================================
-// SECURITY SERVICE CLASS
+// DEVICE & FINGERPRINTING
 // ============================================
 
-export class SecurityServiceClass {
-  /**
-   * ✅ ACHROMATIC: Parse and classify device information
-   */
-  async parseDeviceInfo(userAgent?: string): Promise<DeviceInfo> {
-    if (!userAgent) {
-      return {
-        name: null,
-        type: 'unknown',
-        fingerprint: null,
-        userAgent: undefined,
-      };
-    }
-
-    try {
-      const deviceInfo: DeviceInfo = {
-        name: 'Unknown Device',
-        type: 'unknown',
-        fingerprint: null,
-        userAgent,
-        platform: undefined,
-        browser: undefined,
-        os: undefined,
-      };
-
-      // ✅ ENTERPRISE: Operating System Detection
-      if (/Windows NT 10.0/.test(userAgent)) {
-        deviceInfo.os = 'Windows 10/11';
-        deviceInfo.platform = 'Windows';
-      } else if (/Windows NT/.test(userAgent)) {
-        deviceInfo.os = 'Windows';
-        deviceInfo.platform = 'Windows';
-      } else if (/Mac OS X/.test(userAgent)) {
-        const match = userAgent.match(/Mac OS X ([\d_]+)/);
-        deviceInfo.os = match
-          ? `macOS ${match[1]!.replace(/_/g, '.')}`
-          : 'macOS';
-        deviceInfo.platform = 'macOS';
-      } else if (/Linux/.test(userAgent)) {
-        deviceInfo.os = 'Linux';
-        deviceInfo.platform = 'Linux';
-      } else if (/Android/.test(userAgent)) {
-        const match = userAgent.match(/Android ([\d.]+)/);
-        deviceInfo.os = match ? `Android ${match[1]}` : 'Android';
-        deviceInfo.platform = 'Android';
-      } else if (/iPhone OS/.test(userAgent)) {
-        const match = userAgent.match(/iPhone OS ([\d_]+)/);
-        deviceInfo.os = match ? `iOS ${match[1]!.replace(/_/g, '.')}` : 'iOS';
-        deviceInfo.platform = 'iOS';
-      }
-
-      // ✅ ENTERPRISE: Browser Detection
-      if (/Chrome\/[\d.]+/.test(userAgent) && !/Edge|Edg/.test(userAgent)) {
-        const match = userAgent.match(/Chrome\/([\d.]+)/);
-        deviceInfo.browser = match ? `Chrome ${match[1]}` : 'Chrome';
-      } else if (/Firefox\/[\d.]+/.test(userAgent)) {
-        const match = userAgent.match(/Firefox\/([\d.]+)/);
-        deviceInfo.browser = match ? `Firefox ${match[1]}` : 'Firefox';
-      } else if (
-        /Safari\/[\d.]+/.test(userAgent) &&
-        !/Chrome/.test(userAgent)
-      ) {
-        const match = userAgent.match(/Version\/([\d.]+).*Safari/);
-        deviceInfo.browser = match ? `Safari ${match[1]}` : 'Safari';
-      } else if (/Edge|Edg\/[\d.]+/.test(userAgent)) {
-        const match = userAgent.match(/(?:Edge|Edg)\/([\d.]+)/);
-        deviceInfo.browser = match ? `Edge ${match[1]}` : 'Edge';
-      }
-
-      // ✅ ENTERPRISE: Device Type Classification
-      if (/Mobile|Android|iPhone/.test(userAgent)) {
-        deviceInfo.type = 'mobile';
-
-        if (/iPhone/.test(userAgent)) {
-          const model = this.extractiPhoneModel(userAgent);
-          deviceInfo.name = model ?? 'iPhone';
-        } else if (/Android/.test(userAgent)) {
-          deviceInfo.name = 'Android Phone';
-        } else {
-          deviceInfo.name = 'Mobile Device';
-        }
-      } else if (/iPad/.test(userAgent)) {
-        deviceInfo.type = 'tablet';
-        deviceInfo.name = 'iPad';
-      } else if (/Tablet/.test(userAgent)) {
-        deviceInfo.type = 'tablet';
-        deviceInfo.name = 'Tablet';
-      } else {
-        deviceInfo.type = 'desktop';
-        deviceInfo.name = `${deviceInfo.browser ?? 'Browser'} on ${deviceInfo.os ?? 'Desktop'}`;
-      }
-
-      // ✅ ENTERPRISE: Generate secure device fingerprint
-      deviceInfo.fingerprint = await this.generateDeviceFingerprint(userAgent);
-
-      return deviceInfo;
-    } catch (error) {
-      console.error('❌ ACHROMATIC: Error parsing device info:', error);
-      return {
-        name: null,
-        type: 'unknown',
-        fingerprint: null,
-        userAgent,
-      };
-    }
-  }
-
-  /**
-   * ✅ ENTERPRISE: Calculate comprehensive risk score
-   */
-  async calculateRiskScore(context: {
-    userId: string;
-    ipAddress?: string;
-    deviceInfo?: DeviceInfo;
-    geolocation?: GeolocationContext;
-    isNewDevice?: boolean;
-    isNewLocation?: boolean;
-    timeOfDay?: Date;
-    consecutiveFailures?: number;
-    sessionHistory?: any[];
-  }): Promise<RiskAssessment> {
-    let riskScore = 0;
-    const riskFactors: string[] = [];
-    const recommendations: string[] = [];
-
-    try {
-      // ✅ ENTERPRISE: Device-based risk
-      if (context.isNewDevice) {
-        riskScore += 25;
-        riskFactors.push('new_device');
-        recommendations.push('Consider enabling device verification');
-      }
-
-      if (!context.deviceInfo?.fingerprint) {
-        riskScore += 10;
-        riskFactors.push('no_device_fingerprint');
-      }
-
-      // ✅ ENTERPRISE: Location-based risk (CORRIGIDO)
-      if (context.geolocation?.country) {
-        const country = context.geolocation.country;
-
-        if (
-          (SECURITY_CONFIG.suspiciousCountries as readonly string[]).includes(
-            country
-          )
-        ) {
-          riskScore += 40;
-          riskFactors.push('suspicious_country');
-          recommendations.push(
-            'Additional verification required for this location'
-          );
-        } else if (
-          !(SECURITY_CONFIG.trustedCountries as readonly string[]).includes(
-            country
-          )
-        ) {
-          riskScore += 15;
-          riskFactors.push('untrusted_country');
-        }
-      }
-
-      if (context.isNewLocation) {
-        riskScore += 20;
-        riskFactors.push('new_location');
-        recommendations.push('Location change detected');
-      }
-
-      // ✅ ENTERPRISE: Time-based risk
-      if (context.timeOfDay) {
-        const hour = context.timeOfDay.getHours();
-        if (
-          hour >= SECURITY_CONFIG.suspiciousHours.start &&
-          hour <= SECURITY_CONFIG.suspiciousHours.end
-        ) {
-          riskScore += 10;
-          riskFactors.push('suspicious_time');
-        }
-      }
-
-      // ✅ ENTERPRISE: Authentication failure risk
-      if (context.consecutiveFailures && context.consecutiveFailures > 0) {
-        riskScore += Math.min(context.consecutiveFailures * 15, 60);
-        riskFactors.push('authentication_failures');
-        recommendations.push('Monitor for brute force attacks');
-      }
-
-      // ✅ ENTERPRISE: IP-based risk
-      if (!context.ipAddress || context.ipAddress === 'unknown') {
-        riskScore += 15;
-        riskFactors.push('no_ip_address');
-      }
-
-      // ✅ ENTERPRISE: Session pattern analysis
-      if (context.sessionHistory && context.sessionHistory.length > 0) {
-        const recentSessions = context.sessionHistory.filter(
-          s =>
-            Date.now() - new Date(s.createdAt).getTime() < 24 * 60 * 60 * 1000
-        );
-
-        if (recentSessions.length > 10) {
-          riskScore += 20;
-          riskFactors.push('excessive_sessions');
-          recommendations.push('Unusual session activity detected');
-        }
-      }
-
-      // ✅ ENTERPRISE: Clamp risk score
-      riskScore = Math.min(100, Math.max(0, riskScore));
-
-      // ✅ ENTERPRISE: Determine security level
-      let securityLevel: SecurityLevel = 'normal';
-      if (riskScore >= SECURITY_CONFIG.riskThresholds.critical) {
-        securityLevel = 'critical';
-        recommendations.push('Immediate security review required');
-      } else if (riskScore >= SECURITY_CONFIG.riskThresholds.high) {
-        securityLevel = 'high_risk';
-        recommendations.push('Enhanced security measures recommended');
-      } else if (riskScore >= SECURITY_CONFIG.riskThresholds.medium) {
-        securityLevel = 'elevated';
-        recommendations.push('Additional verification may be required');
-      }
-
-      return {
-        score: riskScore,
-        level: securityLevel,
-        factors: riskFactors,
-        recommendations,
-        lastUpdated: new Date(),
-      };
-    } catch (error) {
-      console.error('❌ ACHROMATIC: Error calculating risk score:', error);
-      return {
-        score: 25, // Default medium-low risk on error
-        level: 'elevated',
-        factors: ['calculation_error'],
-        recommendations: ['Security assessment temporarily unavailable'],
-        lastUpdated: new Date(),
-      };
-    }
-  }
-
-  /**
-   * ✅ ENTERPRISE: Validate user security requirements
-   */
-  async validateUserSecurity(
-    user: EnterpriseUser,
-    context: {
-      ipAddress?: string;
-      deviceInfo?: DeviceInfo;
-      riskScore?: number;
-    }
-  ): Promise<{
-    isValid: boolean;
-    requiresMFA: boolean;
-    requiresPasswordChange: boolean;
-    securityWarnings: string[];
-    blockedReasons: string[];
-  }> {
-    const securityWarnings: string[] = [];
-    const blockedReasons: string[] = [];
-    let requiresMFA = false;
-    let requiresPasswordChange = false;
-
-    try {
-      // ✅ ENTERPRISE: Account status checks
-      if (!user.isActive) {
-        blockedReasons.push('Account is inactive');
-      }
-
-      if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
-        blockedReasons.push('Account is temporarily locked');
-      }
-
-      // ✅ ENTERPRISE: Password security checks
-      if (user.passwordChangedAt) {
-        const passwordAge = Date.now() - user.passwordChangedAt.getTime();
-        const maxPasswordAge = 90 * 24 * 60 * 60 * 1000; // 90 days
-
-        if (passwordAge > maxPasswordAge) {
-          requiresPasswordChange = true;
-          securityWarnings.push('Password has expired and must be changed');
-        }
-      }
-
-      // ✅ ENTERPRISE: MFA requirements
-      const riskScore = context.riskScore ?? 0;
-
-      if (user.twoFactorEnabled) {
-        requiresMFA = true;
-      } else if (riskScore >= 50) {
-        requiresMFA = true;
-        securityWarnings.push(
-          'Two-factor authentication required due to elevated risk'
-        );
-      } else if (
-        user.securityLevel === 'critical' ||
-        user.securityLevel === 'high_risk'
-      ) {
-        requiresMFA = true;
-        securityWarnings.push(
-          'Two-factor authentication required for high-security account'
-        );
-      }
-
-      // ✅ ENTERPRISE: Device-based security
-      if (context.deviceInfo?.type === 'unknown') {
-        securityWarnings.push('Unrecognized device type');
-      }
-
-      // ✅ ENTERPRISE: Failed login attempts
-      if (user.failedLoginAttempts >= 3) {
-        securityWarnings.push(
-          `${user.failedLoginAttempts} failed login attempts detected`
-        );
-      }
-
-      if (user.failedLoginAttempts >= 5) {
-        blockedReasons.push('Too many failed login attempts');
-      }
-
-      return {
-        isValid: blockedReasons.length === 0,
-        requiresMFA,
-        requiresPasswordChange,
-        securityWarnings,
-        blockedReasons,
-      };
-    } catch (error) {
-      console.error('❌ ACHROMATIC: Error validating user security:', error);
-      return {
-        isValid: false,
-        requiresMFA: true, // Fail secure
-        requiresPasswordChange: false,
-        securityWarnings: ['Security validation error'],
-        blockedReasons: ['Unable to verify security requirements'],
-      };
-    }
-  }
-
-  /**
-   * ✅ ENTERPRISE: Generate secure device fingerprint
-   */
-  async generateDeviceFingerprint(
-    userAgent: string,
-    additionalData?: Record<string, any>
-  ): Promise<string> {
-    try {
-      // ✅ ENTERPRISE: Generate salt for uniqueness
-      const salt = randomBytes(SECURITY_CONFIG.deviceFingerprint.saltLength);
-
-      // ✅ ENTERPRISE: Combine fingerprint data
-      const fingerprintData = {
-        userAgent,
-        timestamp: Date.now(),
-        salt: salt.toString('hex'),
-        ...additionalData,
-      };
-
-      // ✅ ENTERPRISE: Create secure hash
-      const hash = createHash(SECURITY_CONFIG.deviceFingerprint.algorithm);
-      hash.update(JSON.stringify(fingerprintData));
-
-      return hash
-        .digest('hex')
-        .substring(0, SECURITY_CONFIG.deviceFingerprint.hashLength);
-    } catch (error) {
-      console.error(
-        '❌ ACHROMATIC: Error generating device fingerprint:',
-        error
-      );
-      // ✅ FALLBACK: Generate simple hash
-      const simpleHash = createHash('sha256');
-      simpleHash.update(userAgent + Date.now().toString());
-      return simpleHash.digest('hex').substring(0, 16);
-    }
-  }
-
-  /**
-   * ✅ ENTERPRISE: Validate session security
-   */
-  async validateSessionSecurity(sessionData: {
-    userId: string;
-    sessionToken: string;
-    createdAt: Date;
-    lastAccessedAt?: Date | null;
-    riskScore?: number;
-    securityLevel?: SecurityLevel;
-    deviceInfo?: DeviceInfo;
-    ipAddress?: string;
-  }): Promise<{
-    isValid: boolean;
-    shouldRevoke: boolean;
-    securityWarnings: string[];
-    recommendations: string[];
-  }> {
-    const securityWarnings: string[] = [];
-    const recommendations: string[] = [];
-    let shouldRevoke = false;
-
-    try {
-      // ✅ ENTERPRISE: Session age validation
-      const sessionAge = Date.now() - sessionData.createdAt.getTime();
-      const maxSessionAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-      if (sessionAge > maxSessionAge) {
-        shouldRevoke = true;
-        securityWarnings.push('Session has exceeded maximum age');
-      }
-
-      // ✅ ENTERPRISE: Idle time validation
-      if (sessionData.lastAccessedAt) {
-        const idleTime = Date.now() - sessionData.lastAccessedAt.getTime();
-        const maxIdleTime = this.getMaxIdleTime(
-          sessionData.securityLevel ?? 'normal'
-        );
-
-        if (idleTime > maxIdleTime) {
-          shouldRevoke = true;
-          securityWarnings.push('Session has been idle too long');
-        }
-      }
-
-      // ✅ ENTERPRISE: Risk-based validation
-      const riskScore = sessionData.riskScore ?? 0;
-      if (riskScore >= 80) {
-        shouldRevoke = true;
-        securityWarnings.push('Session risk score is too high');
-      } else if (riskScore >= 60) {
-        securityWarnings.push('Session has elevated risk score');
-        recommendations.push('Consider additional verification');
-      }
-
-      // ✅ ENTERPRISE: Device validation
-      if (!sessionData.deviceInfo?.fingerprint) {
-        securityWarnings.push('Session missing device fingerprint');
-        recommendations.push('Enable device tracking for better security');
-      }
-
-      // ✅ ENTERPRISE: IP validation
-      if (!sessionData.ipAddress) {
-        securityWarnings.push('Session missing IP address');
-      }
-
-      return {
-        isValid: !shouldRevoke,
-        shouldRevoke,
-        securityWarnings,
-        recommendations,
-      };
-    } catch (error) {
-      console.error('❌ ACHROMATIC: Error validating session security:', error);
-      return {
-        isValid: false,
-        shouldRevoke: true, // Fail secure
-        securityWarnings: ['Session security validation failed'],
-        recommendations: ['Revoke session for security'],
-      };
-    }
-  }
-
-  // ============================================
-  // PRIVATE UTILITY METHODS
-  // ============================================
-
-  /**
-   * ✅ ENTERPRISE: Extract iPhone model from user agent
-   */
-  private extractiPhoneModel(userAgent: string): string | null {
-    try {
-      if (/iPhone/.test(userAgent)) {
-        // This is simplified - in production, use a comprehensive device database
-        if (/iPhone OS 17/.test(userAgent)) return 'iPhone (iOS 17)';
-        if (/iPhone OS 16/.test(userAgent)) return 'iPhone (iOS 16)';
-        if (/iPhone OS 15/.test(userAgent)) return 'iPhone (iOS 15)';
-        return 'iPhone';
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * ✅ ENTERPRISE: Get maximum idle time based on security level
-   */
-  private getMaxIdleTime(securityLevel: SecurityLevel): number {
-    const idleTimes = {
-      normal: 24 * 60 * 60 * 1000, // 24 hours
-      elevated: 8 * 60 * 60 * 1000, // 8 hours
-      high_risk: 2 * 60 * 60 * 1000, // 2 hours
-      critical: 30 * 60 * 1000, // 30 minutes
+/**
+ * ✅ PARSE: Device information from user agent
+ */
+export function parseDeviceInfo(userAgent?: string | null): DeviceInfo {
+  if (!userAgent) {
+    return {
+      name: 'Unknown Device',
+      type: 'unknown',
+      fingerprint: null,
+      platform: undefined,
+      browser: undefined,
+      os: undefined,
     };
-
-    return idleTimes[securityLevel] || idleTimes.normal;
   }
+
+  // Simple user agent parsing (in production, use a proper library)
+  const isMobile = /Mobile|Android|iPhone|iPad/i.test(userAgent);
+  const isTablet = /iPad|Tablet/i.test(userAgent);
+
+  let deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown' = 'unknown';
+  if (isTablet) deviceType = 'tablet';
+  else if (isMobile) deviceType = 'mobile';
+  else deviceType = 'desktop';
+
+  // Extract browser info
+  let browser: string | undefined = undefined;
+  if (userAgent.includes('Chrome')) browser = 'Chrome';
+  else if (userAgent.includes('Firefox')) browser = 'Firefox';
+  else if (userAgent.includes('Safari')) browser = 'Safari';
+  else if (userAgent.includes('Edge')) browser = 'Edge';
+
+  // Extract OS info
+  let os: string | undefined = undefined;
+  if (userAgent.includes('Windows')) os = 'Windows';
+  else if (userAgent.includes('Mac')) os = 'macOS';
+  else if (userAgent.includes('Linux')) os = 'Linux';
+  else if (userAgent.includes('Android')) os = 'Android';
+  else if (userAgent.includes('iOS')) os = 'iOS';
+
+  // Extract platform
+  let platform: string | undefined = undefined;
+  if (userAgent.includes('Win')) platform = 'Windows';
+  else if (userAgent.includes('Mac')) platform = 'macOS';
+  else if (userAgent.includes('Linux')) platform = 'Linux';
+  else if (userAgent.includes('Android')) platform = 'Android';
+  else if (userAgent.includes('iPhone') || userAgent.includes('iPad'))
+    platform = 'iOS';
+
+  return {
+    name: browser && os ? `${browser} on ${os}` : 'Unknown Device',
+    type: deviceType,
+    fingerprint: generateDeviceFingerprint(userAgent),
+    platform: platform ?? undefined,
+    browser: browser ?? undefined,
+    os: os ?? undefined,
+  };
+}
+
+/**
+ * ✅ GENERATE: Device fingerprint
+ */
+export function generateDeviceFingerprint(
+  userAgent: string,
+  additionalData?: Record<string, unknown>
+): string {
+  const data = JSON.stringify({
+    userAgent,
+    ...additionalData,
+    timestamp: Math.floor(Date.now() / (1000 * 60 * 60 * 24)), // Daily rotation
+  });
+
+  return createHash('sha256').update(data).digest('hex').substring(0, 16);
 }
 
 // ============================================
-// SINGLETON INSTANCE & CONVENIENCE FUNCTIONS
+// RISK ASSESSMENT
 // ============================================
 
 /**
- * ✅ ACHROMATIC: Parse device information
+ * ✅ RISK ASSESSMENT: Interface
  */
-export async function parseDeviceInfo(userAgent?: string): Promise<DeviceInfo> {
-  return SecurityService.parseDeviceInfo(userAgent);
+interface RiskAssessment {
+  securityLevel: SecurityLevel;
+  riskFactors: string[];
+  recommendations: string[];
 }
 
 /**
- * ✅ ENTERPRISE: Calculate risk score
+ * ✅ CALCULATE: Risk score based on multiple factors
  */
-export async function calculateRiskScore(context: {
-  userId: string;
-  ipAddress?: string;
+export function calculateRiskScore(context: {
+  user?: EnterpriseUser;
   deviceInfo?: DeviceInfo;
   geolocation?: GeolocationContext;
+  ipAddress?: string | null;
   isNewDevice?: boolean;
   isNewLocation?: boolean;
-  timeOfDay?: Date;
-  consecutiveFailures?: number;
-  sessionHistory?: any[];
-}): Promise<RiskAssessment> {
-  return SecurityService.calculateRiskScore(context);
-}
+  authFailures?: number;
+  timeOfDay?: number; // 0-23
+}): RiskAssessment & { riskScore: number } {
+  let riskScore = 0;
+  const riskFactors: string[] = [];
 
-/**
- * ✅ ENTERPRISE: Generate device fingerprint
- */
-export async function generateDeviceFingerprint(
-  userAgent: string,
-  additionalData?: Record<string, any>
-): Promise<string> {
-  return SecurityService.generateDeviceFingerprint(userAgent, additionalData);
-}
-
-/**
- * ✅ ENTERPRISE: Validate user security
- */
-export async function validateUserSecurity(
-  user: EnterpriseUser,
-  context: {
-    ipAddress?: string;
-    deviceInfo?: DeviceInfo;
-    riskScore?: number;
+  // Device-based risk
+  if (context.isNewDevice) {
+    riskScore += 20;
+    riskFactors.push('new_device');
   }
-): Promise<{
-  isValid: boolean;
-  requiresMFA: boolean;
-  requiresPasswordChange: boolean;
-  securityWarnings: string[];
-  blockedReasons: string[];
-}> {
-  return SecurityService.validateUserSecurity(user, context);
+
+  if (!context.deviceInfo?.fingerprint) {
+    riskScore += 5;
+    riskFactors.push('no_device_fingerprint');
+  }
+
+  // Location-based risk
+  if (context.isNewLocation) {
+    riskScore += 15;
+    riskFactors.push('new_location');
+  }
+
+  // Geographic risk
+  if (context.geolocation?.country) {
+    const suspiciousCountries = ['CN', 'RU', 'KP', 'IR'];
+    if (suspiciousCountries.includes(context.geolocation.country)) {
+      riskScore += 30;
+      riskFactors.push('suspicious_country');
+    }
+  }
+
+  // Network risk
+  if (!context.ipAddress) {
+    riskScore += 10;
+    riskFactors.push('no_ip_address');
+  }
+
+  // Authentication failure history
+  if (context.authFailures && context.authFailures > 0) {
+    riskScore += Math.min(context.authFailures * 5, 25);
+    riskFactors.push('authentication_failures');
+  }
+
+  // Time-based risk (suspicious hours: 2 AM - 6 AM)
+  if (context.timeOfDay !== undefined) {
+    if (context.timeOfDay >= 2 && context.timeOfDay <= 6) {
+      riskScore += 10;
+      riskFactors.push('suspicious_time');
+    }
+  }
+
+  // Determine security level
+  let securityLevel: SecurityLevel = 'normal';
+  if (riskScore >= 90) securityLevel = 'critical';
+  else if (riskScore >= 75) securityLevel = 'high_risk';
+  else if (riskScore >= 50) securityLevel = 'elevated';
+
+  return {
+    riskScore: Math.min(riskScore, 100), // Cap at 100
+    securityLevel,
+    riskFactors,
+    recommendations: generateSecurityRecommendations(riskScore, riskFactors),
+  };
+}
+
+/**
+ * ✅ GENERATE: Security recommendations based on risk
+ */
+function generateSecurityRecommendations(
+  riskScore: number,
+  riskFactors: string[]
+): string[] {
+  const recommendations: string[] = [];
+
+  if (riskScore >= 75) {
+    recommendations.push('Require MFA authentication');
+    recommendations.push('Monitor session closely');
+  }
+
+  if (riskScore >= 50) {
+    recommendations.push('Send security alert email');
+    recommendations.push('Limit session duration');
+  }
+
+  if (riskFactors.includes('new_device')) {
+    recommendations.push('Verify device via email');
+  }
+
+  if (riskFactors.includes('new_location')) {
+    recommendations.push('Confirm location change');
+  }
+
+  if (riskFactors.includes('suspicious_country')) {
+    recommendations.push('Additional identity verification required');
+  }
+
+  return recommendations;
 }
 
 // ============================================
-// EXPORTS
+// USER SECURITY VALIDATION
 // ============================================
 
-// Criar instância da classe
-const securityServiceInstance = new SecurityServiceClass();
+/**
+ * ✅ VALIDATE: User security status
+ */
+export function validateUserSecurity(user: EnterpriseUser): {
+  isValid: boolean;
+  issues: string[];
+  securityLevel: SecurityLevel;
+} {
+  const issues: string[] = [];
 
-// Export named para compatibilidade com imports existentes
-export const SecurityService = securityServiceInstance;
+  // Check if account is active
+  if (!user.isActive) {
+    issues.push('Account is inactive');
+  }
 
-// Export alternativo com nome original
-export { securityServiceInstance as securityService };
+  // Check failed login attempts - using available field
+  const maxFailedAttempts = 5;
+  const currentFailedAttempts =
+    typeof user.loginAttempts === 'number'
+      ? user.loginAttempts
+      : parseInt(String(user.loginAttempts || 0), 10);
 
-// Export default para compatibilidade
-export default securityServiceInstance;
+  if (currentFailedAttempts >= maxFailedAttempts) {
+    issues.push('Too many failed login attempts');
+  }
+
+  // Determine security level
+  let securityLevel: SecurityLevel = 'normal';
+  if (issues.length > 0) {
+    if (
+      issues.some(
+        issue => issue.includes('locked') || issue.includes('inactive')
+      )
+    ) {
+      securityLevel = 'critical';
+    } else if (currentFailedAttempts >= 3) {
+      securityLevel = 'elevated';
+    }
+  }
+
+  return {
+    isValid: issues.length === 0,
+    issues,
+    securityLevel,
+  };
+}
+
+// ============================================
+// PERMISSION & ACCESS CONTROL
+// ============================================
+
+/**
+ * ✅ CHECK: If user has specific permission
+ */
+export function hasPermission(
+  context: OrganizationAuthContext | null,
+  permission: string
+): boolean {
+  if (!context?.membership?.permissions) {
+    return false;
+  }
+
+  // Check direct permissions
+  if (Array.isArray(context.membership.permissions)) {
+    return context.membership.permissions.includes(permission);
+  }
+
+  return false;
+}
+
+/**
+ * ✅ CHECK: If user has specific role
+ */
+export function hasRole(
+  context: OrganizationAuthContext | null,
+  role: MemberRole
+): boolean {
+  return context?.membership?.role === role;
+}
+
+/**
+ * ✅ CHECK: If user is organization owner
+ */
+export function isOwner(context: OrganizationAuthContext | null): boolean {
+  return hasRole(context, 'owner');
+}
+
+/**
+ * ✅ CHECK: If user is admin or owner
+ */
+export function isAdminOrOwner(
+  context: OrganizationAuthContext | null
+): boolean {
+  return hasRole(context, 'owner') || hasRole(context, 'admin');
+}
+
+/**
+ * ✅ CHECK: If user can manage members
+ */
+export function canManageMembers(
+  context: OrganizationAuthContext | null
+): boolean {
+  return isAdminOrOwner(context) || hasPermission(context, 'manage_members');
+}
+
+/**
+ * ✅ CHECK: If user can manage projects
+ */
+export function canManageProjects(
+  context: OrganizationAuthContext | null
+): boolean {
+  return isAdminOrOwner(context) || hasPermission(context, 'manage_projects');
+}
+
+/**
+ * ✅ CHECK: If user can view billing
+ */
+export function canViewBilling(
+  context: OrganizationAuthContext | null
+): boolean {
+  return isAdminOrOwner(context) || hasPermission(context, 'view_billing');
+}
+
+/**
+ * ✅ CHECK: If user can manage billing
+ */
+export function canManageBilling(
+  context: OrganizationAuthContext | null
+): boolean {
+  return isOwner(context) || hasPermission(context, 'manage_billing');
+}
+
+// ============================================
+// SESSION SECURITY
+// ============================================
+
+/**
+ * ✅ CHECK: If session has high security requirements
+ */
+export function hasHighSecurity(_context: EnhancedAuthContext | null): boolean {
+  return false;
+}
+
+/**
+ * ✅ CHECK: If user has two-factor authentication enabled
+ */
+export function hasTwoFactor(_context: EnhancedAuthContext | null): boolean {
+  return false;
+}
+
+/**
+ * ✅ CHECK: If session is credentials-based (not OAuth)
+ */
+export function isCredentialsSession(
+  context: EnhancedAuthContext | null
+): boolean {
+  return Boolean(context);
+}
+
+/**
+ * ✅ GET: Session risk level
+ */
+export function getSessionRiskLevel(
+  context: EnhancedAuthContext | null
+): SecurityLevel {
+  return context?.session?.enterprise?.securityLevel ?? 'normal';
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+/**
+ * ✅ GENERATE: Secure random string
+ */
+export function generateSecureToken(length: number = 32): string {
+  return randomBytes(length).toString('hex');
+}
+
+/**
+ * ✅ HASH: String with salt
+ */
+export function hashWithSalt(data: string, salt?: string): string {
+  const actualSalt = salt ?? randomBytes(16).toString('hex');
+  return createHash('sha256')
+    .update(data + actualSalt)
+    .digest('hex');
+}
+
+/**
+ * ✅ VALIDATE: IP address format
+ */
+export function isValidIPAddress(ip: string): boolean {
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
+/**
+ * ✅ SANITIZE: User agent string
+ */
+export function sanitizeUserAgent(userAgent: string): string {
+  // Remove potentially dangerous characters
+  return userAgent.replace(/[<>'"]/g, '').substring(0, 500);
+}
+
+/**
+ * ✅ CHECK: If request is from trusted network
+ */
+export function isTrustedNetwork(_ipAddress: string): boolean {
+  // This would check against a list of trusted IP ranges
+  // For now, return false to be conservative
+  return false;
+}

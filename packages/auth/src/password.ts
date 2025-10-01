@@ -135,11 +135,11 @@ export async function verifyPassword(
     // ✅ ENTERPRISE: Handle different hashing algorithms
     if (hashedPassword.startsWith('scrypt:')) {
       const [, salt, hash] = hashedPassword.split(':');
-      
+
       // ✅ CORRIGIDO: Linha 138 - Validar salt antes do uso
       if (!salt) throw new Error('Salt is required');
       const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
-      
+
       // ✅ CORRIGIDO: Linha 139 - Validar hash antes do uso
       if (!hash) throw new Error('Hash is required');
       const expectedHash = Buffer.from(hash, 'hex');
@@ -174,7 +174,7 @@ export function validatePasswordStrength(
     errors.push(
       `Password must be at least ${PASSWORD_CONFIG.strength.minLength} characters long`
     );
-  } else if (password.length >= PASSWORD_CONFIG.strength.minLength) {
+  } else {
     score += 10;
   }
 
@@ -195,36 +195,28 @@ export function validatePasswordStrength(
 
   if (PASSWORD_CONFIG.strength.requireUppercase && !hasUppercase) {
     errors.push('Password must contain at least one uppercase letter');
-  } else {
-    if (hasUppercase) {
-      score += 15;
-    }
+  } else if (hasUppercase) {
+    score += 15;
   }
 
   if (PASSWORD_CONFIG.strength.requireLowercase && !hasLowercase) {
     errors.push('Password must contain at least one lowercase letter');
-  } else {
-    if (hasLowercase) {
-      score += 15;
-    }
+  } else if (hasLowercase) {
+    score += 15;
   }
 
   if (PASSWORD_CONFIG.strength.requireNumbers && !hasNumbers) {
     errors.push('Password must contain at least one number');
-  } else {
-    if (hasNumbers) {
-      score += 15;
-    }
+  } else if (hasNumbers) {
+    score += 15;
   }
 
   if (PASSWORD_CONFIG.strength.requireSpecialChars && !hasSpecialChars) {
     errors.push(
       'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
     );
-  } else {
-    if (hasSpecialChars) {
-      score += 15;
-    }
+  } else if (hasSpecialChars) {
+    score += 15;
   }
 
   if (specialCharCount >= PASSWORD_CONFIG.strength.minSpecialChars) {
@@ -272,7 +264,7 @@ export function validatePasswordStrength(
     // ✅ CORRIGIDO: Linhas 267-268 - Guard clauses para emailParts
     if (
       (emailParts && lowercasePassword.includes(emailParts)) ||
-      (emailParts?.includes(lowercasePassword))
+      emailParts?.includes(lowercasePassword)
     ) {
       errors.push('Password should not contain parts of your email address');
       score = Math.max(0, score - 20);
@@ -363,7 +355,7 @@ export async function validatePasswordReuse(
     const validHashes = previousPasswordHashes
       .slice(0, maxCheck)
       .filter(hash => hash != null);
-    
+
     const verificationPromises = validHashes.map(hash =>
       verifyPassword(newPassword, hash)
     );
