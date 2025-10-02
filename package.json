@@ -65,7 +65,12 @@
     "predev": "pnpm check:requirements",
     "prebuild": "pnpm qa:fast",
     "pretest:e2e": "pnpm qa:build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "rate-limiter:build": "turbo run build --filter=@workspace/rate-limiter",
+    "rate-limiter:dev": "turbo run dev --filter=@workspace/rate-limiter",
+    "rate-limiter:test": "turbo run test --filter=@workspace/rate-limiter",
+    "rate-limiter:lint": "turbo run lint --filter=@workspace/rate-limiter",
+    "rate-limiter:type-check": "turbo run type-check --filter=@workspace/rate-limiter"
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx}": [
@@ -83,6 +88,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
+    "ioredis": "^5.4.1",
     "jose": "^6.1.0",
     "next": "^15.5.4",
     "next-auth": "5.0.0-beta.25",
@@ -112,6 +118,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "husky": "^9.1.7",
+    "jest": "^29.7.0",
     "lint-staged": "^15.2.10",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
@@ -140,7 +147,9 @@
       "turbo": "^2.5.8",
       "tailwindcss": "^3.4.0",
       "autoprefixer": "^10.4.21",
-      "postcss": "^8.5.6"
+      "postcss": "^8.5.6",
+      "ioredis": "^5.4.1",
+      "zod": "^3.25.76"
     },
     "peerDependencyRules": {
       "allowedVersions": {

@@ -7,14 +7,20 @@ import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 /**
- * ✅ ENTERPRISE: ESLint 9+ Flat Config
- * Clean, objetivo e enterprise-ready para monorepo Turborepo
+ * 🏆 ENTERPRISE ESLINT CONFIG - Otimizado para Qualidade + Produtividade
+ *
+ * Filosofia:
+ * - Error: Previne bugs reais (type errors, security, runtime crashes)
+ * - Warn: Code quality opcional (pode ser ignorado temporariamente)
+ * - Off: Falsos positivos ou coberto por outras ferramentas
+ *
+ * Baseado em: Google, Meta, Microsoft, Vercel best practices
  */
 export default [
-  // ✅ BASE: JavaScript recomendado
+  // ✅ BASE: JavaScript essentials
   js.configs.recommended,
 
-  // ✅ PERFORMANCE: Ignores globais otimizados
+  // ✅ PERFORMANCE: Ignores otimizados
   {
     ignores: [
       '**/node_modules/**',
@@ -24,7 +30,6 @@ export default [
       '**/.turbo/**',
       '**/build/**',
       '**/*.min.js',
-      // Database & tooling exclusions
       'packages/database/**',
       '**/drizzle/**',
       '**/migrations/**',
@@ -33,7 +38,7 @@ export default [
     ],
   },
 
-  // ✅ TYPESCRIPT: Configuração principal
+  // ✅ TYPESCRIPT: Main configuration
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
@@ -63,7 +68,7 @@ export default [
       'jsx-a11y': jsxA11yPlugin,
     },
     rules: {
-      // ✅ TYPESCRIPT: Core rules
+      // 🎯 TYPESCRIPT: Type Safety (ERROR - previne bugs)
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -72,56 +77,63 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error', // PROMOVIDO: força types
+      '@typescript-eslint/no-non-null-assertion': 'error', // PROMOVIDO: type safety
       '@typescript-eslint/consistent-type-imports': [
         'error',
         { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
       ],
-      // 🎯 FASE 1: Desabilitar no-unnecessary-condition (95 warnings eliminados)
-      '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error', // NOVO: previne bugs async
+      '@typescript-eslint/await-thenable': 'error', // NOVO: previne await desnecessário
 
-      // ✅ REACT: Essential rules only
+      // 🎯 TYPESCRIPT: Code Quality (WARN - pode ser ignorado)
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'off', // Mantido OFF (muitos falsos positivos)
+
+      // 🎯 REACT: Critical rules (ERROR)
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/jsx-uses-vars': 'error',
       'react/jsx-key': 'error',
       'react/jsx-no-duplicate-props': 'error',
       'react/no-unescaped-entities': 'error',
+      'react/no-unknown-property': 'error', // NOVO: previne typos em props
 
-      // ✅ REACT HOOKS: Critical rules
+      // 🎯 REACT HOOKS: Non-negotiable (ERROR)
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'error', // PROMOVIDO: previne stale closures
 
-      // ✅ ACCESSIBILITY: Essential only
-      'jsx-a11y/alt-text': 'error',
-      'jsx-a11y/anchor-is-valid': 'error',
-      'jsx-a11y/aria-props': 'error',
+      // 🎯 ACCESSIBILITY: Balanced approach
+      'jsx-a11y/alt-text': 'warn',
+      'jsx-a11y/anchor-is-valid': 'warn',
+      'jsx-a11y/aria-props': 'warn',
+      'jsx-a11y/aria-unsupported-elements': 'warn',
+      'jsx-a11y/role-has-required-aria-props': 'warn',
 
-      // ✅ GENERAL: Clean code essentials
-      'no-unused-vars': 'off',
-      'no-undef': 'off',
+      // 🎯 GENERAL: Clean code (ERROR for critical, WARN for style)
+      'no-unused-vars': 'off', // Delegado para @typescript-eslint
+      'no-undef': 'off', // TypeScript já valida
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
       'no-var': 'error',
       'prefer-const': 'error',
-      'prefer-template': 'error',
+      'prefer-template': 'warn', // REBAIXADO: style preference
       'no-duplicate-imports': 'error',
-      'no-trailing-spaces': 'error',
-      'eol-last': 'error',
-      semi: ['error', 'always'],
-      quotes: ['error', 'single', { avoidEscape: true }],
 
-      // ✅ SECURITY: Non-negotiable
+      // 🎯 FORMATTING: Delegado para Prettier (removidos)
+      // Prettier cuida: semi, quotes, trailing-spaces, eol-last
+
+      // 🎯 SECURITY: Non-negotiable (ERROR)
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
 
-      // ✅ PERFORMANCE: Important warnings
-      'no-await-in-loop': 'warn',
-      'require-atomic-updates': 'warn',
+      // 🎯 ASYNC/PROMISES: Pragmatic approach
+      'no-await-in-loop': 'off', // REMOVIDO: muitos falsos positivos (retry logic, etc)
+      'require-atomic-updates': 'off', // REMOVIDO: falsos positivos frequentes
+      'no-promise-executor-return': 'error', // NOVO: previne bugs Promise
+      'no-async-promise-executor': 'error', // NOVO: previne anti-patterns
     },
     settings: {
       react: { version: 'detect' },
@@ -147,6 +159,8 @@ export default [
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-var': 'error',
+      'prefer-const': 'error',
     },
   },
 
@@ -157,11 +171,13 @@ export default [
       '**/next.config.{js,ts}',
       '**/tailwind.config.{js,ts}',
       '**/vitest.config.{js,ts}',
+      '**/postcss.config.{js,ts}',
     ],
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 
@@ -180,13 +196,18 @@ export default [
         it: 'readonly',
         beforeEach: 'readonly',
         afterEach: 'readonly',
+        afterAll: 'readonly',
+        beforeAll: 'readonly',
         vi: 'readonly',
+        jest: 'readonly',
       },
     },
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
 
@@ -198,6 +219,19 @@ export default [
     },
   },
 
-  // ✅ PRETTIER: Always last
+  // ✅ INFRASTRUCTURE: Gateway/Repository patterns
+  {
+    files: [
+      '**/infrastructure/**/*.{js,ts}',
+      '**/*.gateway.{js,ts}',
+      '**/*.repository.{js,ts}',
+    ],
+    rules: {
+      // Retry logic é comum aqui
+      'no-await-in-loop': 'off',
+    },
+  },
+
+  // ✅ PRETTIER: Must be last to override formatting rules
   prettierConfig,
 ];

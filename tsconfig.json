@@ -21,6 +21,7 @@
     { "path": "packages/common" },
     { "path": "packages/routes" },
     { "path": "packages/ui" },
+    { "path": "packages/rate-limiter" },
     { "path": "packages/e2e" },
     { "path": "tooling/eslint-config" },
     { "path": "tooling/prettier-config" },
