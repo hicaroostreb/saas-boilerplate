@@ -1,5 +1,8 @@
+// packages/database/src/repositories/contracts/user.repository.interface.ts
+
 // ============================================
 // USER REPOSITORY CONTRACT - SRP: APENAS USER INTERFACE
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import type { UserEntity } from '../../entities/auth/user.entity';
@@ -16,6 +19,19 @@ export interface IUserRepository {
   create(user: UserEntity): Promise<UserEntity>;
   update(user: UserEntity): Promise<UserEntity>;
   delete(id: string): Promise<void>;
+
+  // ============================================
+  // MULTI-TENANCY OPERATIONS
+  // ============================================
+
+  findByOrganizationId(organizationId: string): Promise<UserEntity[]>;
+
+  // ============================================
+  // SOFT DELETE OPERATIONS
+  // ============================================
+
+  softDelete(id: string): Promise<void>;
+  restore(id: string): Promise<UserEntity>;
 
   // ============================================
   // QUERY OPERATIONS

@@ -1,5 +1,8 @@
+// packages/database/src/seeders/testing.ts
+
 // ============================================
 // TESTING SEEDERS - SRP: APENAS TEST DATA
+// Enterprise Multi-Tenancy and Soft Delete - TypeScript Strict Mode Fixed
 // ============================================
 
 import { db } from '../connection';
@@ -38,6 +41,79 @@ export const testingSeeder = {
     }
 
     const now = new Date();
+    const tenantIdAlpha = crypto.randomUUID();
+    const tenantIdBeta = crypto.randomUUID();
+
+    // ============================================
+    // TEST ORGANIZATIONS DATA FIRST
+    // ============================================
+
+    const testOrganizations = [
+      {
+        id: crypto.randomUUID(),
+        tenantId: tenantIdAlpha,
+        name: 'Test Organization Alpha',
+        slug: 'test-org-alpha',
+        description: 'Primary test organization for comprehensive testing',
+        website: null,
+        logoUrl: null,
+        bannerUrl: null,
+        brandColor: '#3b82f6',
+        ownerId: '', // Will be set after user creation
+        isPublic: false,
+        allowJoinRequests: true,
+        requireApproval: false,
+        memberLimit: 10,
+        projectLimit: 5,
+        storageLimit: 1073741824, // 1GB
+        contactEmail: null,
+        contactPhone: null,
+        address: null,
+        taxId: null,
+        industry: 'technology',
+        companySize: '11-50',
+        planType: 'professional',
+        billingEmail: null,
+        metadata: { source: 'test' },
+        isActive: true,
+        isVerified: true,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+      {
+        id: crypto.randomUUID(),
+        tenantId: tenantIdBeta,
+        name: 'Test Organization Beta',
+        slug: 'test-org-beta',
+        description: 'Secondary test organization for multi-org testing',
+        website: null,
+        logoUrl: null,
+        bannerUrl: null,
+        brandColor: '#10b981',
+        ownerId: '', // Will be set after user creation
+        isPublic: true,
+        allowJoinRequests: false,
+        requireApproval: true,
+        memberLimit: 5,
+        projectLimit: 3,
+        storageLimit: 536870912, // 512MB
+        contactEmail: null,
+        contactPhone: null,
+        address: null,
+        taxId: null,
+        industry: 'consulting',
+        companySize: '1-10',
+        planType: 'starter',
+        billingEmail: null,
+        metadata: { source: 'test' },
+        isActive: true,
+        isVerified: false,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+    ];
 
     // ============================================
     // TEST USERS DATA
@@ -48,6 +124,7 @@ export const testingSeeder = {
         id: crypto.randomUUID(),
         email: 'test.admin@test.com',
         name: 'Test Admin',
+        organizationId: testOrganizations[0]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: now,
         passwordHash: null,
@@ -73,6 +150,7 @@ export const testingSeeder = {
         id: crypto.randomUUID(),
         email: 'test.user@test.com',
         name: 'Test User',
+        organizationId: testOrganizations[0]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: now,
         passwordHash: null,
@@ -98,6 +176,7 @@ export const testingSeeder = {
         id: crypto.randomUUID(),
         email: 'test.inactive@test.com',
         name: 'Inactive User',
+        organizationId: testOrganizations[1]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: null,
         passwordHash: null,
@@ -121,112 +200,36 @@ export const testingSeeder = {
       },
     ];
 
+    // Update organization owners
+    testOrganizations[0]!.ownerId = testUsers[0]!.id; // ✅ FIX: Non-null assertions
+    testOrganizations[1]!.ownerId = testUsers[1]!.id; // ✅ FIX: Non-null assertions
+
     await db.insert(users).values(testUsers);
 
     if (options.verbose) {
       console.log(`  ✅ Created ${testUsers.length} test users`);
     }
 
-    // ============================================
-    // TEST ORGANIZATIONS DATA - ✅ FIXED: Safe array access
-    // ============================================
-
-    const adminUser = testUsers[0]; // Safe - we know it exists
-    const regularUser = testUsers[1]; // Safe - we know it exists
-
-    if (!adminUser || !regularUser) {
-      throw new Error('Failed to create test users');
-    }
-
-    const testOrganizations = [
-      {
-        id: crypto.randomUUID(),
-        name: 'Test Organization Alpha',
-        slug: 'test-org-alpha',
-        description: 'Primary test organization for comprehensive testing',
-        website: null,
-        logoUrl: null,
-        bannerUrl: null,
-        brandColor: '#3b82f6',
-        ownerId: adminUser.id, // ✅ FIXED: Safe access
-        isPublic: false,
-        allowJoinRequests: true,
-        requireApproval: false,
-        memberLimit: 10,
-        projectLimit: 5,
-        storageLimit: 1073741824, // 1GB
-        contactEmail: null,
-        contactPhone: null,
-        address: null,
-        taxId: null,
-        industry: 'technology',
-        companySize: '11-50',
-        planType: 'professional',
-        billingEmail: null,
-        metadata: { source: 'test' },
-        isActive: true,
-        isVerified: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: 'Test Organization Beta',
-        slug: 'test-org-beta',
-        description: 'Secondary test organization for multi-org testing',
-        website: null,
-        logoUrl: null,
-        bannerUrl: null,
-        brandColor: '#10b981',
-        ownerId: regularUser.id, // ✅ FIXED: Safe access
-        isPublic: true,
-        allowJoinRequests: false,
-        requireApproval: true,
-        memberLimit: 5,
-        projectLimit: 3,
-        storageLimit: 536870912, // 512MB
-        contactEmail: null,
-        contactPhone: null,
-        address: null,
-        taxId: null,
-        industry: 'consulting',
-        companySize: '1-10',
-        planType: 'starter',
-        billingEmail: null,
-        metadata: { source: 'test' },
-        isActive: true,
-        isVerified: false,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-    ];
-
     await db.insert(organizations).values(testOrganizations);
 
     if (options.verbose) {
-      console.log(
-        `  ✅ Created ${testOrganizations.length} test organizations`
-      );
+      console.log(`  ✅ Created ${testOrganizations.length} test organizations`);
     }
 
     // ============================================
-    // TEST MEMBERSHIPS DATA - ✅ FIXED: Safe access
+    // TEST MEMBERSHIPS DATA
     // ============================================
 
-    const orgAlpha = testOrganizations[0];
-    const orgBeta = testOrganizations[1];
-
-    if (!orgAlpha || !orgBeta) {
-      throw new Error('Failed to create test organizations');
-    }
+    const adminUser = testUsers[0]!; // ✅ FIX: Non-null assertion
+    const regularUser = testUsers[1]!; // ✅ FIX: Non-null assertion
+    const orgAlpha = testOrganizations[0]!; // ✅ FIX: Non-null assertion
+    const orgBeta = testOrganizations[1]!; // ✅ FIX: Non-null assertion
 
     const testMemberships = [
       {
         id: crypto.randomUUID(),
-        userId: adminUser.id, // ✅ FIXED: Safe access
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
+        userId: adminUser.id,
+        organizationId: orgAlpha.id,
         role: 'owner' as const,
         permissions: null,
         status: 'active' as const,
@@ -243,8 +246,8 @@ export const testingSeeder = {
       },
       {
         id: crypto.randomUUID(),
-        userId: regularUser.id, // ✅ FIXED: Safe access
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
+        userId: regularUser.id,
+        organizationId: orgAlpha.id,
         role: 'admin' as const,
         permissions: null,
         status: 'active' as const,
@@ -261,8 +264,8 @@ export const testingSeeder = {
       },
       {
         id: crypto.randomUUID(),
-        userId: regularUser.id, // ✅ FIXED: Safe access
-        organizationId: orgBeta.id, // ✅ FIXED: Safe access
+        userId: regularUser.id,
+        organizationId: orgBeta.id,
         role: 'owner' as const,
         permissions: null,
         status: 'active' as const,
@@ -286,14 +289,14 @@ export const testingSeeder = {
     }
 
     // ============================================
-    // TEST PROJECTS DATA - ✅ FIXED: Safe access
+    // TEST PROJECTS DATA
     // ============================================
 
     const testProjects = [
       {
         id: crypto.randomUUID(),
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
-        ownerId: adminUser.id, // ✅ FIXED: Safe access
+        organizationId: orgAlpha.id,
+        ownerId: adminUser.id,
         name: 'Test Project Alpha',
         slug: 'test-project-alpha',
         description: 'Primary test project for comprehensive testing',
@@ -326,8 +329,8 @@ export const testingSeeder = {
       },
       {
         id: crypto.randomUUID(),
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
-        ownerId: regularUser.id, // ✅ FIXED: Safe access
+        organizationId: orgAlpha.id,
+        ownerId: regularUser.id,
         name: 'Test Project Beta',
         slug: 'test-project-beta',
         description: 'Secondary test project for feature testing',
@@ -367,15 +370,15 @@ export const testingSeeder = {
     }
 
     // ============================================
-    // TEST CONTACTS DATA - ✅ FIXED: Safe access
+    // TEST CONTACTS DATA
     // ============================================
 
     const testContacts = [
       {
         id: crypto.randomUUID(),
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
-        createdBy: adminUser.id, // ✅ FIXED: Safe access
-        assignedTo: regularUser.id, // ✅ FIXED: Safe access
+        organizationId: orgAlpha.id,
+        createdBy: adminUser.id,
+        assignedTo: regularUser.id,
         firstName: 'John',
         lastName: 'Doe',
         fullName: 'John Doe',
@@ -415,8 +418,8 @@ export const testingSeeder = {
       },
       {
         id: crypto.randomUUID(),
-        organizationId: orgAlpha.id, // ✅ FIXED: Safe access
-        createdBy: regularUser.id, // ✅ FIXED: Safe access
+        organizationId: orgAlpha.id,
+        createdBy: regularUser.id,
         assignedTo: null,
         firstName: 'Jane',
         lastName: 'Smith',
@@ -457,18 +460,11 @@ export const testingSeeder = {
       console.log(`  ✅ Created ${testContacts.length} test contacts`);
       console.log('');
       console.log('🧪 TESTING DATA SUMMARY:');
-      console.log(
-        `   👤 Users: ${testUsers.length} (1 admin, 1 active, 1 inactive)`
-      );
-      console.log(
-        `   🏢 Organizations: ${testOrganizations.length} (1 private, 1 public)`
-      );
-      console.log(
-        `   👥 Memberships: ${testMemberships.length} (various roles)`
-      );
-      console.log(
-        `   📊 Projects: ${testProjects.length} (1 active, 1 inactive)`
-      );
+      console.log(`   👤 Users: ${testUsers.length} (1 admin, 1 active, 1 inactive)`);
+      console.log(`   🏢 Organizations: ${testOrganizations.length} (1 private, 1 public)`);
+      console.log(`   🏗️  Tenants: 2 (Alpha: ${tenantIdAlpha.slice(0, 8)}..., Beta: ${tenantIdBeta.slice(0, 8)}...)`);
+      console.log(`   👥 Memberships: ${testMemberships.length} (various roles)`);
+      console.log(`   📊 Projects: ${testProjects.length} (1 active, 1 inactive)`);
       console.log(`   📇 Contacts: ${testContacts.length} (various types)`);
       console.log('');
       console.log('🔑 TEST LOGIN CREDENTIALS:');

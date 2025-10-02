@@ -1,9 +1,12 @@
+// packages/database/src/seeders/development.ts
+
 // ============================================
 // DEVELOPMENT SEEDERS - SRP: APENAS DEV DATA
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import type { SeedOptions } from '../index';
-import { runScript } from '../scripts/seed'; // ✅ FIXED: Now exported
+import { runScript } from '../scripts/seed';
 
 export const developmentSeeder = {
   name: 'Development (Achromatic)',

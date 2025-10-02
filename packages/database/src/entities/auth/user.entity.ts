@@ -1,5 +1,6 @@
 // ============================================
 // USER ENTITY - SRP: APENAS USER DOMAIN LOGIC
+// Enterprise Multi-Tenancy Support
 // ============================================
 
 import type { User } from '../../schemas/auth';
@@ -9,6 +10,7 @@ export class UserEntity {
     public readonly id: string,
     public readonly email: string,
     public readonly name: string | null,
+    public readonly organizationId: string | null, // ✅ ADD: Multi-tenancy
     public readonly image: string | null,
     public readonly emailVerified: Date | null,
     public readonly passwordHash: string | null,
@@ -40,6 +42,7 @@ export class UserEntity {
       data.id,
       data.email,
       data.name,
+      data.organizationId, // ✅ ADD: Multi-tenancy
       data.image,
       data.emailVerified,
       data.passwordHash,
@@ -53,8 +56,8 @@ export class UserEntity {
       data.firstName,
       data.lastName,
       data.avatarUrl,
-      data.timezone || 'UTC', // ✅ FIXED: Default fallback
-      data.locale || 'en', // ✅ FIXED: Default fallback
+      data.timezone || 'UTC',
+      data.locale || 'en',
       data.emailNotifications,
       data.marketingEmails,
       data.createdAt,
@@ -66,6 +69,7 @@ export class UserEntity {
   static create(data: {
     email: string;
     name?: string | null;
+    organizationId?: string | null; // ✅ ADD: Multi-tenancy
     image?: string | null;
     passwordHash?: string | null;
     firstName?: string | null;
@@ -79,6 +83,7 @@ export class UserEntity {
       crypto.randomUUID(),
       data.email,
       data.name || null,
+      data.organizationId || null, // ✅ ADD: Multi-tenancy
       data.image || null,
       null, // emailVerified
       data.passwordHash || null,
@@ -110,7 +115,6 @@ export class UserEntity {
     if (this.firstName && this.lastName) {
       return `${this.firstName} ${this.lastName}`;
     }
-    // ✅ FIXED: Proper type handling
     const fallbackName = this.name || this.email.split('@')[0] || 'User';
     return fallbackName;
   }
@@ -151,7 +155,10 @@ export class UserEntity {
     return this.isActive && this.marketingEmails && this.emailNotifications;
   }
 
-  // ... resto dos métodos igual ao anterior ...
+  // ✅ ADD: Multi-tenancy helper
+  belongsToOrganization(organizationId: string): boolean {
+    return this.organizationId === organizationId;
+  }
 
   // ============================================
   // SERIALIZATION
@@ -162,6 +169,7 @@ export class UserEntity {
       id: this.id,
       email: this.email,
       name: this.name,
+      organizationId: this.organizationId, // ✅ FIX: Add missing field
       image: this.image,
       emailVerified: this.emailVerified,
       passwordHash: this.passwordHash,
@@ -201,6 +209,7 @@ export class UserEntity {
       id: this.id,
       email: this.email,
       name: this.name,
+      organizationId: this.organizationId, // ✅ ADD: Multi-tenancy
       firstName: this.firstName,
       lastName: this.lastName,
       displayName: this.getDisplayName(),
@@ -218,7 +227,7 @@ export class UserEntity {
     };
   }
 
-  // Update methods - mantendo os mesmos do anterior
+  // Update methods
   updateProfile(data: {
     name?: string | null;
     firstName?: string | null;
@@ -230,6 +239,7 @@ export class UserEntity {
       this.id,
       this.email,
       data.name !== undefined ? data.name : this.name,
+      this.organizationId, // ✅ ADD: Multi-tenancy
       this.image,
       this.emailVerified,
       this.passwordHash,
@@ -258,6 +268,7 @@ export class UserEntity {
       this.id,
       this.email,
       this.name,
+      this.organizationId, // ✅ ADD: Multi-tenancy
       this.image,
       this.emailVerified,
       this.passwordHash,
@@ -286,6 +297,7 @@ export class UserEntity {
       this.id,
       this.email,
       this.name,
+      this.organizationId, // ✅ ADD: Multi-tenancy
       this.image,
       new Date(),
       this.passwordHash,

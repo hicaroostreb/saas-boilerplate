@@ -1,3 +1,5 @@
+// packages/database/src/repositories/index.ts
+
 // ============================================
 // REPOSITORIES MASTER BARREL EXPORTS
 // ============================================
@@ -5,7 +7,7 @@
 // Contracts (interfaces)
 export * from './contracts';
 
-// Implementations - ✅ FIXED: Now with 's'
+// Implementations
 export * from './implementations';
 
 // Repository factory

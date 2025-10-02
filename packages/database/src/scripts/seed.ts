@@ -1,4 +1,8 @@
-// packages/database/src/scripts/seed.ts - ACHROMATIC ENTERPRISE MINIMAL SEED
+// packages/database/src/scripts/seed.ts
+
+// ============================================
+// ACHROMATIC ENTERPRISE MINIMAL SEED - Enterprise Multi-Tenancy
+// ============================================
 
 import { config } from 'dotenv';
 import path from 'path';
@@ -8,14 +12,13 @@ import { fileURLToPath } from 'url';
 // ENVIRONMENT SETUP
 // ============================================
 
-// Load environment from multiple possible locations
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const envPaths = [
-  path.resolve(__dirname, '../../../../.env.local'), // From packages/database/src/scripts
-  path.resolve(process.cwd(), '.env.local'), // From root
-  path.resolve(__dirname, '../../../.env.local'), // Alternative
+  path.resolve(__dirname, '../../../../.env.local'),
+  path.resolve(process.cwd(), '.env.local'),
+  path.resolve(__dirname, '../../../.env.local'),
 ];
 
 let envLoaded = false;
@@ -38,14 +41,12 @@ if (!envLoaded) {
 }
 
 // ============================================
-// IMPORTS - ✅ FIXED: Updated import paths
+// IMPORTS
 // ============================================
 
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-// ✅ FIXED: Import from new connection structure
 import { closeConnection, db, healthCheck } from '../connection/index.js';
-// ✅ FIXED: Import from new schemas structure
 import { users } from '../schemas/auth/index.js';
 import { memberships, organizations } from '../schemas/business/index.js';
 import { authAuditLogs } from '../schemas/security/index.js';
@@ -78,9 +79,6 @@ const SEED_DATA = {
 // UTILITY FUNCTIONS
 // ============================================
 
-/**
- * ✅ ENTERPRISE: Generate secure password hash
- */
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
@@ -94,91 +92,41 @@ async function seed() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   try {
-    // ✅ ENTERPRISE: Health check first
     console.log('🏥 Checking database health...');
     const isHealthy = await healthCheck();
     if (!isHealthy) {
       throw new Error('Database health check failed');
     }
 
-    // ✅ ENTERPRISE: Create single test user
-    console.log('👤 Creating test user...');
     const now = new Date();
-    const passwordHash = await hashPassword(SEED_DATA.user.password);
-    const userId = randomUUID();
+    const tenantId = randomUUID(); // ✅ ENTERPRISE: Multi-tenancy
 
-    const testUserRecord = {
-      id: userId,
-      name: SEED_DATA.user.name,
-      email: SEED_DATA.user.email.toLowerCase(),
-      passwordHash,
-      emailVerified: now, // ✅ ENTERPRISE: Pre-verified for seed user
-      image: null,
-
-      // ✅ ENTERPRISE: Account status
-      isActive: true,
-      isSuperAdmin: false,
-      isEmailVerified: true,
-      lastLoginAt: null,
-      lastLoginIp: null,
-      loginAttempts: '0',
-      lockedUntil: null,
-
-      // ✅ ENTERPRISE: User preferences & metadata
-      firstName: null,
-      lastName: null,
-      avatarUrl: null,
-      timezone: 'UTC',
-      locale: 'en',
-      emailNotifications: true,
-      marketingEmails: false,
-
-      // ✅ ENTERPRISE: Timestamps
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    };
-
-    const [testUser] = await db
-      .insert(users)
-      .values(testUserRecord)
-      .returning();
-
-    // ✅ CORRIGIDO: Verificação para testUser possivelmente undefined
-    if (testUser) {
-      console.log(`  ✅ User created: ${testUser.email} (ID: ${testUser.id})`);
-    }
-
-    // ✅ CORRIGIDO: Verificação para testUser antes de usar
-    if (!testUser) {
-      throw new Error('Failed to create test user');
-    }
-
-    // ✅ ENTERPRISE: Create single test organization
+    // ✅ ENTERPRISE: Create organization first for FK constraint
     console.log('🏢 Creating test organization...');
     const organizationId = randomUUID();
 
     const testOrgRecord = {
       id: organizationId,
+      tenantId: tenantId, // ✅ ENTERPRISE: Multi-tenancy
       name: SEED_DATA.organization.name,
       slug: SEED_DATA.organization.slug,
       description: SEED_DATA.organization.description,
-      ownerId: testUser.id,
+      ownerId: '', // Will be set after user creation
 
-      // ✅ ENTERPRISE: Branding & customization
+      // Branding & customization
       logoUrl: null,
       website: null,
-      brandColor: '#3b82f6', // Default blue
+      brandColor: '#3b82f6',
 
-      // ✅ ENTERPRISE: Settings
+      // Settings
       isPublic: false,
       allowJoinRequests: false,
       requireApproval: true,
       memberLimit: SEED_DATA.organization.maxMembers,
       projectLimit: SEED_DATA.organization.maxProjects,
-      storageLimit: SEED_DATA.organization.maxStorage * 1024 * 1024, // Convert MB to bytes
+      storageLimit: SEED_DATA.organization.maxStorage * 1024 * 1024,
 
-      // ✅ ENTERPRISE: Contact & billing
+      // Contact & billing
       contactEmail: null,
       contactPhone: null,
       address: null,
@@ -188,11 +136,11 @@ async function seed() {
       planType: SEED_DATA.organization.planName,
       billingEmail: null,
 
-      // ✅ ENTERPRISE: Status
+      // Status
       isActive: true,
       isVerified: true,
 
-      // ✅ ENTERPRISE: Metadata
+      // Metadata
       metadata: {
         source: 'seed',
         createdBy: 'system',
@@ -200,28 +148,76 @@ async function seed() {
         seedVersion: '1.0.0',
       },
 
-      // ✅ ENTERPRISE: Timestamps
+      // Timestamps
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
     };
+
+    // ✅ ENTERPRISE: Create test user
+    console.log('👤 Creating test user...');
+    const passwordHash = await hashPassword(SEED_DATA.user.password);
+    const userId = randomUUID();
+
+    const testUserRecord = {
+      id: userId,
+      name: SEED_DATA.user.name,
+      email: SEED_DATA.user.email.toLowerCase(),
+      organizationId: organizationId, // ✅ ENTERPRISE: Multi-tenancy
+      passwordHash,
+      emailVerified: now,
+      image: null,
+
+      // Account status
+      isActive: true,
+      isSuperAdmin: false,
+      isEmailVerified: true,
+      lastLoginAt: null,
+      lastLoginIp: null,
+      loginAttempts: '0',
+      lockedUntil: null,
+
+      // User preferences & metadata
+      firstName: null,
+      lastName: null,
+      avatarUrl: null,
+      timezone: 'UTC',
+      locale: 'en',
+      emailNotifications: true,
+      marketingEmails: false,
+
+      // Timestamps
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
+    // Update organization with owner ID
+    testOrgRecord.ownerId = userId;
+
+    const [testUser] = await db
+      .insert(users)
+      .values(testUserRecord)
+      .returning();
+
+    if (!testUser) {
+      throw new Error('Failed to create test user');
+    }
+
+    console.log(`  ✅ User created: ${testUser.email} (ID: ${testUser.id})`);
 
     const [testOrg] = await db
       .insert(organizations)
       .values(testOrgRecord)
       .returning();
 
-    // ✅ CORRIGIDO: Verificação para testOrg possivelmente undefined
-    if (testOrg) {
-      console.log(
-        `  ✅ Organization created: ${testOrg.name} (ID: ${testOrg.id})`
-      );
-    }
-
-    // ✅ CORRIGIDO: Verificação para testOrg antes de usar
     if (!testOrg) {
       throw new Error('Failed to create test organization');
     }
+
+    console.log(
+      `  ✅ Organization created: ${testOrg.name} (ID: ${testOrg.id})`
+    );
 
     // ✅ ENTERPRISE: Create owner membership
     console.log('👥 Creating owner membership...');
@@ -234,25 +230,25 @@ async function seed() {
 
       role: 'owner' as const,
 
-      // ✅ ENTERPRISE: Permissions & access
+      // Permissions & access
       permissions: null,
 
-      // ✅ ENTERPRISE: Status
+      // Status
       status: 'active' as const,
 
-      // ✅ ENTERPRISE: Invitation & joining
+      // Invitation & joining
       invitedBy: null,
       invitedAt: null,
       acceptedAt: now,
 
-      // ✅ ENTERPRISE: Activity
+      // Activity
       lastActivityAt: null,
 
-      // ✅ ENTERPRISE: Custom fields
+      // Custom fields
       title: null,
       department: null,
 
-      // ✅ ENTERPRISE: Metadata
+      // Metadata
       metadata: {
         source: 'seed',
         joinMethod: 'creation',
@@ -260,7 +256,7 @@ async function seed() {
         seedVersion: '1.0.0',
       },
 
-      // ✅ ENTERPRISE: Timestamps
+      // Timestamps
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -271,7 +267,6 @@ async function seed() {
       .values(membershipRecord)
       .returning();
 
-    // ✅ CORRIGIDO: Verificação para membership possivelmente undefined
     if (membership) {
       console.log(
         `  ✅ Membership created: ${testUser.name} as ${membership.role}`
@@ -285,20 +280,20 @@ async function seed() {
       userId: testUser.id,
       organizationId: testOrg.id,
 
-      // ✅ ENTERPRISE: Event classification
-      eventType: 'login_success' as const, // Era 'login', agora 'login_success'
+      // Event classification
+      eventType: 'login_success' as const,
       riskLevel: 'low' as const,
 
-      // ✅ ENTERPRISE: Context
+      // Context
       ipAddress: '127.0.0.1',
       userAgent: 'seed-script',
 
-      // ✅ ENTERPRISE: Location
+      // Location
       country: null,
       region: null,
       city: null,
 
-      // ✅ ENTERPRISE: Device info
+      // Device info
       deviceId: null,
       deviceType: null,
       browserName: null,
@@ -306,32 +301,36 @@ async function seed() {
       osName: null,
       osVersion: null,
 
-      // ✅ ENTERPRISE: Session
+      // Session
       sessionId: null,
       sessionToken: null,
 
-      // ✅ ENTERPRISE: Event data
+      // Event data
       success: true,
       errorCode: null,
       errorMessage: null,
       resource: 'seed-operation',
       action: 'minimal_seed_complete',
 
-      // ✅ ENTERPRISE: Raw data
+      // Raw data
       requestHeaders: null,
       responseData: {
         userEmail: testUser.email,
         organizationSlug: testOrg.slug,
+        tenantId: tenantId, // ✅ ENTERPRISE: Include tenant ID
         seedVersion: '1.0.0',
       },
       metadata: {
         source: 'seed',
         operation: 'minimal_seed_complete',
+        tenantId: tenantId, // ✅ ENTERPRISE: Include tenant ID
         timestamp: now.toISOString(),
       },
 
-      // ✅ ENTERPRISE: Timestamps
+      // Timestamps
       createdAt: now,
+      updatedAt: now, // ✅ ENTERPRISE: Add updatedAt
+      deletedAt: null, // ✅ ENTERPRISE: Add deletedAt
       expiresAt: null,
     };
 
@@ -357,6 +356,7 @@ async function seed() {
     console.log('🏢 ORGANIZATION:');
     console.log(`   📛 Name: ${SEED_DATA.organization.name}`);
     console.log(`   🔗 Slug: ${SEED_DATA.organization.slug}`);
+    console.log(`   🏗️  Tenant ID: ${tenantId}`);
     console.log(`   📦 Plan: ${SEED_DATA.organization.planName}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   } catch (error) {
@@ -389,10 +389,9 @@ export async function runScript(): Promise<void> {
 }
 
 // ============================================
-// ERROR HANDLING & EXECUTION
+// ERROR HANDLING & EXECUTION - ✅ FIXED
 // ============================================
 
-// Handle uncaught errors
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise);
   console.error('❌ Reason:', reason);
@@ -404,7 +403,6 @@ process.on('uncaughtException', error => {
   process.exit(1);
 });
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n⚠️  Process interrupted, cleaning up...');
   await closeConnection();
@@ -417,14 +415,11 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Execute seed with comprehensive error handling
 console.log('🚀 Initializing Achromatic Enterprise minimal seed process...');
 
-// ✅ FIXED: Only run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seed().catch(async error => {
-    console.error('❌ Unexpected error during enterprise seeding:', error);
-    await closeConnection();
-    process.exit(1);
-  });
-}
+// ✅ FIXED: Always execute seed when script is run directly
+seed().catch(async error => {
+  console.error('❌ Unexpected error during enterprise seeding:', error);
+  await closeConnection();
+  process.exit(1);
+});

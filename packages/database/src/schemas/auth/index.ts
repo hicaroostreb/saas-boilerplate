@@ -1,3 +1,5 @@
+// packages/database/src/schemas/auth/index.ts
+
 // ============================================
 // AUTH SCHEMAS BARREL EXPORTS
 // ============================================

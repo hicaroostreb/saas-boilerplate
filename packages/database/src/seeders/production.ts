@@ -1,5 +1,8 @@
+// packages/database/src/seeders/production.ts
+
 // ============================================
 // PRODUCTION SEEDERS - SRP: APENAS PROD DATA
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import { db } from '../connection';
@@ -41,12 +44,35 @@ export const productionSeeder = {
     // ============================================
 
     const now = new Date();
+    const tenantId = crypto.randomUUID();
 
-    // Create system admin user (minimal)
+    // Create default organization first (for FK constraint)
+    const defaultOrg = {
+      id: crypto.randomUUID(),
+      tenantId: tenantId,
+      name: process.env.DEFAULT_ORG_NAME || 'Default Organization',
+      slug: process.env.DEFAULT_ORG_SLUG || 'default',
+      description: 'Default organization for production',
+      ownerId: '', // Will be updated after user creation
+      isPublic: false,
+      allowJoinRequests: false,
+      requireApproval: true,
+      memberLimit: 100,
+      projectLimit: 50,
+      storageLimit: 10737418240, // 10GB
+      planType: 'enterprise',
+      isActive: true,
+      isVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Create system admin user
     const adminUser = {
       id: crypto.randomUUID(),
       email: process.env.ADMIN_EMAIL || 'admin@example.com',
       name: 'System Administrator',
+      organizationId: defaultOrg.id,
       passwordHash: null, // Force password setup on first login
       isActive: true,
       isSuperAdmin: true,
@@ -60,31 +86,14 @@ export const productionSeeder = {
       updatedAt: now,
     };
 
+    // Update organization with owner ID
+    defaultOrg.ownerId = adminUser.id;
+
     await db.insert(users).values(adminUser);
 
     if (options.verbose) {
       console.log(`  ✅ Created admin user: ${adminUser.email}`);
     }
-
-    // Create default organization (minimal)
-    const defaultOrg = {
-      id: crypto.randomUUID(),
-      name: process.env.DEFAULT_ORG_NAME || 'Default Organization',
-      slug: process.env.DEFAULT_ORG_SLUG || 'default',
-      description: 'Default organization for production',
-      ownerId: adminUser.id,
-      isPublic: false,
-      allowJoinRequests: false,
-      requireApproval: true,
-      memberLimit: 100,
-      projectLimit: 50,
-      storageLimit: 10737418240, // 10GB
-      planType: 'enterprise',
-      isActive: true,
-      isVerified: true,
-      createdAt: now,
-      updatedAt: now,
-    };
 
     await db.insert(organizations).values(defaultOrg);
 
@@ -115,6 +124,7 @@ export const productionSeeder = {
       console.log(
         `   🏢 Organization: ${defaultOrg.name} (${defaultOrg.slug})`
       );
+      console.log(`   🏗️  Tenant ID: ${tenantId}`);
       console.log('   ⚠️  Complete setup via admin interface');
     }
   },
