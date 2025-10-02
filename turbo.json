@@ -23,7 +23,8 @@
     "STRIPE_SECRET_KEY",
     "STRIPE_PUBLISHABLE_KEY",
     "TURBO_TOKEN",
-    "TURBO_TEAM"
+    "TURBO_TEAM",
+    "REDIS_URL"
   ],
   "tasks": {
     "build": {
@@ -52,7 +53,8 @@
         "STRIPE_WEBHOOK_SECRET",
         "STRIPE_SECRET_KEY",
         "STRIPE_PUBLISHABLE_KEY",
-        "VERCEL_ENV"
+        "VERCEL_ENV",
+        "REDIS_URL"
       ],
       "cache": true,
       "persistent": false,
@@ -82,7 +84,8 @@
         "PORT",
         "STRIPE_WEBHOOK_SECRET",
         "STRIPE_SECRET_KEY",
-        "STRIPE_PUBLISHABLE_KEY"
+        "STRIPE_PUBLISHABLE_KEY",
+        "REDIS_URL"
       ],
       "outputLogs": "new-only"
     },
@@ -142,7 +145,7 @@
       "outputs": ["coverage/**", "test-results/**", "junit.xml"],
       "cache": true,
       "persistent": false,
-      "env": ["NODE_ENV", "CI"]
+      "env": ["NODE_ENV", "CI", "REDIS_URL"]
     },
     "test:e2e": {
       "dependsOn": ["build"],

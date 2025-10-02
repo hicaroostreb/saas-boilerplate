@@ -82,6 +82,8 @@
       "@workspace/routes/*": ["packages/routes/src/*"],
       "@workspace/ui": ["packages/ui/src"],
       "@workspace/ui/*": ["packages/ui/src/*"],
+      "@workspace/rate-limiter": ["packages/rate-limiter/src"],
+      "@workspace/rate-limiter/*": ["packages/rate-limiter/src/*"],
       "@workspace/e2e": ["packages/e2e/src"],
       "@workspace/e2e/*": ["packages/e2e/src/*"],
 
@@ -130,6 +132,7 @@
     { "path": "packages/common" },
     { "path": "packages/routes" },
     { "path": "packages/ui" },
+    { "path": "packages/rate-limiter" },
     { "path": "packages/e2e" },
 
     // Tooling
