@@ -1,5 +1,8 @@
+// packages/database/src/schemas/business/organization.schema.ts
+
 // ============================================
 // ORGANIZATION SCHEMA - SRP: APENAS ORGANIZATION TABLE
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import {
@@ -13,17 +16,17 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
-
-// ============================================
-// ORGANIZATION TABLE DEFINITION
-// ============================================
 
 export const organizations = pgTable(
   'organizations',
   {
     id: text('id')
       .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
+    // Multi-tenancy
+    tenantId: text('tenant_id')
+      .notNull()
       .$defaultFn(() => crypto.randomUUID()),
 
     // Basic info
@@ -72,10 +75,8 @@ export const organizations = pgTable(
     // Metadata
     metadata: jsonb('metadata').$type<Record<string, any>>(),
 
-    // Ownership
-    ownerId: text('owner_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    // Ownership - ✅ REMOVED REFERENCE to avoid circular dependency
+    ownerId: text('owner_id').notNull(),
 
     // Status
     isActive: boolean('is_active').default(true).notNull(),
@@ -89,6 +90,7 @@ export const organizations = pgTable(
   table => ({
     // Indexes for performance
     slugIdx: uniqueIndex('org_slug_idx').on(table.slug),
+    tenantIdx: index('org_tenant_idx').on(table.tenantId),
     ownerIdx: index('org_owner_idx').on(table.ownerId),
     nameIdx: index('org_name_idx').on(table.name),
     publicIdx: index('org_public_idx').on(table.isPublic),
@@ -98,10 +100,6 @@ export const organizations = pgTable(
   })
 );
 
-// ============================================
-// ORGANIZATION TYPES
-// ============================================
-
 export type Organization = typeof organizations.$inferSelect;
 export type CreateOrganization = typeof organizations.$inferInsert;
 
@@ -109,6 +107,7 @@ export type CreateOrganization = typeof organizations.$inferInsert;
 export type PublicOrganization = Pick<
   Organization,
   | 'id'
+  | 'tenantId'
   | 'name'
   | 'slug'
   | 'description'
@@ -120,6 +119,7 @@ export type PublicOrganization = Pick<
 export type OrganizationProfile = Pick<
   Organization,
   | 'id'
+  | 'tenantId'
   | 'name'
   | 'slug'
   | 'description'
@@ -131,6 +131,7 @@ export type OrganizationProfile = Pick<
 export type OrganizationSettings = Pick<
   Organization,
   | 'id'
+  | 'tenantId'
   | 'isPublic'
   | 'allowJoinRequests'
   | 'requireApproval'
@@ -140,6 +141,7 @@ export type OrganizationSettings = Pick<
 export type OrganizationBilling = Pick<
   Organization,
   | 'id'
+  | 'tenantId'
   | 'planType'
   | 'billingEmail'
   | 'memberLimit'

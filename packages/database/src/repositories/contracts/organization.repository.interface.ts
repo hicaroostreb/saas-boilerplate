@@ -1,5 +1,8 @@
+// packages/database/src/repositories/contracts/organization.repository.interface.ts
+
 // ============================================
 // ORGANIZATION REPOSITORY CONTRACT - SRP: APENAS ORGANIZATION INTERFACE
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import type { CreateOrganization, Organization } from '../../schemas/business';
@@ -16,6 +19,19 @@ export interface IOrganizationRepository {
   create(data: CreateOrganization): Promise<Organization>;
   update(id: string, data: Partial<Organization>): Promise<Organization>;
   delete(id: string): Promise<void>;
+
+  // ============================================
+  // MULTI-TENANCY OPERATIONS
+  // ============================================
+
+  findByTenantId(tenantId: string): Promise<Organization | null>;
+
+  // ============================================
+  // SOFT DELETE OPERATIONS
+  // ============================================
+
+  softDelete(id: string): Promise<void>;
+  restore(id: string): Promise<Organization>;
 
   // ============================================
   // QUERY OPERATIONS

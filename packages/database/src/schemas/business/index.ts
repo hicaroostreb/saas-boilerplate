@@ -1,3 +1,5 @@
+// packages/database/src/schemas/business/index.ts
+
 // ============================================
 // BUSINESS SCHEMAS BARREL EXPORTS
 // ============================================

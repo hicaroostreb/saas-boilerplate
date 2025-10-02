@@ -1,5 +1,8 @@
+// packages/database/src/schemas/security/rate-limit.schema.ts
+
 // ============================================
 // RATE LIMIT SCHEMA - SRP: APENAS RATE LIMIT TABLE
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import {
@@ -12,31 +15,19 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
-
-// ============================================
-// ENUMS
-// ============================================
 
 export const rateLimitTypeEnum = pgEnum('rate_limit_type', [
-  // Authentication limits
   'login_attempts',
   'password_reset',
   'email_verification',
   'registration',
-
-  // API limits
   'api_requests',
   'api_uploads',
   'api_downloads',
-
-  // Feature limits
   'organization_creation',
   'invitation_sending',
   'project_creation',
   'contact_creation',
-
-  // General limits
   'requests_per_ip',
   'requests_per_user',
   'requests_per_endpoint',
@@ -50,10 +41,6 @@ export const rateLimitWindowEnum = pgEnum('rate_limit_window', [
   'month',
 ]);
 
-// ============================================
-// RATE LIMIT TABLE DEFINITION
-// ============================================
-
 export const rateLimits = pgTable(
   'rate_limits',
   {
@@ -61,28 +48,29 @@ export const rateLimits = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
 
-    // Identification (one of these will be used)
-    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
-    ipAddress: varchar('ip_address', { length: 45 }), // IPv6 compatible
-    identifier: varchar('identifier', { length: 255 }), // Generic identifier (email, etc.)
+    // Multi-tenancy - ✅ REMOVED REFERENCES to avoid circular dependency
+    organizationId: text('organization_id'),
 
-    // Rate limit configuration
+    // Identification - ✅ REMOVED REFERENCES to avoid circular dependency
+    userId: text('user_id'),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    identifier: varchar('identifier', { length: 255 }),
+
+    // Configuration
     type: rateLimitTypeEnum('type').notNull(),
-    resource: varchar('resource', { length: 200 }), // Specific resource being limited
+    resource: varchar('resource', { length: 200 }),
 
-    // Limit details
+    // Details
     windowType: rateLimitWindowEnum('window_type').notNull(),
-    windowSize: integer('window_size').default(1).notNull(), // Number of window units
+    windowSize: integer('window_size').default(1).notNull(),
     maxAttempts: integer('max_attempts').notNull(),
 
-    // Current state
+    // State
     currentAttempts: integer('current_attempts').default(0).notNull(),
 
     // Timing
     windowStart: timestamp('window_start', { mode: 'date' }).notNull(),
     windowEnd: timestamp('window_end', { mode: 'date' }).notNull(),
-
-    // Blocking
     blockedUntil: timestamp('blocked_until', { mode: 'date' }),
 
     // Metadata
@@ -93,10 +81,11 @@ export const rateLimits = pgTable(
     // Timestamps
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at', { mode: 'date' }),
   },
   table => ({
-    // Indexes for performance
     userIdx: index('rate_limit_user_idx').on(table.userId),
+    organizationIdx: index('rate_limit_org_idx').on(table.organizationId),
     ipIdx: index('rate_limit_ip_idx').on(table.ipAddress),
     identifierIdx: index('rate_limit_identifier_idx').on(table.identifier),
     typeIdx: index('rate_limit_type_idx').on(table.type),
@@ -105,16 +94,14 @@ export const rateLimits = pgTable(
       table.blockedUntil
     ),
     createdAtIdx: index('rate_limit_created_at_idx').on(table.createdAt),
+    deletedAtIdx: index('rate_limit_deleted_at_idx').on(table.deletedAt),
 
-    // Composite indexes for lookups
     userTypeIdx: index('rate_limit_user_type_idx').on(table.userId, table.type),
     ipTypeIdx: index('rate_limit_ip_type_idx').on(table.ipAddress, table.type),
     identifierTypeIdx: index('rate_limit_identifier_type_idx').on(
       table.identifier,
       table.type
     ),
-
-    // Unique constraints
     userTypeResourceIdx: uniqueIndex('rate_limit_user_type_resource_idx').on(
       table.userId,
       table.type,
@@ -131,26 +118,25 @@ export const rateLimits = pgTable(
   })
 );
 
-// ============================================
-// RATE LIMIT TYPES
-// ============================================
-
 export type RateLimit = typeof rateLimits.$inferSelect;
 export type CreateRateLimit = typeof rateLimits.$inferInsert;
-
-// Enum types
 export type RateLimitType = (typeof rateLimitTypeEnum.enumValues)[number];
 export type RateLimitWindow = (typeof rateLimitWindowEnum.enumValues)[number];
 
-// Rate limit check result
-export type RateLimitResult = {
-  allowed: boolean;
-  remaining: number;
-  resetTime: Date;
-  retryAfter?: number; // seconds
+export type RateLimitWithUser = RateLimit & {
+  user?: { id: string; name: string | null; email: string };
 };
 
-// Rate limit configuration
+export type RateLimitSummary = {
+  type: RateLimitType;
+  resource?: string;
+  totalLimits: number;
+  activeLimits: number;
+  blockedLimits: number;
+  averageAttempts: number;
+};
+
+// ✅ ADD MISSING TYPES that security/index.ts is trying to export
 export type RateLimitConfig = {
   type: RateLimitType;
   resource?: string;
@@ -159,21 +145,9 @@ export type RateLimitConfig = {
   maxAttempts: number;
 };
 
-// Rate limit with user info
-export type RateLimitWithUser = RateLimit & {
-  user?: {
-    id: string;
-    name: string | null;
-    email: string;
-  };
-};
-
-// Rate limit summary for monitoring
-export type RateLimitSummary = {
-  type: RateLimitType;
-  resource?: string;
-  totalLimits: number;
-  activeLimits: number;
-  blockedLimits: number;
-  averageAttempts: number;
+export type RateLimitResult = {
+  allowed: boolean;
+  remaining: number;
+  resetTime: Date;
+  retryAfter?: number;
 };

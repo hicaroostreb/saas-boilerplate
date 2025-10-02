@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
 // ============================================
-// ENVIRONMENT CONFIGURATION - ✅ FIXED: No __dirname
+// ENVIRONMENT CONFIGURATION - ESM COMPATIBLE
 // ============================================
 
 // ✅ ENTERPRISE: Multi-path .env loading strategy (ESM compatible)
@@ -34,12 +34,12 @@ if (!envLoaded) {
 }
 
 // ============================================
-// DRIZZLE CONFIGURATION
+// DRIZZLE CONFIGURATION - ENTERPRISE MULTI-TENANT
 // ============================================
 
 export default defineConfig({
-  // ✅ FIXED: New enterprise schema structure
-  schema: './src/schemas/index.ts', // Single entry point for all domains
+  // ✅ ENTERPRISE: Single entry point for all domains
+  schema: './src/schemas/index.ts',
 
   out: './drizzle',
   dialect: 'postgresql',
@@ -54,7 +54,7 @@ export default defineConfig({
 
   // ✅ MIGRATIONS: Enhanced configuration
   migrations: {
-    table: '__drizzle_migrations', // Prefix to avoid conflicts
+    table: '__drizzle_migrations',
     schema: 'public',
   },
 
@@ -63,7 +63,7 @@ export default defineConfig({
     casing: 'snake_case',
   },
 
-  // ✅ ENTERPRISE: Comprehensive tables filter (updated)
+  // ✅ ENTERPRISE: Comprehensive tables filter (updated with multi-tenancy)
   tablesFilter: [
     // Auth domain
     'user',
@@ -71,14 +71,14 @@ export default defineConfig({
     'session',
     'verificationToken',
 
-    // Business domain
+    // Business domain (multi-tenant)
     'organizations',
     'memberships',
     'invitations',
     'projects',
     'contacts',
 
-    // Security domain
+    // Security domain (enterprise audit)
     'auth_audit_logs',
     'rate_limits',
     'password_reset_tokens',
@@ -109,9 +109,10 @@ if (!process.env.DATABASE_URL) {
 
 // Log configuration summary in development
 if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 Drizzle Kit Configuration:');
+  console.log('🔧 Drizzle Kit Enterprise Configuration:');
   console.log(`   📊 Schema: ./src/schemas/index.ts`);
   console.log(`   📁 Output: ./drizzle`);
-  console.log(`   🗃️  Database: PostgreSQL`);
-  console.log(`   📋 Tables: 12 tracked tables`);
+  console.log(`   🗃️  Database: PostgreSQL (Multi-tenant)`);
+  console.log(`   📋 Tables: 12 tracked enterprise tables`);
+  console.log(`   🏗️  Features: Soft Delete, Audit Trail, Multi-tenancy`);
 }

@@ -1,3 +1,5 @@
+// packages/database/src/schemas/activity/index.ts
+
 // ============================================
 // ACTIVITY SCHEMAS BARREL EXPORTS
 // ============================================

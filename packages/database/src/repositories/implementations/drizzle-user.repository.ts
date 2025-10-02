@@ -1,5 +1,8 @@
+// packages/database/src/repositories/implementations/drizzle-user.repository.ts
+
 // ============================================
 // DRIZZLE USER REPOSITORY - SRP: APENAS USER DATA ACCESS
+// Enterprise Multi-Tenancy and Soft Delete
 // ============================================
 
 import {
@@ -10,6 +13,7 @@ import {
   eq,
   gte,
   inArray,
+  isNull,
   like,
   sql,
 } from 'drizzle-orm';
@@ -29,7 +33,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(eq(users.id, id))
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
     return result[0] ? UserEntity.fromDatabase(result[0]) : null;
@@ -39,7 +43,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(and(eq(users.email, email), isNull(users.deletedAt)))
       .limit(1);
 
     return result[0] ? UserEntity.fromDatabase(result[0]) : null;
@@ -51,7 +55,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(inArray(users.id, ids));
+      .where(and(inArray(users.id, ids), isNull(users.deletedAt)));
 
     return result.map(user => UserEntity.fromDatabase(user));
   }
@@ -73,7 +77,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [result] = await this.db
       .update(users)
       .set({ ...user.toDatabase(), updatedAt: new Date() })
-      .where(eq(users.id, user.id))
+      .where(and(eq(users.id, user.id), isNull(users.deletedAt)))
       .returning();
 
     if (!result) {
@@ -91,7 +95,48 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   // ============================================
-  // QUERY OPERATIONS - ✅ COMPLETE REWRITE
+  // MULTI-TENANCY OPERATIONS
+  // ============================================
+
+  async findByOrganizationId(organizationId: string): Promise<UserEntity[]> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(
+        and(eq(users.organizationId, organizationId), isNull(users.deletedAt))
+      )
+      .orderBy(desc(users.createdAt));
+
+    return result.map(user => UserEntity.fromDatabase(user));
+  }
+
+  // ============================================
+  // SOFT DELETE OPERATIONS
+  // ============================================
+
+  async softDelete(id: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  async restore(id: string): Promise<UserEntity> {
+    const [result] = await this.db
+      .update(users)
+      .set({ deletedAt: null })
+      .where(eq(users.id, id))
+      .returning();
+
+    if (!result) {
+      throw new Error('Failed to restore user');
+    }
+
+    return UserEntity.fromDatabase(result);
+  }
+
+  // ============================================
+  // QUERY OPERATIONS
   // ============================================
 
   async findAll(options?: {
@@ -99,47 +144,29 @@ export class DrizzleUserRepository implements IUserRepository {
     offset?: number;
     isActive?: boolean;
   }): Promise<UserEntity[]> {
-    // ✅ FIXED: Use direct SQL building approach
     const baseSelect = this.db.select().from(users);
 
-    // Build conditions array
-    const conditions = [];
+    const conditions = [isNull(users.deletedAt)];
     if (options?.isActive !== undefined) {
       conditions.push(eq(users.isActive, options.isActive));
     }
 
-    // Execute query with all conditions at once
     let result;
-    if (conditions.length > 0) {
-      if (options?.limit && options?.offset) {
-        result = await baseSelect
-          .where(and(...conditions))
-          .orderBy(desc(users.createdAt))
-          .limit(options.limit)
-          .offset(options.offset);
-      } else if (options?.limit) {
-        result = await baseSelect
-          .where(and(...conditions))
-          .orderBy(desc(users.createdAt))
-          .limit(options.limit);
-      } else {
-        result = await baseSelect
-          .where(and(...conditions))
-          .orderBy(desc(users.createdAt));
-      }
+    if (options?.limit && options?.offset) {
+      result = await baseSelect
+        .where(and(...conditions))
+        .orderBy(desc(users.createdAt))
+        .limit(options.limit)
+        .offset(options.offset);
+    } else if (options?.limit) {
+      result = await baseSelect
+        .where(and(...conditions))
+        .orderBy(desc(users.createdAt))
+        .limit(options.limit);
     } else {
-      if (options?.limit && options?.offset) {
-        result = await baseSelect
-          .orderBy(desc(users.createdAt))
-          .limit(options.limit)
-          .offset(options.offset);
-      } else if (options?.limit) {
-        result = await baseSelect
-          .orderBy(desc(users.createdAt))
-          .limit(options.limit);
-      } else {
-        result = await baseSelect.orderBy(desc(users.createdAt));
-      }
+      result = await baseSelect
+        .where(and(...conditions))
+        .orderBy(desc(users.createdAt));
     }
 
     return result.map(user => UserEntity.fromDatabase(user));
@@ -149,7 +176,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(like(users.email, `%${pattern}%`))
+      .where(and(like(users.email, `%${pattern}%`), isNull(users.deletedAt)))
       .limit(limit);
 
     return result.map(user => UserEntity.fromDatabase(user));
@@ -162,7 +189,13 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(and(eq(users.isActive, true), gte(users.lastLoginAt, cutoffDate)))
+      .where(
+        and(
+          eq(users.isActive, true),
+          gte(users.lastLoginAt, cutoffDate),
+          isNull(users.deletedAt)
+        )
+      )
       .orderBy(desc(users.lastLoginAt))
       .limit(limit);
 
@@ -177,7 +210,13 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(and(eq(users.email, email), eq(users.isActive, true)))
+      .where(
+        and(
+          eq(users.email, email),
+          eq(users.isActive, true),
+          isNull(users.deletedAt)
+        )
+      )
       .limit(1);
 
     return result[0] ? UserEntity.fromDatabase(result[0]) : null;
@@ -191,7 +230,11 @@ export class DrizzleUserRepository implements IUserRepository {
       .select()
       .from(users)
       .where(
-        and(eq(users.isEmailVerified, false), gte(users.createdAt, cutoffDate))
+        and(
+          eq(users.isEmailVerified, false),
+          gte(users.createdAt, cutoffDate),
+          isNull(users.deletedAt)
+        )
       );
 
     return result.map(user => UserEntity.fromDatabase(user));
@@ -203,7 +246,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(gte(users.lockedUntil, now));
+      .where(and(gte(users.lockedUntil, now), isNull(users.deletedAt)));
 
     return result.map(user => UserEntity.fromDatabase(user));
   }
@@ -215,7 +258,13 @@ export class DrizzleUserRepository implements IUserRepository {
     const result = await this.db
       .select()
       .from(users)
-      .where(and(eq(users.isActive, false), gte(users.updatedAt, cutoffDate)));
+      .where(
+        and(
+          eq(users.isActive, false),
+          gte(users.updatedAt, cutoffDate),
+          isNull(users.deletedAt)
+        )
+      );
 
     return result.map(user => UserEntity.fromDatabase(user));
   }
@@ -225,7 +274,10 @@ export class DrizzleUserRepository implements IUserRepository {
   // ============================================
 
   async countTotal(): Promise<number> {
-    const [result] = await this.db.select({ count: count() }).from(users);
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(users)
+      .where(isNull(users.deletedAt));
 
     return result?.count ?? 0;
   }
@@ -234,7 +286,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [result] = await this.db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.isActive, true));
+      .where(and(eq(users.isActive, true), isNull(users.deletedAt)));
 
     return result?.count ?? 0;
   }
@@ -243,7 +295,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [result] = await this.db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.isEmailVerified, true));
+      .where(and(eq(users.isEmailVerified, true), isNull(users.deletedAt)));
 
     return result?.count ?? 0;
   }
@@ -260,7 +312,7 @@ export class DrizzleUserRepository implements IUserRepository {
         count: count(),
       })
       .from(users)
-      .where(gte(users.createdAt, cutoffDate))
+      .where(and(gte(users.createdAt, cutoffDate), isNull(users.deletedAt)))
       .groupBy(sql`DATE(${users.createdAt})`)
       .orderBy(asc(sql`DATE(${users.createdAt})`));
 
@@ -310,7 +362,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [result] = await this.db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.email, email));
+      .where(and(eq(users.email, email), isNull(users.deletedAt)));
 
     return (result?.count ?? 0) > 0;
   }
@@ -319,7 +371,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const [result] = await this.db
       .select({ count: count() })
       .from(users)
-      .where(eq(users.id, id));
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
 
     return (result?.count ?? 0) > 0;
   }
