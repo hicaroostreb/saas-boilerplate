@@ -1,9 +1,9 @@
 // packages/ui/src/components/dashboard/favorites-section.tsx
 
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface Organization {
   id: string;
@@ -26,7 +26,7 @@ const mockFavorites = [
     href: '/contacts/emma-johnson',
   },
   {
-    id: '2', 
+    id: '2',
     name: 'Liam Wilson',
     role: 'Developer',
     avatar: 'LW',
@@ -36,7 +36,7 @@ const mockFavorites = [
     id: '3',
     name: 'Olivia Brown',
     role: 'Manager',
-    avatar: 'OB', 
+    avatar: 'OB',
     href: '/contacts/olivia-brown',
   },
   {
@@ -55,7 +55,10 @@ const mockFavorites = [
   },
 ];
 
-export function FavoritesSection({ organization, collapsed }: FavoritesSectionProps) {
+export function FavoritesSection({
+  organization,
+  collapsed,
+}: FavoritesSectionProps) {
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
 
   if (collapsed) {
@@ -70,16 +73,16 @@ export function FavoritesSection({ organization, collapsed }: FavoritesSectionPr
           onClick={() => setFavoritesExpanded(!favoritesExpanded)}
           className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="24" 
-            height="24" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             className={`size-3 transition-transform duration-200 ${favoritesExpanded ? 'rotate-90' : ''}`}
           >
             <path d="m9 18 6-6-6-6" />
@@ -91,9 +94,9 @@ export function FavoritesSection({ organization, collapsed }: FavoritesSectionPr
       {/* ✅ ENTERPRISE: Favorites List */}
       {favoritesExpanded && (
         <ul className="flex w-full min-w-0 flex-col gap-1">
-          {mockFavorites.map((favorite) => (
+          {mockFavorites.map(favorite => (
             <li key={favorite.id} className="group/menu-item relative">
-              <Link 
+              <Link
                 href={`/organizations/${organization.slug}${favorite.href}`}
                 className="peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2.5 text-left outline-none ring-sidebar-ring transition-[width,height,padding] focus-visible:ring-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-9 text-sm"
               >

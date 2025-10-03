@@ -16,12 +16,20 @@
     "test:email": "playwright test email-verification.spec.js",
     "test:security": "playwright test password-security.spec.js email-verification.spec.js",
     "test:all": "playwright test",
-    "install:browsers": "playwright install"
+    "install:browsers": "playwright install",
+    "format": "prettier --write ."
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "prettier": "^3.6.2"
   },
-  "keywords": ["e2e", "testing", "playwright", "automation", "security"],
+  "keywords": [
+    "e2e",
+    "testing",
+    "playwright",
+    "automation",
+    "security"
+  ],
   "author": "SaaS Team",
   "license": "MIT"
 }

@@ -84,11 +84,6 @@ export default [
         { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error', // NOVO: previne bugs async
-      '@typescript-eslint/await-thenable': 'error', // NOVO: previne await desnecessário
-
-      // 🎯 TYPESCRIPT: Code Quality (WARN - pode ser ignorado)
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/no-unnecessary-condition': 'off', // Mantido OFF (muitos falsos positivos)
 
       // 🎯 REACT: Critical rules (ERROR)

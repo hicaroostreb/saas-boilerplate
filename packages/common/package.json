@@ -8,7 +8,7 @@
     "build": "tsc --build",
     "dev": "tsc --build --watch",
     "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
-    "format": "prettier --write src/**/*.{ts,tsx}",
+    "format": "prettier --write .",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

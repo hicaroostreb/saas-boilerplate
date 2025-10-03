@@ -27,9 +27,9 @@ interface DashboardHeaderProps {
 // ✅ CORRIGIDO: Removidas propriedades inexistentes e variáveis não utilizadas
 export function DashboardHeader({
   organization, // ✅ CORRIGIDO: Propriedade correta
-  user,         // ✅ CORRIGIDO: Propriedade correta
+  user, // ✅ CORRIGIDO: Propriedade correta
   title = 'Overview',
-  subtitle,     // ✅ CORRIGIDO: Propriedade correta
+  subtitle, // ✅ CORRIGIDO: Propriedade correta
 }: DashboardHeaderProps) {
   const [activeTab, setActiveTab] = useState('30d');
 

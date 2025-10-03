@@ -1,6 +1,6 @@
 # =============================================================================
 # ENTERPRISE MONOREPO GITIGNORE
-# NextJS + Turbo + Playwright + VS Code + GitHub Actions
+# NextJS + Turbo + Playwright + VS Code + GitHub Actions + BUN
 # =============================================================================
 
 # ===== NODE.JS & PACKAGE MANAGERS =====
@@ -13,6 +13,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+bun-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -112,6 +113,16 @@ web_modules/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# ===== BUN PACKAGE MANAGER =====
+
+# Bun cache and install directories
+.bun/
+bun.lockb.bak
+
+# Bun debug files
+bun-debug-*.log
+bun-error-*.log
 
 # ===== NEXT.JS & REACT =====
 
@@ -360,15 +371,21 @@ metrics-temp/
 
 # ===== WORKSPACE SPECIFIC =====
 
-# Package manager workspaces
+# Package manager workspaces (BUN UPDATED)
 .pnpm/
 .yarn/cache
 .yarn/unplugged
+.bun/install/cache
 
 # Lock files (keep main, ignore sub-packages if needed)
 # Uncomment if you want to ignore lock files in sub-packages
-# packages/*/pnpm-lock.yaml
-# apps/*/pnpm-lock.yaml
+# packages/*/bun.lockb
+# apps/*/bun.lockb
+
+# Legacy package manager files (cleanup)
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
 
 # Workspace temporary files
 workspace-*.log

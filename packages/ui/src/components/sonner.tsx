@@ -1,30 +1,30 @@
-"use client";
+'use client';
 
-import { Toaster as SonnerToaster } from "sonner";
+import { Toaster as SonnerToaster } from 'sonner';
 
 interface ToasterProps {
-  position?: 
-    | "top-left" 
-    | "top-right" 
-    | "bottom-left" 
-    | "bottom-right" 
-    | "top-center" 
-    | "bottom-center";
-  theme?: "light" | "dark" | "system";
+  position?:
+    | 'top-left'
+    | 'top-right'
+    | 'bottom-left'
+    | 'bottom-right'
+    | 'top-center'
+    | 'bottom-center';
+  theme?: 'light' | 'dark' | 'system';
   richColors?: boolean;
   closeButton?: boolean;
   expand?: boolean;
   className?: string;
 }
 
-export function Toaster({ 
-  position = "bottom-right",
-  theme = "system", 
+export function Toaster({
+  position = 'bottom-right',
+  theme = 'system',
   richColors = true,
   closeButton = true,
   expand = true,
   className,
-  ...props 
+  ...props
 }: ToasterProps) {
   return (
     <SonnerToaster
@@ -40,4 +40,4 @@ export function Toaster({
 }
 
 // Re-export toast function para uso em server actions
-export { toast } from "sonner";
+export { toast } from 'sonner';

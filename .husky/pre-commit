@@ -11,7 +11,7 @@ fi
 
 # ✅ ENTERPRISE: Use lint-staged for staged files only (performance)
 echo "📝 Running lint-staged on changed files..."
-pnpm dlx lint-staged
+bunx lint-staged
 
 # ✅ ENTERPRISE: Only run qa:fast if lint-staged passes (fail-fast pattern)
 if [ $? -eq 0 ]; then
@@ -19,7 +19,7 @@ if [ $? -eq 0 ]; then
     
     # ✅ ENTERPRISE: Add timing for performance monitoring
     start_time=$(date +%s)
-    pnpm qa:fast
+    bun run qa:fast
     qa_exit_code=$?
     end_time=$(date +%s)
     duration=$((end_time - start_time))
@@ -34,12 +34,12 @@ if [ $? -eq 0 ]; then
         fi
     else
         echo "❌ Quality checks failed after ${duration}s"
-        echo "🔧 Run 'pnpm qa:fix' to automatically fix common issues"
+        echo "🔧 Run 'bun run qa:fix' to automatically fix common issues"
         exit 1
     fi
 else
     echo "❌ Lint-staged failed, please fix issues before committing"
-    echo "🔧 Run 'pnpm qa:fix' to automatically fix formatting and linting issues"
+    echo "🔧 Run 'bun run qa:fix' to automatically fix formatting and linting issues"
     exit 1
 fi
 

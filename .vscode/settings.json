@@ -8,11 +8,18 @@
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
 
-  // 🔧 MELHORIAS PARA MONOREPO CI/CD
-  "eslint.packageManager": "pnpm",
-  "eslint.workingDirectories": [".", "apps/*", "packages/*"],
+  // 🚀 BUN SPECIFIC CONFIGURATIONS
+  "eslint.packageManager": "bun",
+  "npm.packageManager": "bun",
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.env.windows": {
+    "BUN_INSTALL": "C:\\Users\\%USERNAME%\\.bun"
+  },
+
+  // 🔧 MELHORIAS PARA MONOREPO CI/CD (BUN UPDATED)
+  "eslint.workingDirectories": [".", "apps/*", "packages/*", "tooling/*"],
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
-  "eslint.format.enable": false, // Prettier handles formatting
+  "eslint.format.enable": false,
 
   // 🚀 PERFORMANCE BOOST
   "typescript.preferences.includePackageJsonAutoImports": "on",
@@ -23,7 +30,8 @@
 
   // 🎯 WORKSPACE SPECIFIC
   "files.associations": {
-    "*.css": "tailwindcss"
+    "*.css": "tailwindcss",
+    "bun.lockb": "json"
   },
   "tailwindCSS.includeLanguages": {
     "typescript": "javascript",
@@ -34,20 +42,23 @@
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
 
-  // 📁 EXCLUDE OPTIMIZADO
+  // 📁 EXCLUDE OPTIMIZADO (BUN UPDATED)
   "search.exclude": {
     "**/node_modules": true,
     "**/.next": true,
     "**/dist": true,
     "**/.turbo": true,
     "**/coverage": true,
-    "**/.nyc_output": true
+    "**/.nyc_output": true,
+    "**/.bun": true,
+    "**/bun.lockb": false
   },
   "files.exclude": {
     "**/.turbo": true,
     "**/node_modules": true,
     "**/dist": true,
-    "**/.next": true
+    "**/.next": true,
+    "**/.bun": true
   },
 
   // 🔄 CI/CD WORKFLOW HELPERS

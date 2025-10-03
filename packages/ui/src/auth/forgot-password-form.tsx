@@ -95,7 +95,7 @@ export function ForgotPasswordForm({
     } catch (error: unknown) {
       // ✅ CORRIGIDO: Type assertion para error
       const _error = error as Error;
-      
+
       // ✅ ENTERPRISE: Handle specific error types
       if (_error.message?.includes('rate')) {
         setInternalError(
@@ -223,8 +223,8 @@ export function ForgotPasswordForm({
                 <div className="text-sm space-y-1">
                   <p className="font-medium">Security Notice</p>
                   <p>
-                    If you don't receive an email within 5 minutes, check
-                    your spam folder or verify that{' '}
+                    If you don't receive an email within 5 minutes, check your
+                    spam folder or verify that{' '}
                     <span className="font-medium">{userEmail}</span> is the
                     correct address.
                   </p>
@@ -307,7 +307,7 @@ export function ForgotPasswordForm({
         <p className="text-sm text-muted-foreground">
           {organizationSlug
             ? `Enter your ${organizationSlug} email address and we'll send you a link to reset your password.`
-            : 'No worries! Enter your email address and we\'ll send you a link to reset your password.'}
+            : "No worries! Enter your email address and we'll send you a link to reset your password."}
         </p>
       </div>
 
@@ -420,8 +420,8 @@ export function ForgotPasswordForm({
                 <p className="font-medium">Security Notice</p>
                 <p>
                   For your security, we'll only send reset instructions to
-                  registered email addresses.{' '}
-                  The reset link will expire in 1 hour.
+                  registered email addresses. The reset link will expire in 1
+                  hour.
                 </p>
               </div>
             </div>

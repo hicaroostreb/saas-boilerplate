@@ -155,7 +155,7 @@ export function ResetPasswordForm({
     } catch (error: unknown) {
       // ✅ CORRIGIDO: Type assertion para error
       const _error = error as Error;
-      
+
       // ✅ ENTERPRISE: Handle specific error types
       if (_error.message?.includes('expired')) {
         setInternalError(

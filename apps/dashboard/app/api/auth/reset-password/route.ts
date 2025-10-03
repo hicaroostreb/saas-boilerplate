@@ -5,7 +5,7 @@ import {
   logAuthEvent,
   revokeAllUserSessions,
   validatePasswordReuse,
-  validatePasswordStrength
+  validatePasswordStrength,
 } from '@workspace/auth/server';
 import { db, passwordResetTokens, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';

@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "SaaS Universal",
-  description: "Template universal para SaaS",
+  title: 'SaaS Universal',
+  description: 'Template universal para SaaS',
 };
 
 export default function RootLayout({
