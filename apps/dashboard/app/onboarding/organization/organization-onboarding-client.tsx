@@ -118,7 +118,7 @@ export function OrganizationOnboardingClient() {
 
       if (!orgResponse.ok || !orgResult.success) {
         toast.error(
-          orgResult.error?.message || 'Failed to create organization'
+          orgResult.error?.message ?? 'Failed to create organization'
         );
         return;
       }

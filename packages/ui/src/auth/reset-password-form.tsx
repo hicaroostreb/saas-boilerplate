@@ -1,700 +1,387 @@
-// packages/ui/src/auth/reset-password-form.tsx - ENTERPRISE ACHROMATIC ADAPTATION
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { PasswordStrength } from '../components/password-strength';
+import { Button } from '../primitives/Button';
+import { ErrorAlert } from '../primitives/ErrorAlert';
+import { PasswordInput } from '../primitives/PasswordInput';
+import { PasswordStrength } from '../primitives/PasswordStrength';
+import { cn } from '../utils/cn';
 
-// ✅ ENTERPRISE: Enhanced schema with stronger validation
 const resetPasswordSchema = z
   .object({
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
-      .max(72, 'Password must be less than 72 characters')
-      .refine(
-        password => /[A-Z]/.test(password),
-        'Password must contain at least one uppercase letter'
-      )
-      .refine(
-        password => /[a-z]/.test(password),
-        'Password must contain at least one lowercase letter'
-      )
-      .refine(
-        password => /\d/.test(password),
-        'Password must contain at least one number'
-      )
-      .refine(
-        password => /[^A-Za-z0-9]/.test(password),
-        'Password must contain at least one special character'
-      ),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    confirmPassword: z.string(),
   })
   .refine(data => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: "Passwords don't match",
     path: ['confirmPassword'],
   });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
-// ✅ ENTERPRISE: Enhanced props interface
-interface ResetPasswordFormProps {
-  requestId: string;
-  expires: Date;
-  onResetPassword: (data: {
-    requestId: string;
-    password: string;
-    confirmPassword: string;
-  }) => Promise<void>;
+export interface ResetPasswordFormProps {
+  onResetPassword: (data: ResetPasswordFormData) => Promise<void>;
   isLoading?: boolean;
-
-  // ✅ ENTERPRISE: New props for enterprise features
+  error?: string | null;
+  token?: string;
   email?: string;
   organizationSlug?: string | null;
   showPasswordStrength?: boolean;
-  requireStrongPassword?: boolean;
-  error?: string | null;
-
-  // ✅ ENTERPRISE: Success handling
-  onSuccess?: () => void;
-
-  // ✅ ENTERPRISE: Context URLs
-  forgotPasswordUrl?: string;
   signInUrl?: string;
 }
 
+/**
+ * ResetPasswordForm component - Complete password reset flow
+ *
+ * @example
+ * ```
+ * function ResetPasswordPage() {
+ *   const { token } = useSearchParams();
+ *   const [isLoading, setIsLoading] = useState(false);
+ *   const [error, setError] = useState<string | null>(null);
+ *
+ *   const handleResetPassword = async (data: ResetPasswordFormData) => {
+ *     setIsLoading(true);
+ *     try {
+ *       await authService.resetPassword(token, data.password);
+ *       router.push('/auth/sign-in?reset=success');
+ *     } catch (err) {
+ *       setError('Failed to reset password');
+ *       throw err;
+ *     } finally {
+ *       setIsLoading(false);
+ *     }
+ *   };
+ *
+ *   return (
+ *     <ResetPasswordForm
+ *       onResetPassword={handleResetPassword}
+ *       isLoading={isLoading}
+ *       error={error}
+ *       token={token}
+ *       showPasswordStrength={true}
+ *     />
+ *   );
+ * }
+ * ```
+ */
 export function ResetPasswordForm({
-  requestId,
-  expires,
   onResetPassword,
   isLoading = false,
+  error: externalError,
+  token,
   email,
   organizationSlug,
   showPasswordStrength = true,
-  requireStrongPassword = true,
-  error: externalError,
-  onSuccess,
-  forgotPasswordUrl,
   signInUrl,
-}: ResetPasswordFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [internalError, setInternalError] = useState<string | null>(null);
+}: ResetPasswordFormProps): JSX.Element {
   const [isSuccess, setIsSuccess] = useState(false);
+  const [internalError, setInternalError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
     watch,
+    formState: { errors },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const watchedPassword = watch('password', '');
-  const watchedConfirmPassword = watch('confirmPassword', '');
-
-  // ✅ ENTERPRISE: Combined error handling
-  const displayError = externalError ?? internalError; // ✅ CORREÇÃO: || → ||
-
-  // ✅ ENTERPRISE: Enhanced time calculation
-  const getTimeRemaining = () => {
-    const now = new Date();
-    const timeLeft = Math.max(0, expires.getTime() - now.getTime());
-
-    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-
-    return {
-      hours,
-      minutes,
-      isExpired: timeLeft <= 0,
-      totalMinutes: Math.floor(timeLeft / (1000 * 60)),
-    };
-  };
-
-  const { hours, minutes, isExpired, totalMinutes } = getTimeRemaining();
-
-  // ✅ ENTERPRISE: Build URLs with context
-  const contextualForgotPasswordUrl =
-    forgotPasswordUrl ??
-    (organizationSlug // ✅ CORREÇÃO: || → ||
-      ? `/auth/forgot-password?org=${organizationSlug}${email ? `&email=${encodeURIComponent(email)}` : ''}`
-      : `/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`);
-
+  const password = watch('password', '');
+  const displayError = externalError ?? internalError;
   const contextualSignInUrl =
     signInUrl ??
-    (organizationSlug // ✅ CORREÇÃO: || → ||
-      ? `/auth/sign-in?org=${organizationSlug}&message=password-reset`
-      : '/auth/sign-in?message=password-reset');
+    (organizationSlug
+      ? `/auth/sign-in?org=${organizationSlug}`
+      : '/auth/sign-in');
 
-  const handleFormSubmit = async (data: ResetPasswordFormData) => {
+  const handleFormSubmit = async (
+    data: ResetPasswordFormData
+  ): Promise<void> => {
     setInternalError(null);
 
-    if (isExpired) {
-      setInternalError(
-        'This reset link has expired. Please request a new password reset.'
-      );
-      return;
-    }
-
     try {
-      await onResetPassword({
-        requestId,
-        password: data.password,
-        confirmPassword: data.confirmPassword,
-      });
-
+      await onResetPassword(data);
       setIsSuccess(true);
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error: unknown) {
-      // ✅ CORRIGIDO: Type assertion para error
-      const _error = error as Error;
-
-      // ✅ ENTERPRISE: Handle specific error types
-      if (_error.message?.includes('expired')) {
-        setInternalError(
-          'This reset link has expired. Please request a new password reset.'
-        );
-      } else if (_error.message?.includes('used')) {
-        setInternalError(
-          'This reset link has already been used. Please request a new password reset.'
-        );
-      } else if (_error.message?.includes('weak')) {
-        setInternalError(
-          'Password does not meet security requirements. Please choose a stronger password.'
-        );
-      } else {
-        setInternalError(
-          _error.message ??
-            'An error occurred while resetting your password. Please try again.'
-        );
-      }
+    } catch (_error: unknown) {
+      const errorMessage =
+        _error instanceof Error
+          ? _error.message
+          : 'Failed to reset password. Please try again.';
+      setInternalError(errorMessage);
     }
   };
 
-  // ✅ ENTERPRISE: Success state
+  // Success State
   if (isSuccess) {
     return (
-      <div className="rounded-xl border bg-card text-card-foreground shadow w-full px-4 py-2 border-transparent dark:border-border">
-        <div className="flex flex-col space-y-1.5 p-6">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-green-600 dark:text-green-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <h3 className="font-semibold tracking-tight text-base lg:text-lg">
-              Password reset successful
-            </h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Your password has been successfully reset. You can now sign in with
-            your new password.
-            {email && (
-              <span className="block mt-1">
-                Account: <span className="font-medium">{email}</span>
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="p-6 pt-0 space-y-4">
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <svg
-                className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <p className="font-medium">Security Notice</p>
-                <p>
-                  For your security, all your other active sessions have been
-                  signed out. You&apos;ll need to sign in again on other
-                  devices.
-                </p>{' '}
-                {/* ✅ CORREÇÃO: Escape apostrophe */}
+      <AuthFormContainer
+        title="Password reset successful"
+        subtitle="Your password has been successfully reset. You can now sign in with your new password."
+        icon={<SuccessIcon />}
+        variant="success"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-success/10 rounded-lg border border-success/20">
+            <div className="flex items-start gap-2">
+              <CheckIcon className="mt-0.5 h-4 w-4 text-success flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-success">Password Updated</p>
+                <p className="text-success/80 mt-1">
+                  Your account is now secured with the new password.
+                </p>
               </div>
             </div>
           </div>
 
-          <a
-            href={contextualSignInUrl}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 w-full"
+          <Button
+            className="w-full"
+            onClick={() => (window.location.href = contextualSignInUrl)}
           >
-            Continue to sign in
-          </a>
+            Continue to Sign In
+          </Button>
+
+          <div className="text-center">
+            <a
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              href="/auth/forgot-password"
+            >
+              Reset a different password?
+            </a>
+          </div>
         </div>
-      </div>
+      </AuthFormContainer>
     );
   }
 
-  return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow w-full px-4 py-2 border-transparent dark:border-border">
-      {/* ✅ ENTERPRISE: Enhanced header with context */}
-      <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="font-semibold tracking-tight text-base lg:text-lg">
-          {organizationSlug
-            ? `Reset your ${organizationSlug} password`
-            : 'Reset your password'}
-        </h3>
-
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            {email
-              ? `Creating a new password for ${email}`
-              : 'Create a new secure password below'}
-            {organizationSlug && (
-              <span className="block text-xs mt-1">
-                Organization: {organizationSlug}
-              </span>
-            )}
-          </p>
-
-          {/* ✅ ENTERPRISE: Enhanced expiration display */}
-          <div className="flex items-center space-x-2">
-            {isExpired ? (
-              <div className="flex items-center space-x-1 text-xs text-red-600 dark:text-red-400">
-                <svg
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="font-medium">This link has expired</span>
-              </div>
-            ) : totalMinutes < 60 ? (
-              <div className="flex items-center space-x-1 text-xs text-orange-600 dark:text-orange-400">
-                <svg
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span>Expires in {totalMinutes} minutes</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                <svg
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span>
-                  Expires in {hours > 0 && `${hours}h `}
-                  {minutes}m
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="p-6 pt-0">
-        {/* ✅ ENTERPRISE: Enhanced error alerts */}
-        {displayError && (
-          <div className="mb-4">
-            <div
-              role="alert"
-              className="relative w-full rounded-lg border p-4 text-foreground border-transparent bg-destructive/10"
-            >
-              <div className="flex flex-row items-start gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mt-0.5 shrink-0"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" x2="12" y1="8" y2="12" />
-                  <line x1="12" x2="12.01" y1="16" y2="16" />
-                </svg>
-                <div className="text-sm flex-1">{displayError}</div>
+  // Token validation
+  if (!token) {
+    return (
+      <AuthFormContainer
+        title="Invalid reset link"
+        subtitle="This password reset link is invalid or has expired. Please request a new one."
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-error/10 rounded-lg border border-error/20">
+            <div className="flex items-start gap-2">
+              <ErrorIcon className="mt-0.5 h-4 w-4 text-error flex-shrink-0" />
+              <div className="text-sm text-error">
+                The reset link may have expired or been used already.
               </div>
             </div>
           </div>
-        )}
 
-        {/* ✅ ENTERPRISE: Enhanced token expired warning */}
-        {isExpired && (
-          <div className="mb-4">
-            <div
-              role="alert"
-              className="relative w-full rounded-lg border p-4 text-foreground border-transparent bg-yellow-500/10"
-            >
-              <div className="flex flex-row items-start gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mt-0.5 shrink-0"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12,6 12,12 16,14" />
-                </svg>
-                <div className="text-sm space-y-2">
-                  <p>
-                    <strong>This reset link has expired.</strong>
-                  </p>
-                  <p>
-                    Password reset links are only valid for 1 hour for security
-                    reasons.
-                  </p>
-                  <a
-                    href={contextualForgotPasswordUrl}
-                    className="inline-flex items-center text-primary hover:underline"
-                  >
-                    Request a new password reset →
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={void handleSubmit(handleFormSubmit)}
-        >
-          {' '}
-          {/* ✅ CORREÇÃO: Add void to handle promise */}
-          {/* New Password Field */}
-          <div className="space-y-2 flex flex-col">
-            <label
-              className="text-sm font-medium leading-none"
-              htmlFor="password"
-            >
-              New Password{' '}
-              {requireStrongPassword && (
-                <span className="text-xs text-muted-foreground">
-                  (Strong password required)
-                </span>
-              )}
-            </label>
-            <div className="relative inline-block h-9 w-full">
-              <span className="absolute left-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0"
-                >
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-              </span>
-              <input
-                className="flex h-9 w-full rounded-md border border-input bg-transparent py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 px-10"
-                type={showPassword ? 'text' : 'password'}
-                maxLength={72}
-                autoCapitalize="off"
-                autoComplete="new-password"
-                id="password"
-                placeholder="Create a strong password"
-                disabled={isExpired || isLoading}
-                {...register('password')}
-              />
-              <span className="absolute left-auto right-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
-                <button
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground -mr-2.5 size-8"
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label="Toggle password visibility"
-                  disabled={isExpired || isLoading}
-                >
-                  {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                      <line x1="2" x2="22" y1="2" y2="22" />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </span>
-            </div>
-            {errors.password && (
-              <p className="text-xs text-red-500">{errors.password.message}</p>
-            )}
-
-            {/* ✅ ENTERPRISE: Enhanced Password Strength Component */}
-            {showPasswordStrength && !isExpired && (
-              <PasswordStrength password={watchedPassword} />
-            )}
-          </div>
-          {/* ✅ ENTERPRISE: Confirm Password Field */}
-          <div className="space-y-2 flex flex-col">
-            <label
-              className="text-sm font-medium leading-none"
-              htmlFor="confirmPassword"
-            >
-              Confirm New Password
-            </label>
-            <div className="relative inline-block h-9 w-full">
-              <span className="absolute left-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0"
-                >
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-              </span>
-              <input
-                className="flex h-9 w-full rounded-md border border-input bg-transparent py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 px-10"
-                type={showConfirmPassword ? 'text' : 'password'}
-                maxLength={72}
-                autoCapitalize="off"
-                autoComplete="new-password"
-                id="confirmPassword"
-                placeholder="Confirm your new password"
-                disabled={isExpired || isLoading}
-                {...register('confirmPassword')}
-              />
-              <span className="absolute left-auto right-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
-                <button
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground -mr-2.5 size-8"
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label="Toggle password visibility"
-                  disabled={isExpired || isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                      <line x1="2" x2="22" y1="2" y2="22" />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </span>
-            </div>
-            {errors.confirmPassword && (
-              <p className="text-xs text-red-500">
-                {errors.confirmPassword.message}
-              </p>
-            )}
-
-            {/* ✅ ENTERPRISE: Password match indicator */}
-            {watchedPassword && watchedConfirmPassword && !isExpired && (
-              <div className="flex items-center space-x-2">
-                {watchedPassword === watchedConfirmPassword ? (
-                  <>
-                    <svg
-                      className="w-4 h-4 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-xs text-green-600 dark:text-green-400">
-                      Passwords match
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4 text-red-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-xs text-red-600 dark:text-red-400">
-                      Passwords do not match
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          {/* Submit Button */}
-          <button
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-            type="submit"
-            disabled={isLoading || isExpired}
+          <Button
+            className="w-full"
+            onClick={() => (window.location.href = '/auth/forgot-password')}
           >
-            {isLoading ? 'Resetting password...' : 'Reset password'}
-          </button>
-        </form>
+            Request New Reset Link
+          </Button>
 
-        {/* ✅ ENTERPRISE: Security notice */}
-        {!isExpired && (
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <svg
-                className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium">Security Information</p>
-                <p>
-                  After resetting your password, all your active sessions will
-                  be signed out for security. You&apos;ll need to sign in again
-                  on all devices.
-                </p>{' '}
-                {/* ✅ CORREÇÃO: Escape apostrophe */}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ✅ ENTERPRISE: Enhanced footer */}
-      <div className="items-center p-6 pt-0 flex flex-col space-y-2 text-sm text-muted-foreground">
-        {!isExpired ? (
-          <div className="flex items-center space-x-4 text-xs">
-            <a
-              href={contextualSignInUrl}
-              className="hover:text-foreground transition-colors"
-            >
-              Back to sign in
-            </a>
-            <span>•</span>
-            <a
-              href="/support"
-              className="hover:text-foreground transition-colors"
-            >
-              Need help?
-            </a>
-          </div>
-        ) : (
           <div className="text-center">
             <a
-              href={contextualForgotPasswordUrl}
-              className="text-primary hover:underline font-medium"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              href={contextualSignInUrl}
             >
-              Request new password reset
+              Back to Sign In
             </a>
           </div>
-        )}
+        </div>
+      </AuthFormContainer>
+    );
+  }
+
+  // Main Form
+  return (
+    <AuthFormContainer
+      title={
+        organizationSlug
+          ? `Reset your ${organizationSlug} password`
+          : 'Reset your password'
+      }
+      subtitle={
+        email
+          ? `Create a new password for ${email}`
+          : 'Please enter your new password below.'
+      }
+    >
+      <ErrorAlert
+        message={displayError}
+        className={displayError ? undefined : undefined}
+      />
+
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={handleSubmit(handleFormSubmit)}
+      >
+        <div className="space-y-2">
+          <PasswordInput
+            id="password"
+            placeholder="Enter new password"
+            disabled={isLoading}
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message || undefined}
+            {...register('password')}
+          />
+
+          {showPasswordStrength && password && (
+            <PasswordStrength
+              password={password}
+              email={email}
+              variant="progress"
+              showRequirements={true}
+            />
+          )}
+        </div>
+
+        <PasswordInput
+          id="confirmPassword"
+          placeholder="Confirm new password"
+          disabled={isLoading}
+          error={Boolean(errors.confirmPassword)}
+          helperText={errors.confirmPassword?.message || undefined}
+          {...register('confirmPassword')}
+        />
+
+        <Button
+          type="submit"
+          className="w-full"
+          loading={isLoading}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Updating password...' : 'Update Password'}
+        </Button>
+      </form>
+
+      {/* Security Tips */}
+      <div className="p-4 bg-muted/50 rounded-lg">
+        <h4 className="font-medium text-sm mb-2">Password Security Tips</h4>
+        <ul className="text-xs text-muted-foreground space-y-1">
+          <li className="flex items-center gap-2">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            Use a combination of letters, numbers, and symbols
+          </li>
+          <li className="flex items-center gap-2">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            Avoid using personal information
+          </li>
+          <li className="flex items-center gap-2">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            Don&apos;t reuse passwords from other accounts
+          </li>
+        </ul>
       </div>
+
+      <div className="text-center">
+        <a
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          href={contextualSignInUrl}
+        >
+          Back to Sign In
+        </a>
+      </div>
+    </AuthFormContainer>
+  );
+}
+
+// Helper Components (reuse from forgot-password-form or create shared)
+function AuthFormContainer({
+  title,
+  subtitle,
+  icon,
+  variant = 'default',
+  children,
+  className,
+}: {
+  title: string;
+  subtitle: React.ReactNode;
+  icon?: React.ReactNode;
+  variant?: 'default' | 'success';
+  children: React.ReactNode;
+  className?: string;
+}): JSX.Element {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border bg-card text-card-foreground shadow w-full px-4 py-2',
+        className
+      )}
+    >
+      <div className="flex flex-col space-y-1.5 p-6">
+        {icon && variant === 'success' && (
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-success/10 rounded-full flex items-center justify-center">
+              {icon}
+            </div>
+            <h3 className="font-semibold tracking-tight text-base lg:text-lg">
+              {title}
+            </h3>
+          </div>
+        )}
+        {(!icon || variant === 'default') && (
+          <h3 className="font-semibold tracking-tight text-base lg:text-lg">
+            {title}
+          </h3>
+        )}
+        <div className="text-sm text-muted-foreground">{subtitle}</div>
+      </div>
+
+      <div className="p-6 pt-0 flex flex-col gap-4">{children}</div>
     </div>
+  );
+}
+
+// Icons
+function SuccessIcon(): JSX.Element {
+  return (
+    <svg
+      className="w-5 h-5 text-success"
+      fill="currentColor"
+      viewBox="0 0 20 20"
+    >
+      <path
+        fillRule="evenodd"
+        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }): JSX.Element {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="20,6 9,17 4,12" />
+    </svg>
+  );
+}
+
+function ErrorIcon({ className }: { className?: string }): JSX.Element {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
   );
 }

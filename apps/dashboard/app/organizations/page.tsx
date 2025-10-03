@@ -38,11 +38,11 @@ export default async function OrganizationsPage() {
       id: membership.organization.id, // UUID string já - sem toString()
       name: membership.organization.name,
       slug: membership.organization.slug,
-      memberCount: membership.organization.memberships?.length || 1,
+      memberCount: membership.organization.memberships?.length ?? 1,
       avatar: membership.organization.name.charAt(0).toUpperCase(),
       role: membership.role,
       isOwner: membership.organization.ownerId === session.user.id, // UUID comparison
-      planName: membership.organization.planName || 'Free',
+      planName: membership.organization.planName ?? 'Free',
       isActive: membership.organization.isActive,
     }));
 

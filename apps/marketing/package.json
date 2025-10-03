@@ -10,6 +10,8 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "echo '⚠️ Tests not configured yet'",
     "clean": "rm -rf .next .turbo node_modules coverage out",
     "clean:cache": "rm -rf .next/cache .turbo/cache",
     "clean:build": "rm -rf .next out",
@@ -47,7 +49,7 @@
   },
   "engines": {
     "node": ">=18.17.0",
-    "pnpm": ">=8.0.0"
+    "bun": ">=1.0.0"
   },
   "browserslist": [
     "> 1%",
