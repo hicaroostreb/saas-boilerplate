@@ -7,14 +7,16 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"],
-      "@workspace/common": ["../common/src"],
-      "@workspace/common/*": ["../common/src/*"]
+      "~/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../common" }]
+  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*", ".turbo"],
+  "references": []
 }
