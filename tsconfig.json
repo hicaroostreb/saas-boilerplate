@@ -22,6 +22,7 @@
     { "path": "packages/routes" },
     { "path": "packages/ui" },
     { "path": "packages/rate-limiter" },
+    { "path": "packages/webhooks" },
     { "path": "packages/e2e" },
     { "path": "tooling/eslint-config" },
     { "path": "tooling/prettier-config" },
