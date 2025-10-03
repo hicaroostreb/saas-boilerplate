@@ -5,6 +5,15 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --build --watch",
@@ -16,6 +25,7 @@
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
+    "@workspace/webhooks": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/common": "workspace:*",
