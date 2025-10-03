@@ -54,7 +54,7 @@ export default function OrganizationsClient({
     <div className="relative min-h-screen bg-background">
       {/* Header */}
       <div className="fixed inset-x-0 top-0 z-10 mx-auto flex min-w-80 items-center justify-center bg-background p-4">
-        <Link href={process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}>
+        <Link href={process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}>
           <div className="flex items-center space-x-2">
             <div className="flex size-9 items-center justify-center p-1">
               <div className="flex size-7 items-center justify-center rounded-md border text-primary-foreground bg-primary">

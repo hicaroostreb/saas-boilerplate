@@ -1,6 +1,7 @@
 {
   "name": "@workspace/billing",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +10,10 @@
     "dev": "tsc --build --watch",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "echo '⚠️ Tests not configured yet'",
+    "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
     "@workspace/database": "workspace:*",

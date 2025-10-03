@@ -23,7 +23,10 @@
     "dev": "tsc --watch",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "echo '⚠️ Tests not configured yet'",
+    "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.0",

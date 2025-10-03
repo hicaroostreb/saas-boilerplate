@@ -5,6 +5,7 @@
   "type": "module",
   "description": "End-to-end testing suite for the SaaS boilerplate",
   "scripts": {
+    "build": "echo '✅ E2E package does not require build'",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
@@ -17,7 +18,11 @@
     "test:security": "playwright test password-security.spec.js email-verification.spec.js",
     "test:all": "playwright test",
     "install:browsers": "playwright install",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "echo '✅ E2E package linting not required'",
+    "typecheck": "echo '✅ E2E package typecheck not required'",
+    "clean": "rm -rf test-results playwright-report .turbo"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

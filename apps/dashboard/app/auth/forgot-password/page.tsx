@@ -18,7 +18,7 @@ export default async function ForgotPasswordPage({
   const resolvedSearchParams = await searchParams;
 
   // ✅ ENTERPRISE: Get URL parameters from resolved params
-  const email = resolvedSearchParams.email || '';
+  const email = resolvedSearchParams.email ?? '';
   const organizationSlug = resolvedSearchParams.org;
 
   return (
@@ -26,7 +26,7 @@ export default async function ForgotPasswordPage({
       <div className="mx-auto w-full min-w-[320px] space-y-6 py-12 max-w-sm">
         {/* ✅ ACHROMATIC: Logo limpo */}
         <Link
-          href={process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}
+          href={process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}
           className="block w-fit mx-auto"
         >
           <div className="flex items-center space-x-2">

@@ -1,7 +1,5 @@
 // packages/auth/src/utils/sign-in.utils.ts - SIGN-IN UTILITIES
 
-import { isValidEmail } from '../lib/utils';
-
 /**
  * ✅ ENTERPRISE: Sign-in Input Validation
  * Single Responsibility: Input validation utilities
@@ -20,6 +18,15 @@ export interface ValidationResult {
   error?: string;
   field?: 'email' | 'password' | 'general';
   errors?: string[];
+}
+
+/**
+ * ✅ EMAIL VALIDATION: Simple email validation
+ * Replace the import with inline function
+ */
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 /**

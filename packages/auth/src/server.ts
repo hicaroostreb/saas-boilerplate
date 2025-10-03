@@ -1,6 +1,7 @@
 // packages/auth/src/server.ts - CLEAN SERVER EXPORTS (ARGS FIXED)
 
-import NextAuth from 'next-auth';
+import type { NextAuthResult } from 'next-auth';
+import NextAuth from 'next-auth'; // ✅ ADICIONAR import que estava faltando
 import { authConfig } from './config/auth.config';
 import { AuthContextService } from './services/auth-context.service';
 import { AuthSessionService } from './services/auth-session.service';
@@ -11,11 +12,11 @@ import { OrganizationContextService } from './services/organization-context.serv
  */
 const nextAuth = NextAuth(authConfig);
 
-// ✅ NEXTAUTH: Core exports with explicit type for signIn
-export const { auth, handlers, signOut } = nextAuth;
-export const signIn: (
-  ...args: Parameters<typeof nextAuth.signIn>
-) => ReturnType<typeof nextAuth.signIn> = nextAuth.signIn;
+// ✅ NEXTAUTH: Core exports with explicit type annotations
+export const auth: NextAuthResult['auth'] = nextAuth.auth;
+export const handlers: NextAuthResult['handlers'] = nextAuth.handlers;
+export const signOut: NextAuthResult['signOut'] = nextAuth.signOut;
+export const signIn: NextAuthResult['signIn'] = nextAuth.signIn;
 export { authConfig };
 
 // ✅ SERVICES: Instantiate services
