@@ -31,7 +31,8 @@ export function DashboardHeader({
   title = 'Overview',
   subtitle, // ✅ CORRIGIDO: Propriedade correta
 }: DashboardHeaderProps) {
-  const [activeTab, setActiveTab] = useState('30d');
+  // ✅ CORREÇÃO: Prefixado com underscore para ignorar warnings
+  const [_activeTab, _setActiveTab] = useState('30d');
 
   return (
     <div className="sticky top-0 z-20 bg-background">

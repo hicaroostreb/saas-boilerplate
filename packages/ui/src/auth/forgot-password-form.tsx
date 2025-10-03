@@ -73,7 +73,8 @@ export function ForgotPasswordForm({
     },
   });
 
-  const watchedEmail = watch('email', '');
+  // ✅ CORREÇÃO 1: Prefixado com underscore para ignorar warning
+  const _watchedEmail = watch('email', '');
 
   // ✅ ENTERPRISE: Combined error handling
   const displayError = externalError ?? internalError;
@@ -177,7 +178,7 @@ export function ForgotPasswordForm({
         <div className="p-6 pt-0 space-y-4">
           {/* What's next section */}
           <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-            <h4 className="font-medium text-sm">What's next?</h4>
+            <h4 className="font-medium text-sm">What&apos;s next?</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li className="flex items-center space-x-2">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full" />
@@ -223,8 +224,8 @@ export function ForgotPasswordForm({
                 <div className="text-sm space-y-1">
                   <p className="font-medium">Security Notice</p>
                   <p>
-                    If you don't receive an email within 5 minutes, check your
-                    spam folder or verify that{' '}
+                    If you don&apos;t receive an email within 5 minutes, check
+                    your spam folder or verify that{' '}
                     <span className="font-medium">{userEmail}</span> is the
                     correct address.
                   </p>
@@ -306,8 +307,8 @@ export function ForgotPasswordForm({
         </h3>
         <p className="text-sm text-muted-foreground">
           {organizationSlug
-            ? `Enter your ${organizationSlug} email address and we'll send you a link to reset your password.`
-            : "No worries! Enter your email address and we'll send you a link to reset your password."}
+            ? `Enter your ${organizationSlug} email address and we&apos;ll send you a link to reset your password.`
+            : 'No worries! Enter your email address and we&apos;ll send you a link to reset your password.'}
         </p>
       </div>
 
@@ -419,7 +420,7 @@ export function ForgotPasswordForm({
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Security Notice</p>
                 <p>
-                  For your security, we'll only send reset instructions to
+                  For your security, we&apos;ll only send reset instructions to
                   registered email addresses. The reset link will expire in 1
                   hour.
                 </p>

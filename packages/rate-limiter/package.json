@@ -14,9 +14,9 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --build --watch",
-    "lint": "eslint src --ext .ts --max-warnings 0",
-    "type-check": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write",
     "test": "jest"
   },
   "dependencies": {
