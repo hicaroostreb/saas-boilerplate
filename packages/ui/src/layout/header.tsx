@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useState } from "react";
-import { cn } from "../lib/utils";
+import * as React from 'react';
+import { useState } from 'react';
+import { cn } from '../lib/utils';
 
 interface HeaderProps {
   logoText?: string;
@@ -12,10 +12,10 @@ interface HeaderProps {
 }
 
 export function Header({
-  logoText = "Acme",
-  signInUrl = "/auth/sign-in",
-  signUpUrl = "/auth/sign-up",
-  className
+  logoText = 'Acme',
+  signInUrl = '/auth/sign-in',
+  signUpUrl = '/auth/sign-up',
+  className,
 }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -23,10 +23,10 @@ export function Header({
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark");
-    
+    document.documentElement.classList.toggle('dark');
+
     // ÚNICA MUDANÇA: Adicionar background preto/branco
-    if (document.documentElement.classList.contains("dark")) {
+    if (document.documentElement.classList.contains('dark')) {
       document.documentElement.style.backgroundColor = '#000000';
       localStorage.setItem('theme', 'dark');
     } else {
@@ -44,7 +44,12 @@ export function Header({
   };
 
   return (
-    <section className={cn("sticky inset-x-0 top-0 z-40 border-b bg-background py-4", className)}>
+    <section
+      className={cn(
+        'sticky inset-x-0 top-0 z-40 border-b bg-background py-4',
+        className
+      )}
+    >
       <div className="container mx-auto max-w-7xl px-4">
         {/* Desktop Navigation */}
         <nav className="hidden justify-between lg:flex">
@@ -81,15 +86,18 @@ export function Header({
 
             {/* Desktop Menu */}
             <div className="flex items-center">
-              <nav aria-label="Main" className="relative z-10 flex max-w-max flex-1 items-center justify-center">
+              <nav
+                aria-label="Main"
+                className="relative z-10 flex max-w-max flex-1 items-center justify-center"
+              >
                 <div className="relative">
                   <ul className="group flex flex-1 list-none items-center justify-center space-x-1">
                     {/* Product Dropdown */}
                     <li>
                       <button
-                        onClick={() => handleDropdownToggle("product")}
+                        onClick={() => handleDropdownToggle('product')}
                         className="group inline-flex h-9 w-max items-center justify-center bg-background px-4 py-2 transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-accent/50 rounded-xl text-[15px] font-normal"
-                        aria-expanded={openDropdown === "product"}
+                        aria-expanded={openDropdown === 'product'}
                       >
                         Product
                         <svg
@@ -103,7 +111,7 @@ export function Header({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           className={`lucide lucide-chevron-down relative top-px ml-1 size-3 transition duration-300 ${
-                            openDropdown === "product" ? "rotate-180" : ""
+                            openDropdown === 'product' ? 'rotate-180' : ''
                           }`}
                         >
                           <path d="m6 9 6 6 6-6" />
@@ -114,9 +122,9 @@ export function Header({
                     {/* Resources Dropdown */}
                     <li>
                       <button
-                        onClick={() => handleDropdownToggle("resources")}
+                        onClick={() => handleDropdownToggle('resources')}
                         className="group inline-flex h-9 w-max items-center justify-center bg-background px-4 py-2 transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-accent/50 rounded-xl text-[15px] font-normal"
-                        aria-expanded={openDropdown === "resources"}
+                        aria-expanded={openDropdown === 'resources'}
                       >
                         Resources
                         <svg
@@ -130,7 +138,7 @@ export function Header({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           className={`lucide lucide-chevron-down relative top-px ml-1 size-3 transition duration-300 ${
-                            openDropdown === "resources" ? "rotate-180" : ""
+                            openDropdown === 'resources' ? 'rotate-180' : ''
                           }`}
                         >
                           <path d="m6 9 6 6 6-6" />
@@ -189,7 +197,7 @@ export function Header({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={`lucide lucide-sun size-5 transition-all ${
-                  isDarkMode ? "-rotate-90 scale-0" : "rotate-0 scale-100"
+                  isDarkMode ? '-rotate-90 scale-0' : 'rotate-0 scale-100'
                 }`}
               >
                 <circle cx="12" cy="12" r="4" />
@@ -213,7 +221,7 @@ export function Header({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={`lucide lucide-moon absolute size-5 transition-all ${
-                  isDarkMode ? "rotate-0 scale-100" : "rotate-90 scale-0"
+                  isDarkMode ? 'rotate-0 scale-100' : 'rotate-90 scale-0'
                 }`}
               >
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
@@ -280,13 +288,17 @@ export function Header({
             <div
               className="w-5 origin-center border-t-2 border-primary"
               style={{
-                transform: isMobileMenuOpen ? "translateY(0px) rotate(45deg)" : "translateY(-3px)",
+                transform: isMobileMenuOpen
+                  ? 'translateY(0px) rotate(45deg)'
+                  : 'translateY(-3px)',
               }}
             />
             <div
               className="w-5 origin-center border-t-2 border-primary"
               style={{
-                transform: isMobileMenuOpen ? "translateY(0px) rotate(-45deg)" : "translateY(3px)",
+                transform: isMobileMenuOpen
+                  ? 'translateY(0px) rotate(-45deg)'
+                  : 'translateY(3px)',
               }}
             />
           </button>

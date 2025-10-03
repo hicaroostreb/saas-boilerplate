@@ -10,17 +10,22 @@ export class AuthHelper {
    */
   async signUp(email, password, options = {}) {
     await this.page.goto('/auth/sign-up');
-    
+
     // Fill basic fields
     await this.page.fill('input[name="email"], input[type="email"]', email);
-    await this.page.fill('input[name="password"], input[type="password"]', password);
-    
+    await this.page.fill(
+      'input[name="password"], input[type="password"]',
+      password
+    );
+
     // Handle confirm password if it exists
-    const confirmPasswordField = this.page.locator('input[name="confirmPassword"], input[name="confirm-password"]');
+    const confirmPasswordField = this.page.locator(
+      'input[name="confirmPassword"], input[name="confirm-password"]'
+    );
     if (await confirmPasswordField.isVisible()) {
       await confirmPasswordField.fill(password);
     }
-    
+
     // Handle terms checkbox if required
     if (options.acceptTerms !== false) {
       const termsCheckbox = this.page.locator('input[type="checkbox"]').first();
@@ -28,12 +33,14 @@ export class AuthHelper {
         await termsCheckbox.check();
       }
     }
-    
+
     // Submit
     await this.page.click('button[type="submit"]');
-    
+
     if (options.waitForRedirect !== false) {
-      await this.page.waitForURL(/onboarding|organization|dashboard/, { timeout: 10000 });
+      await this.page.waitForURL(/onboarding|organization|dashboard/, {
+        timeout: 10000,
+      });
     }
   }
 
@@ -42,10 +49,13 @@ export class AuthHelper {
    */
   async signIn(email, password, options = {}) {
     await this.page.goto('/auth/sign-in');
-    
+
     await this.page.fill('input[name="email"], input[type="email"]', email);
-    await this.page.fill('input[name="password"], input[type="password"]', password);
-    
+    await this.page.fill(
+      'input[name="password"], input[type="password"]',
+      password
+    );
+
     // Handle remember me if specified
     if (options.rememberMe) {
       const rememberCheckbox = this.page.locator('input[type="checkbox"]');
@@ -53,11 +63,13 @@ export class AuthHelper {
         await rememberCheckbox.check();
       }
     }
-    
+
     await this.page.click('button[type="submit"]');
-    
+
     if (options.waitForRedirect !== false) {
-      await this.page.waitForURL(/dashboard|org|organizations/, { timeout: 10000 });
+      await this.page.waitForURL(/dashboard|org|organizations/, {
+        timeout: 10000,
+      });
     }
   }
 
@@ -67,20 +79,22 @@ export class AuthHelper {
   async createOrganization(name, options = {}) {
     // Assuming we're on onboarding page
     await this.page.fill(
-      'input[name="name"], input[placeholder*="organization"], input[placeholder*="company"]', 
+      'input[name="name"], input[placeholder*="organization"], input[placeholder*="company"]',
       name
     );
-    
+
     // Handle optional fields
     if (options.description) {
-      const descField = this.page.locator('input[name="description"], textarea[name="description"]');
+      const descField = this.page.locator(
+        'input[name="description"], textarea[name="description"]'
+      );
       if (await descField.isVisible()) {
         await descField.fill(options.description);
       }
     }
-    
+
     await this.page.click('button[type="submit"], button:has-text("create")');
-    
+
     if (options.waitForRedirect !== false) {
       await this.page.waitForURL(/dashboard|org/, { timeout: 10000 });
     }
@@ -95,9 +109,9 @@ export class AuthHelper {
       'button:has-text("sign out")',
       '[data-testid="logout"]',
       'a[href*="signout"]',
-      'a[href*="logout"]'
+      'a[href*="logout"]',
     ];
-    
+
     for (const selector of logoutSelectors) {
       const element = this.page.locator(selector);
       if (await element.isVisible()) {
@@ -106,7 +120,7 @@ export class AuthHelper {
         return;
       }
     }
-    
+
     throw new Error('Logout button not found');
   }
 
@@ -117,7 +131,7 @@ export class AuthHelper {
     await this.page.goto('/auth/forgot-password');
     await this.page.fill('input[name="email"], input[type="email"]', email);
     await this.page.click('button[type="submit"]');
-    
+
     // Wait for success message
     await expect(
       this.page.locator('text=/sent|email|check|success/i')
@@ -131,9 +145,12 @@ export class AuthHelper {
     try {
       // Try to access dashboard
       await this.page.goto('/dashboard', { waitUntil: 'networkidle' });
-      
+
       // If we're still on dashboard URL, user is authenticated
-      return this.page.url().includes('/dashboard') || this.page.url().includes('/org');
+      return (
+        this.page.url().includes('/dashboard') ||
+        this.page.url().includes('/org')
+      );
     } catch {
       return false;
     }
@@ -147,7 +164,7 @@ export class AuthHelper {
     return {
       email: `${prefix}-${timestamp}@example.com`,
       password: 'TestPassword123!',
-      organizationName: `${prefix} Company ${timestamp}`
+      organizationName: `${prefix} Company ${timestamp}`,
     };
   }
 }

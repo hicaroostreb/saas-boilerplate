@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useState, useEffect } from "react";
-import { cn } from "../lib/utils";
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { cn } from '../lib/utils';
 
 interface ThemeToggleProps {
   className?: string;
@@ -15,13 +15,14 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
   // Inicializar tema na montagem do componente
   useEffect(() => {
     setMounted(true);
-    
+
     const theme = localStorage.getItem('theme');
-    const isDarkMode = theme === 'dark' || 
+    const isDarkMode =
+      theme === 'dark' ||
       (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
+
     setIsDark(isDarkMode);
-    
+
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       document.documentElement.style.backgroundColor = '#000000';
@@ -34,7 +35,7 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    
+
     if (newTheme) {
       document.documentElement.classList.add('dark');
       document.documentElement.style.backgroundColor = '#000000';
@@ -55,7 +56,7 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
     <button
       onClick={toggleTheme}
       className={cn(
-        "inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground size-9 bg-background",
+        'inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input shadow-sm hover:bg-accent hover:text-accent-foreground size-9 bg-background',
         className
       )}
     >
@@ -71,7 +72,7 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
         strokeLinecap="round"
         strokeLinejoin="round"
         className={`lucide lucide-sun size-5 transition-all ${
-          isDark ? "-rotate-90 scale-0" : "rotate-0 scale-100"
+          isDark ? '-rotate-90 scale-0' : 'rotate-0 scale-100'
         }`}
       >
         <circle cx="12" cy="12" r="4" />
@@ -97,7 +98,7 @@ export function ThemeToggle({ className }: ThemeToggleProps = {}) {
         strokeLinecap="round"
         strokeLinejoin="round"
         className={`lucide lucide-moon absolute size-5 transition-all ${
-          isDark ? "rotate-0 scale-100" : "rotate-90 scale-0"
+          isDark ? 'rotate-0 scale-100' : 'rotate-90 scale-0'
         }`}
       >
         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />

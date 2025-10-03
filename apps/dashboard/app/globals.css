@@ -77,15 +77,15 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground;
   }
-  
+
   html.dark {
     background-color: #000000 !important;
   }
-  
+
   html {
     background-color: #ffffff !important;
   }
@@ -97,12 +97,12 @@
     background-color: hsl(var(--sidebar-background));
     color: hsl(var(--sidebar-foreground));
   }
-  
+
   .sidebar-accent {
     background-color: hsl(var(--sidebar-accent));
     color: hsl(var(--sidebar-accent-foreground));
   }
-  
+
   .sidebar-ring {
     --ring-color: hsl(var(--sidebar-ring));
   }

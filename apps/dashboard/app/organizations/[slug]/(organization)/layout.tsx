@@ -1,10 +1,10 @@
 // apps/dashboard/app/organizations/[slug]/(organization)/layout.tsx - ENTERPRISE DASHBOARD LAYOUT
 
 import { getAuthOrganizationContext } from '@workspace/auth/server';
-import { 
-  DashboardSidebar, 
-  DashboardHeader, 
-  SidebarProvider 
+import {
+  DashboardHeader,
+  DashboardSidebar,
+  SidebarProvider,
 } from '@workspace/ui';
 
 interface OrganizationLayoutProps {
@@ -12,21 +12,22 @@ interface OrganizationLayoutProps {
   params: Promise<{ slug: string }>;
 }
 
-export default async function OrganizationLayout({ 
-  children, 
-  params 
+export default async function OrganizationLayout({
+  children,
+  params,
 }: OrganizationLayoutProps) {
   const { slug } = await params;
-  
+
   // ✅ Get organization context with user membership
-  const { session, organization, membership } = await getAuthOrganizationContext(slug);
+  const { session, organization, membership } =
+    await getAuthOrganizationContext(slug);
 
   return (
     <SidebarProvider>
       <div className="flex flex-col size-full overflow-hidden">
         <div className="group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar">
           {/* ✅ ENTERPRISE: Modular Sidebar */}
-          <DashboardSidebar 
+          <DashboardSidebar
             organization={organization}
             user={session.user}
             membership={membership}
@@ -36,7 +37,7 @@ export default async function OrganizationLayout({
           <main className="relative flex min-h-svh flex-1 flex-col bg-background size-full">
             <div className="flex h-full flex-col">
               {/* ✅ ENTERPRISE: Modular Header */}
-              <DashboardHeader 
+              <DashboardHeader
                 organization={organization}
                 user={session.user}
               />

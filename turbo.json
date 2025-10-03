@@ -7,7 +7,7 @@
     ".env.example",
     "turbo.json",
     "package.json",
-    "pnpm-lock.yaml",
+    "bun.lockb",
     "eslint.config.js",
     "prettier.config.js",
     "tailwind.config.js"
@@ -155,8 +155,8 @@
       "persistent": false,
       "env": ["NODE_ENV", "CI", "PLAYWRIGHT_BASE_URL", "DATABASE_URL", "AUTH_SECRET", "NEXTAUTH_URL"]
     },
-    "type-check": {
-      "dependsOn": ["^type-check"],
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
       "inputs": [
         "src/**/*.{ts,tsx}",
         "app/**/*.{ts,tsx}",
@@ -221,7 +221,7 @@
     "check:requirements": {
       "cache": true,
       "persistent": false,
-      "inputs": ["package.json", "pnpm-lock.yaml", ".nvmrc", ".node-version"],
+      "inputs": ["package.json", "bun.lockb", ".nvmrc", ".node-version"],
       "outputs": [],
       "outputLogs": "errors-only"
     },
@@ -234,7 +234,7 @@
       "outputLogs": "errors-only"
     },
     "qa:build": {
-      "dependsOn": ["qa:fast", "type-check", "build"],
+      "dependsOn": ["qa:fast", "typecheck", "build"],
       "cache": true,
       "persistent": false,
       "inputs": [],
@@ -260,7 +260,7 @@
     "qa:security": {
       "cache": true,
       "persistent": false,
-      "inputs": ["package.json", "pnpm-lock.yaml"],
+      "inputs": ["package.json", "bun.lockb"],
       "outputs": ["audit-report.*", "security-report.*"],
       "outputLogs": "errors-only"
     },

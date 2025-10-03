@@ -10,7 +10,7 @@
     "composite": true,
 
     // ✅ ENTERPRISE: Module Resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowImportingTsExtensions": false,
@@ -65,9 +65,9 @@
 
     // ✅ ENTERPRISE: Base Configuration
     "baseUrl": ".",
-    "types": ["node"],
+    "types": ["node", "bun-types"],
 
-    // ✅ ENTERPRISE: Path Mapping - SUA ESTRUTURA REAL
+    // ✅ ENTERPRISE: Path Mapping - CORRIGIDO
     "paths": {
       // Packages
       "@workspace/database": ["packages/database/src"],
@@ -87,15 +87,7 @@
       "@workspace/e2e": ["packages/e2e/src"],
       "@workspace/e2e/*": ["packages/e2e/src/*"],
 
-      // Tooling
-      "@workspace/eslint-config": ["tooling/eslint-config/src"],
-      "@workspace/prettier-config": ["tooling/prettier-config/src"],
-      "@workspace/requirements-check": ["tooling/requirements-check/src"],
-      "@workspace/tailwind-config": ["tooling/tailwind-config/src"],
-      "@workspace/typescript-config": ["tooling/typescript-config/src"],
-
-      // Apps aliases
-      "@/*": ["apps/*/src/*"],
+      // Apps aliases - CORRIGIDO (removido padrão inválido)
       "~/*": ["./src/*"]
     },
 

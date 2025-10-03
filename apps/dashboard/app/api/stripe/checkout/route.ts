@@ -1,5 +1,5 @@
 import { stripe } from '@workspace/billing';
-import { db, users, memberships, organizations } from '@workspace/database';
+import { db, memberships, organizations, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';

@@ -124,7 +124,6 @@ export function SignUpForm({
     },
   });
 
-
   const watchedPassword = watch('password', '');
   const _confirmPassword = watch('confirmPassword', ''); // ✅ CORREÇÃO: Add underscore prefix
   const _acceptTerms = watch('acceptTerms'); // ✅ CORREÇÃO: Add underscore prefix

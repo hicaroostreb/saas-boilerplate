@@ -25,9 +25,9 @@ start_time=$(date +%s)
 # ✅ ENTERPRISE: Branch-specific quality gates
 if [[ "$branch" == "main" || "$branch" == "develop" ]]; then
     echo "🔒 Critical branch detected ($branch) - running comprehensive validation"
-    echo "⏳ This may take 8-15 minutes for full E2E and security checks..."
+    echo "⏳ This may take 5-10 minutes for full E2E and security checks..."
     
-    pnpm qa:full
+    bun run qa:full
     qa_exit_code=$?
     
     if [ $qa_exit_code -eq 0 ]; then
@@ -41,7 +41,7 @@ if [[ "$branch" == "main" || "$branch" == "develop" ]]; then
 elif [[ "$branch" == hotfix/* ]]; then
     echo "🚨 Hotfix branch detected ($branch) - running essential checks only"
     
-    pnpm qa:build
+    bun run qa:build
     qa_exit_code=$?
     
     if [ $qa_exit_code -eq 0 ]; then
@@ -55,14 +55,14 @@ elif [[ "$branch" == hotfix/* ]]; then
 else
     echo "📦 Feature branch ($branch) - running build verification"
     
-    pnpm qa:build
+    bun run qa:build
     qa_exit_code=$?
     
     if [ $qa_exit_code -eq 0 ]; then
         echo "✅ Build verification passed for feature branch"
     else
         echo "❌ Build verification failed"
-        echo "🔧 Run 'pnpm qa:fix' to resolve common issues"
+        echo "🔧 Run 'bun run qa:fix' to resolve common issues"
         exit 1
     fi
 fi
@@ -76,8 +76,8 @@ duration_sec=$((duration % 60))
 echo "⏱️  Pre-push validation completed in ${duration_min}m ${duration_sec}s"
 
 # ✅ ENTERPRISE: Performance recommendations
-if [[ "$branch" == "main" || "$branch" == "develop" ]] && [ $duration -gt 900 ]; then
-    echo "⚠️  Warning: Full validation took longer than 15 minutes"
+if [[ "$branch" == "main" || "$branch" == "develop" ]] && [ $duration -gt 600 ]; then
+    echo "⚠️  Warning: Full validation took longer than 10 minutes"
     echo "💡 Consider optimizing E2E tests or running them in parallel"
 fi
 

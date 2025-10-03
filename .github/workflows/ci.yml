@@ -15,7 +15,7 @@ concurrency:
 
 env:
   NODE_VERSION: "18.17.0"
-  PNPM_VERSION: "9.12.0"
+  BUN_VERSION: "1.1.38"
 
 jobs:
   quality-assurance:
@@ -27,16 +27,10 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache Turborepo
         uses: actions/cache@v4
@@ -46,11 +40,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Enterprise QA Pipeline
-        run: pnpm qa:ci
+        run: bun run qa:ci
         env:
           NODE_ENV: test
 
@@ -69,36 +71,38 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm test:install
+        run: bun run test:install
 
       - name: Build applications
-        run: pnpm build
+        run: bun run build
 
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: bun run test:e2e
         env:
           CI: true
           BROWSER: ${{ matrix.browser }}
@@ -123,35 +127,37 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Security Audit
-        run: pnpm qa:security
+        run: bun run qa:security
 
       - name: Generate Security Report
         if: failure()
         run: |
           echo "## Security Audit Failed" >> security-report.md
           echo "### Audit Results:" >> security-report.md
-          pnpm audit --json > audit-report.json 2>/dev/null || true
+          bun pm audit --json > audit-report.json 2>/dev/null || true
           echo "\`\`\`json" >> security-report.md
           cat audit-report.json >> security-report.md 2>/dev/null || echo "No audit data available" >> security-report.md
           echo "\`\`\`" >> security-report.md
           echo "### Dependencies Check:" >> security-report.md
           echo "\`\`\`" >> security-report.md
-          pnpm deps:check >> security-report.md 2>/dev/null || echo "No outdated dependencies found" >> security-report.md
+          bun run deps:check >> security-report.md 2>/dev/null || echo "No outdated dependencies found" >> security-report.md
           echo "\`\`\`" >> security-report.md
 
       - name: Upload Security Reports
@@ -175,22 +181,24 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Production Build Verification
-        run: pnpm build
+        run: bun run build
         env:
           NODE_ENV: production
 

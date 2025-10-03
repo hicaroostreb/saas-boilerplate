@@ -487,7 +487,7 @@ export function SignInForm({
         <span>
           {organizationSlug
             ? `New to ${organizationSlug}?`
-            : 'Don\'t have an account?'}
+            : "Don't have an account?"}
         </span>{' '}
         <a
           className="text-foreground underline hover:text-primary transition-colors"

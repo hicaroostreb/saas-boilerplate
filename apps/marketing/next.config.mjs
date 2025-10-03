@@ -2,36 +2,36 @@
 const nextConfig = {
   // Transpilação de packages do workspace (ATUALIZADO)
   transpilePackages: [
-    "@workspace/ui",
-    "@workspace/auth", 
-    "@workspace/database",
-    "@workspace/billing",
-    "@workspace/common",
-    "@workspace/routes"
+    '@workspace/ui',
+    '@workspace/auth',
+    '@workspace/database',
+    '@workspace/billing',
+    '@workspace/common',
+    '@workspace/routes',
   ],
-  
+
   // Otimizações experimentais para marketing site
   experimental: {
     optimizePackageImports: [
-      "@workspace/ui",
-      "lucide-react", 
-      "framer-motion",
-      "tailwindcss"
+      '@workspace/ui',
+      'lucide-react',
+      'framer-motion',
+      'tailwindcss',
     ],
     webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB', 'INP'],
   },
-  
+
   // Configuração ESLint otimizada
   eslint: {
     dirs: ['app', 'components', 'lib'],
     ignoreDuringBuilds: true, // ← MUDANÇA: true para evitar erros no build
   },
-  
+
   // Configuração TypeScript
   typescript: {
     ignoreBuildErrors: false,
   },
-  
+
   // Otimizações de imagem para marketing
   images: {
     formats: ['image/webp', 'image/avif'],
@@ -39,7 +39,7 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 31536000, // 1 ano
   },
-  
+
   // Headers de segurança e performance
   async headers() {
     return [
@@ -76,20 +76,20 @@ const nextConfig = {
       },
     ];
   },
-  
+
   // Otimizações de bundle para marketing site
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
-  
+
   // Output para otimização de marketing site (COMENTADO - pode causar problemas no dev)
   // output: 'standalone',
-  
+
   // Configuração de build otimizada
   generateBuildId: async () => {
     return `${Date.now()}`;
   },
-  
+
   // PWA e service worker (opcional para marketing)
   ...(process.env.NODE_ENV === 'production' && {
     async rewrites() {

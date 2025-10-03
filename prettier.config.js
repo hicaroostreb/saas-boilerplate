@@ -50,7 +50,6 @@ export default {
   ],
   
   // Configuração Tailwind
-  tailwindConfig: './apps/*/tailwind.config.js',
   tailwindFunctions: ['clsx', 'cn', 'cva', 'twMerge'],
   
   // Configuração de imports (prettier-plugin-organize-imports)

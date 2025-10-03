@@ -36,11 +36,11 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
   html.dark {
     background-color: #000000 !important;
   }
-  
+
   html {
     background-color: #ffffff !important;
   }
