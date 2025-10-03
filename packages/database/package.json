@@ -35,7 +35,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "echo '✅ Database lint disabled - contains generated code and scripts'",
     "format": "echo '✅ Database format disabled - contains generated code and scripts'",
     "db:generate": "drizzle-kit generate",
@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/bun": "^1.2.23",
     "@types/node": "^20.14.0",
     "drizzle-kit": "^0.31.5",
     "tsx": "^4.19.0",

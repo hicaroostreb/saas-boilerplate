@@ -9,7 +9,7 @@
     "dev": "tsc --build --watch",
     "lint": "eslint . --config ../../eslint.config.js",
     "format": "prettier --write .",
-    "type-check": "tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@workspace/database": "workspace:*",

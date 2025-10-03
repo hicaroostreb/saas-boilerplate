@@ -16,6 +16,12 @@ const signInSchema = z.object({
 
 type SignInSchema = z.infer<typeof signInSchema>;
 
+// ✅ ENTERPRISE: Interface específica para erros Next.js
+interface NextRedirectError extends Error {
+  digest?: string;
+  name: string;
+}
+
 // ✅ ENTERPRISE: Enhanced props interface
 interface SignInFormProps {
   onCredentialsSubmit: (data: SignInSchema) => Promise<void>;
@@ -70,15 +76,31 @@ export function SignInForm({
   // ✅ ENTERPRISE: Combined error handling
   const displayError = externalError ?? internalError;
 
-  // ✅ CORRIGIDO: Type assertion para error handling
-  const isRedirectError = (error: unknown): boolean => {
-    const _error = error as any;
-    // Verifica se é erro de redirect do Next.js
-    return (
-      _error?.message?.includes('NEXT_REDIRECT') ||
-      _error?.digest?.startsWith('NEXT_REDIRECT') ||
-      _error?.name === 'RedirectError'
-    );
+  // ✅ CORREÇÃO ENTERPRISE: Type guard com tipagem específica e segura
+  const isRedirectError = (error: unknown): error is NextRedirectError => {
+    if (error instanceof Error) {
+      return (
+        error.message.includes('NEXT_REDIRECT') ||
+        ('digest' in error &&
+          typeof (error as NextRedirectError).digest === 'string' &&
+          (error as NextRedirectError).digest?.startsWith('NEXT_REDIRECT')) ||
+        error.name === 'RedirectError'
+      );
+    }
+
+    // Verificação adicional para objetos que podem ter as propriedades esperadas
+    if (error && typeof error === 'object') {
+      const errorObj = error as Record<string, unknown>;
+      return (
+        (typeof errorObj.message === 'string' &&
+          errorObj.message.includes('NEXT_REDIRECT')) ||
+        (typeof errorObj.digest === 'string' &&
+          errorObj.digest.startsWith('NEXT_REDIRECT')) ||
+        errorObj.name === 'RedirectError'
+      );
+    }
+
+    return false;
   };
 
   const handleFormSubmit = async (data: SignInSchema) => {
