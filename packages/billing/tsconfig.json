@@ -4,12 +4,18 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
+      "@workspace/webhooks": ["../webhooks/src"],
+      "@workspace/webhooks/*": ["../webhooks/src/*"],
       "@workspace/database": ["../database/src"],
       "@workspace/database/*": ["../database/src/*"],
       "@workspace/auth": ["../auth/src"],
@@ -20,5 +26,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../database" }, { "path": "../auth" }, { "path": "../common" }]
+  "references": [{ "path": "../webhooks" }, { "path": "../database" }, { "path": "../auth" }, { "path": "../common" }]
 }
