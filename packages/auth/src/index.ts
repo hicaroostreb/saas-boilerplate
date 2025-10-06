@@ -1,5 +1,3 @@
-// packages/auth/src/index.ts - MAIN PACKAGE EXPORTS (CLEAN & MINIMAL)
-
 // ============================================
 // CORE EXPORTS
 // ============================================
@@ -24,6 +22,15 @@ export {
   revokeAllSessions,
   revokeSession,
 } from './server';
+
+// ✅ NEW: Flow exports (CRÍTICO!)
+export {
+  checkEmailAvailabilityFlow,
+  requestPasswordResetFlow,
+  resetPasswordFlow,
+  signUpFlow,
+  validateResetTokenFlow,
+} from './flows';
 
 // ============================================
 // SERVICE EXPORTS
@@ -96,6 +103,19 @@ export type { UserValidationResult } from './services/user-validation.service';
 
 // Session types
 export type { SessionRevocationResult } from './services/session-revocation.service';
+
+// ✅ NEW: Flow types
+export type {
+  CheckEmailAvailabilityRequest,
+  CheckEmailAvailabilityResult,
+  RequestPasswordResetFlowRequest,
+  ResetPasswordFlowRequest,
+  ResetPasswordFlowResult,
+  SignUpFlowRequest,
+  SignUpFlowResult,
+  ValidateResetTokenFlowRequest,
+  ValidateResetTokenFlowResult,
+} from './flows';
 
 // ============================================
 // CONSTANTS
