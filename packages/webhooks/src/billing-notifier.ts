@@ -1,13 +1,13 @@
 /**
  * Webhook Implementation of Billing Notifier
- * Infrastructure Layer - Implementa interface do Domain
+ * Infrastructure Layer - Implementa interface da Foundation
  */
 
 import type {
   BillingEvent,
   BillingWebhookConfig,
   IBillingNotifier,
-} from '@workspace/billing';
+} from '@workspace/common';
 import { sendWebhook } from './client';
 
 export class WebhookBillingNotifier implements IBillingNotifier {
@@ -19,7 +19,7 @@ export class WebhookBillingNotifier implements IBillingNotifier {
       url: config.url,
       secret: config.secret,
       payload: event as unknown as Record<string, unknown>,
-      maxRetries: 3,
+      maxRetries: config.retries || 3,
     });
   }
 }
