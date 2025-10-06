@@ -1,37 +1,56 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // MÍNIMO - só o essencial para funcionar
+  // ✅ ENTERPRISE: Marketing só usa packages permitidos pela Clean Architecture
   transpilePackages: [
-    // Comentar TODOS temporariamente para debug
-    // '@workspace/ui',
-    // '@workspace/auth',
-    // '@workspace/billing',
-    // '@workspace/common',
-    // '@workspace/routes',
-    // '@workspace/rate-limiter',
-    // '@workspace/database',
-    // '@workspace/webhooks',
+    '@workspace/ui', // ✅ Application Layer
+    '@workspace/common', // ✅ Foundation Layer
+    '@workspace/routes', // ✅ Foundation Layer
+    '@workspace/rate-limiter', // ✅ Infrastructure Layer
   ],
 
-  // DESABILITAR todas as otimizações experimentais
+  // ✅ ENTERPRISE: Configuração mínima estável
   experimental: {
-    // Comentar tudo que pode causar problemas
-    // optimizePackageImports: [...],
-    // webVitalsAttribution: [...],
+    externalDir: true,
   },
 
-  // Configuração basic ESLint
+  // ✅ ENTERPRISE: ESLint focado apenas no src
   eslint: {
     dirs: ['src'],
-    ignoreDuringBuilds: true, // Permitir build mesmo com warnings
+    ignoreDuringBuilds: false,
   },
 
-  // TypeScript básico
+  // ✅ ENTERPRISE: TypeScript strict
   typescript: {
-    ignoreBuildErrors: true, // Temporário para debug
+    ignoreBuildErrors: false,
   },
 
-  // Remover todas as otimizações avançadas por enquanto
+  // ✅ ENTERPRISE: Headers de segurança mantidos
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
+
+  // ✅ ENTERPRISE: Otimizações de produção
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 };
 
 export default nextConfig;

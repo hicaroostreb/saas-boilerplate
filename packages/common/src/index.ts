@@ -7,6 +7,13 @@ export * from './domain/billing/constants/billing.constants';
 export * from './domain/billing/types/plan.types';
 export * from './domain/billing/validators/billing.validators';
 
+// Domain - Billing Interfaces (Foundation Layer)
+export type {
+  BillingEvent,
+  BillingWebhookConfig,
+  IBillingNotifier,
+} from './types/billing.types';
+
 // Domain - User
 export * from './domain/user/types/preferences.types';
 export * from './domain/user/types/user.types';
