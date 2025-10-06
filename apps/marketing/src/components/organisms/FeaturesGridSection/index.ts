@@ -1,1 +1,0 @@
-export { FeaturesGridSection } from './FeaturesGridSection';
