@@ -1,13 +1,12 @@
-// packages/auth/src/config/callbacks.config.ts - NEXTAUTH CALLBACKS CONFIGURATION (VERSÃO LIMPA)
+/**
+ * ✅ ENTERPRISE: NextAuth Callbacks Configuration (VERSÃO LIMPA)
+ * Single Responsibility: NextAuth callbacks for session/JWT handling
+ */
 
 import { db, memberships, organizations, users } from '@workspace/database';
 import { and, eq } from 'drizzle-orm';
 import type { NextAuthConfig } from 'next-auth';
 
-/**
- * ✅ ENTERPRISE: NextAuth Callbacks Configuration (LIMPO)
- * Single Responsibility: NextAuth callbacks for session/JWT handling
- */
 export const callbacksConfig: NextAuthConfig['callbacks'] = {
   /**
    * ✅ SIGN-IN: Control whether user can sign in
@@ -44,26 +43,24 @@ export const callbacksConfig: NextAuthConfig['callbacks'] = {
 
     try {
       // Initial sign-in: populate token with user data
-      if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        token.id = user.id!;
+      if (user && user.id) {
+        // ✅ CORREÇÃO: Verificação segura ao invés de !
+        token.id = user.id;
         token.email = user.email;
 
         // Update last login time if we have user ID
-        if (user.id) {
-          try {
-            await db
-              .update(users)
-              .set({
-                lastLoginAt: new Date(),
-              })
-              .where(eq(users.id, user.id));
-          } catch (updateError) {
-            console.error(
-              '[NextAuth Callback] Error updating lastLoginAt:',
-              updateError
-            );
-          }
+        try {
+          await db
+            .update(users)
+            .set({
+              lastLoginAt: new Date(),
+            })
+            .where(eq(users.id, user.id));
+        } catch (updateError) {
+          console.error(
+            '[NextAuth Callback] Error updating lastLoginAt:',
+            updateError
+          );
         }
       }
 
@@ -100,25 +97,17 @@ export const callbacksConfig: NextAuthConfig['callbacks'] = {
             .limit(1);
 
           if (membership) {
-            // eslint-disable-next-line require-atomic-updates
             token.organizationId = membership.organizationId;
-            // eslint-disable-next-line require-atomic-updates
             token.organizationSlug = membership.organization.slug;
-            // eslint-disable-next-line require-atomic-updates
             token.role = membership.role;
-            // eslint-disable-next-line require-atomic-updates
             token.permissions = Array.isArray(membership.permissions)
               ? membership.permissions
               : [];
           } else {
             // Clear organization context if no active membership
-            // eslint-disable-next-line require-atomic-updates
             token.organizationId = null;
-            // eslint-disable-next-line require-atomic-updates
             token.organizationSlug = null;
-            // eslint-disable-next-line require-atomic-updates
             token.role = null;
-            // eslint-disable-next-line require-atomic-updates
             token.permissions = null;
           }
         } catch (error) {
@@ -127,19 +116,14 @@ export const callbacksConfig: NextAuthConfig['callbacks'] = {
             error
           );
           // Don't fail the entire JWT callback - just clear org context
-          // eslint-disable-next-line require-atomic-updates
           token.organizationId = null;
-          // eslint-disable-next-line require-atomic-updates
           token.organizationSlug = null;
-          // eslint-disable-next-line require-atomic-updates
           token.role = null;
-          // eslint-disable-next-line require-atomic-updates
           token.permissions = null;
         }
       }
 
       // Update session metadata
-      // eslint-disable-next-line require-atomic-updates
       token.lastAccessedAt = Date.now();
 
       return token;
@@ -155,29 +139,32 @@ export const callbacksConfig: NextAuthConfig['callbacks'] = {
   async session({ session, token, user }) {
     try {
       // Use database user if available (database strategy)
-      if (user) {
+      if (user && user.id && user.email) {
+        // ✅ CORREÇÃO: Verificações seguras ao invés de !
         session.user = {
           ...session.user,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          id: user.id!,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          email: user.email!,
+          id: user.id,
+          email: user.email,
           name: user.name,
           image: user.image,
         };
       }
       // Use JWT token data (JWT strategy)
       else if (token) {
-        session.user = {
-          ...session.user,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          id: (token.id as string) ?? token.sub!,
-          email: token.email as string,
-        };
+        const userId = (token.id as string) ?? token.sub ?? '';
+        const userEmail = (token.email as string) ?? '';
+
+        // ✅ CORREÇÃO: Verificação segura ao invés de !
+        if (userId) {
+          session.user = {
+            ...session.user,
+            id: userId,
+            email: userEmail,
+          };
+        }
       }
 
-      // Add enterprise context to session (type-safe casting)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Add enterprise context to session
       const enhancedSession = session as any;
 
       enhancedSession.enterprise = {

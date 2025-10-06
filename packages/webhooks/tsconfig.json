@@ -10,8 +10,21 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@workspace/billing": ["../billing/src"],
+      "@workspace/billing/*": ["../billing/src/*"],
+      "@workspace/database": ["../database/src"],
+      "@workspace/database/*": ["../database/src/*"],
+      "@workspace/auth": ["../auth/src"],
+      "@workspace/auth/*": ["../auth/src/*"],
+      "@workspace/common": ["../common/src"],
+      "@workspace/common/*": ["../common/src/*"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", ".turbo"]
+  "exclude": ["node_modules", "dist", ".turbo"],
+  "references": [{ "path": "../billing" }, { "path": "../auth" }, { "path": "../database" }, { "path": "../common" }]
 }
