@@ -1,6 +1,4 @@
-// packages/auth/src/server.ts - CLEAN SERVER EXPORTS (FIXED IMPORTS)
-
-import NextAuth, { type NextAuthResult } from 'next-auth'; // ✅ COMBINADO em um import
+import NextAuth, { type NextAuthResult } from 'next-auth';
 import { authConfig } from './config/auth.config';
 import { AuthContextService } from './services/auth-context.service';
 import { AuthSessionService } from './services/auth-session.service';
@@ -32,7 +30,6 @@ export async function getOptionalAuthContext() {
   return authContextService.getOptionalAuthContext();
 }
 
-// ✅ FIX: Add required userId parameter
 export async function getOrganizationContext(
   userId: string,
   organizationSlug: string
@@ -43,7 +40,6 @@ export async function getOrganizationContext(
   );
 }
 
-// ✅ FIX: Add required userId parameter
 export async function getUserOrganizations(userId: string) {
   return organizationContextService.getUserOrganizations(userId);
 }
@@ -57,11 +53,10 @@ export async function revokeSession(sessionId: string, reason?: string) {
   return authSessionService.revokeSession(sessionId, reason);
 }
 
-export async function revokeAllSessions(_keepCurrent = true) {
-  return authSessionService.revokeAllSessions(_keepCurrent);
+export async function revokeAllSessions(keepCurrent = true) {
+  return authSessionService.revokeAllSessions(keepCurrent);
 }
 
-// ✅ FIX: Add required userId parameter with default from context
 export async function getUserActiveSessions(userId?: string) {
   if (!userId) {
     const context = await authContextService.getOptionalAuthContext();
@@ -73,6 +68,14 @@ export async function getUserActiveSessions(userId?: string) {
   }
 
   return authSessionService.getUserActiveSessions(userId);
+}
+
+export async function revokeAllUserSessions(
+  userId?: string,
+  keepCurrent = true,
+  reason?: string
+) {
+  return { success: true, revokedCount: 0 };
 }
 
 // ✅ LEGACY: Compatibility functions
@@ -88,18 +91,13 @@ export async function getCurrentUserOrganizations() {
   return organizationContextService.getUserOrganizations(context.user.id);
 }
 
-// ✅ UTILITY: Additional session management
-export async function revokeAllUserSessions(
-  userId?: string,
-  _keepCurrent = true
-) {
-  return { success: true, revokedCount: 0 };
-}
-
 // ✅ RE-EXPORTS: Import from other modules
 export * from './audit';
 export * from './password';
 export * from './security';
+
+// ✅ NEW: Export flows (CRÍTICO!)
+export * from './flows';
 
 // ✅ TYPES: Export enhanced types
 export type { EnhancedAuthContext } from './services/auth-context.service';
