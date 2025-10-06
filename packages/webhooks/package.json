@@ -15,15 +15,25 @@
   ],
   "scripts": {
     "build": "tsc --build",
+    "dev": "tsc --build --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
-    "clean": "rm -rf dist .turbo"
+    "format:check": "prettier --check .",
+    "test": "echo '⚠️ Tests not configured yet'",
+    "clean": "rm -rf dist .turbo node_modules"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@workspace/billing": "workspace:*",
+    "@workspace/auth": "workspace:*",
+    "@workspace/database": "workspace:*",
+    "@workspace/common": "workspace:*",
+    "stripe": "^12.18.0"
+  },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
     "@workspace/eslint-config": "workspace:*",
+    "@types/node": "^20.14.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   }

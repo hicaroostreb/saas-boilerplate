@@ -1,9 +1,8 @@
 /**
- * Billing Events & Webhook Integration
- * DIP: Abstrai eventos de billing usando @workspace/webhooks
+ * Billing Events with Dependency Inversion Principle
+ * Domain Layer - Define interfaces, Infrastructure implementa
  */
 
-import { sendWebhook } from '@workspace/webhooks';
 import type Stripe from 'stripe';
 import type { Payment } from './payments';
 import type { PlanId } from './plans';
@@ -28,6 +27,14 @@ export interface BillingWebhookConfig {
   secret: string;
 }
 
+// ✅ INTERFACE - Domain define, Infrastructure implementa
+export interface IBillingNotifier {
+  sendNotification(
+    config: BillingWebhookConfig,
+    event: BillingEvent
+  ): Promise<void>;
+}
+
 export const createBillingEvent = <T extends Subscription | Payment>(
   type: BillingEventType,
   data: T
@@ -38,46 +45,89 @@ export const createBillingEvent = <T extends Subscription | Payment>(
   data,
 });
 
+// ✅ SERVICE - Dependency Injection
+export class BillingEventService {
+  constructor(private notifier?: IBillingNotifier) {}
+
+  async sendBillingWebhook(
+    config: BillingWebhookConfig,
+    event: BillingEvent
+  ): Promise<void> {
+    if (!this.notifier) {
+      console.warn('No billing notifier configured - event not sent');
+      return;
+    }
+
+    await this.notifier.sendNotification(config, event);
+  }
+
+  // Handler para mudanças de assinatura do Stripe
+  async handleSubscriptionChange(
+    subscription: Stripe.Subscription,
+    webhookConfig?: BillingWebhookConfig
+  ): Promise<void> {
+    const customerId = subscription.customer as string;
+    const subscriptionId = subscription.id;
+    const status = subscription.status as SubscriptionStatus;
+
+    // Criar evento de billing
+    const billingEvent = createBillingEvent('subscription.updated', {
+      id: subscriptionId,
+      teamId: customerId,
+      planId: 'PRO_MONTHLY' as PlanId,
+      status,
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: customerId,
+      startedAt: new Date(subscription.created * 1000),
+      endsAt: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000)
+        : null,
+      canceledAt: subscription.canceled_at
+        ? new Date(subscription.canceled_at * 1000)
+        : null,
+    });
+
+    // Enviar webhook se configurado
+    if (webhookConfig) {
+      await this.sendBillingWebhook(webhookConfig, billingEvent);
+    }
+  }
+}
+
+// ✅ BACKWARD COMPATIBILITY - Funções para manter API existente
+let defaultEventService: BillingEventService | null = null;
+
+export const setDefaultBillingNotifier = (notifier: IBillingNotifier): void => {
+  defaultEventService = new BillingEventService(notifier);
+};
+
 export const sendBillingWebhook = async (
   config: BillingWebhookConfig,
   event: BillingEvent
 ): Promise<void> => {
-  await sendWebhook({
-    url: config.url,
-    secret: config.secret,
-    payload: event as unknown as Record<string, unknown>,
-    maxRetries: 3,
-  });
+  if (!defaultEventService) {
+    console.warn(
+      'No default billing notifier - use setDefaultBillingNotifier()'
+    );
+    return;
+  }
+
+  await defaultEventService.sendBillingWebhook(config, event);
 };
 
-// Handler para mudanças de assinatura do Stripe
-export async function handleSubscriptionChange(
+export const handleSubscriptionChange = async (
   subscription: Stripe.Subscription,
   webhookConfig?: BillingWebhookConfig
-): Promise<void> {
-  const customerId = subscription.customer as string;
-  const subscriptionId = subscription.id;
-  const status = subscription.status as SubscriptionStatus;
-
-  // Criar evento de billing
-  const billingEvent = createBillingEvent('subscription.updated', {
-    id: subscriptionId,
-    teamId: customerId,
-    planId: 'PRO_MONTHLY' as PlanId,
-    status,
-    stripeSubscriptionId: subscriptionId,
-    stripeCustomerId: customerId,
-    startedAt: new Date(subscription.created * 1000),
-    endsAt: subscription.current_period_end
-      ? new Date(subscription.current_period_end * 1000)
-      : null,
-    canceledAt: subscription.canceled_at
-      ? new Date(subscription.canceled_at * 1000)
-      : null,
-  });
-
-  // Enviar webhook se configurado
-  if (webhookConfig) {
-    await sendBillingWebhook(webhookConfig, billingEvent);
+): Promise<void> => {
+  if (!defaultEventService) {
+    console.warn(
+      'No default billing notifier - use setDefaultBillingNotifier()'
+    );
+    return;
   }
-}
+
+  await defaultEventService.handleSubscriptionChange(
+    subscription,
+    webhookConfig
+  );
+};

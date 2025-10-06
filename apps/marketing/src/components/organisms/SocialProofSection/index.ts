@@ -1,0 +1,1 @@
+export { SocialProofSection } from './SocialProofSection';

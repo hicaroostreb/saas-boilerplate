@@ -1,7 +1,6 @@
-// packages/auth/src/server.ts - CLEAN SERVER EXPORTS (ARGS FIXED)
+// packages/auth/src/server.ts - CLEAN SERVER EXPORTS (FIXED IMPORTS)
 
-import type { NextAuthResult } from 'next-auth';
-import NextAuth from 'next-auth'; // ✅ ADICIONAR import que estava faltando
+import NextAuth, { type NextAuthResult } from 'next-auth'; // ✅ COMBINADO em um import
 import { authConfig } from './config/auth.config';
 import { AuthContextService } from './services/auth-context.service';
 import { AuthSessionService } from './services/auth-session.service';

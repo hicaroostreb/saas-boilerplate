@@ -17,13 +17,15 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
-      "@workspace/auth": ["../../packages/auth/src"],
-      "@workspace/database": ["../../packages/database/src"],
-      "@workspace/billing": ["../../packages/billing/src"],
       "@workspace/common": ["../../packages/common/src"],
-      "@workspace/routes": ["../../packages/routes/src"]
+      "@workspace/routes": ["../../packages/routes/src"],
+      "@workspace/rate-limiter": ["../../packages/rate-limiter/src"]
     },
     "plugins": [
       {
@@ -31,13 +33,6 @@
       }
     ]
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    "../../packages/*/src/**/*.ts",
-    "../../packages/*/src/**/*.tsx"
-  ],
+  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

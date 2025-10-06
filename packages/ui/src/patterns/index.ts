@@ -9,10 +9,6 @@
 export { Header } from './Header';
 export type { HeaderProps } from './Header';
 
-// === MARKETING HEADER ===
-export { MarketingHeader } from './MarketingHeader';
-export type { MarketingHeaderProps } from './MarketingHeader';
-
 // === NAVIGATION PATTERNS ===
 export { Navigation } from './Navigation';
 export type { NavigationItem, NavigationProps } from './Navigation';

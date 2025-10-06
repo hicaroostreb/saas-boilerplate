@@ -64,14 +64,9 @@
       "name": "@workspace/dashboard",
       "version": "1.0.0",
       "dependencies": {
-        "@workspace/auth": "workspace:*",
-        "@workspace/billing": "workspace:*",
         "@workspace/common": "workspace:*",
-        "@workspace/database": "workspace:*",
         "@workspace/routes": "workspace:*",
         "@workspace/ui": "workspace:*",
-        "bcryptjs": "^2.4.3",
-        "drizzle-orm": "^0.44.5",
         "nanoid": "^5.0.4",
         "next": "^15.5.4",
         "next-safe-action": "^7.9.8",
@@ -80,7 +75,6 @@
       },
       "devDependencies": {
         "@next/bundle-analyzer": "^15.5.4",
-        "@types/bcryptjs": "^2.4.6",
         "@types/node": "^20.14.0",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.25",
@@ -98,13 +92,22 @@
       "name": "@workspace/marketing",
       "version": "1.0.0",
       "dependencies": {
+        "@hookform/resolvers": "^5.2.2",
+        "@workspace/common": "workspace:*",
+        "@workspace/rate-limiter": "workspace:*",
+        "@workspace/routes": "workspace:*",
         "@workspace/ui": "workspace:*",
+        "clsx": "^2.1.1",
         "framer-motion": "^11.0.0",
+        "lucide-react": "^0.544.0",
         "next": "^15.5.4",
         "next-seo": "^6.5.0",
+        "next-themes": "^0.4.6",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "react-hook-form": "^7.63.0",
         "sharp": "^0.33.0",
+        "zod": "^3.25.76",
       },
       "devDependencies": {
         "@next/bundle-analyzer": "^15.5.4",
@@ -129,6 +132,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@auth/drizzle-adapter": "^1.7.0",
+        "@workspace/common": "workspace:*",
         "@workspace/database": "workspace:*",
         "bcryptjs": "^3.0.2",
         "cookies": "^0.9.1",
@@ -232,10 +236,7 @@
     },
     "packages/routes": {
       "name": "@workspace/routes",
-      "version": "1.0.0",
-      "dependencies": {
-        "@workspace/common": "workspace:*",
-      },
+      "version": "0.1.0",
       "devDependencies": {
         "@workspace/eslint-config": "workspace:*",
         "@workspace/typescript-config": "workspace:*",
@@ -248,6 +249,8 @@
       "version": "1.0.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
+        "@workspace/common": "workspace:*",
+        "@workspace/routes": "workspace:*",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "react-hook-form": "^7.63.0",
@@ -258,12 +261,32 @@
       "devDependencies": {
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.25",
+        "@workspace/eslint-config": "workspace:*",
+        "@workspace/typescript-config": "workspace:*",
         "prettier": "^3.6.2",
         "typescript": "^5.9.2",
       },
       "peerDependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+      },
+    },
+    "packages/webhooks": {
+      "name": "@workspace/webhooks",
+      "version": "0.1.0",
+      "dependencies": {
+        "@workspace/auth": "workspace:*",
+        "@workspace/billing": "workspace:*",
+        "@workspace/common": "workspace:*",
+        "@workspace/database": "workspace:*",
+        "stripe": "^12.18.0",
+      },
+      "devDependencies": {
+        "@types/node": "^20.14.0",
+        "@workspace/eslint-config": "workspace:*",
+        "@workspace/typescript-config": "workspace:*",
+        "prettier": "^3.6.2",
+        "typescript": "^5.9.2",
       },
     },
     "tooling/eslint-config": {
@@ -908,6 +931,8 @@
     "@workspace/typescript-config": ["@workspace/typescript-config@workspace:tooling/typescript-config"],
 
     "@workspace/ui": ["@workspace/ui@workspace:packages/ui"],
+
+    "@workspace/webhooks": ["@workspace/webhooks@workspace:packages/webhooks"],
 
     "acorn": ["acorn@8.15.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg=="],
 
@@ -1635,6 +1660,8 @@
 
     "lru_map": ["lru_map@0.3.3", "", {}, "sha512-Pn9cox5CsMYngeDbmChANltQl+5pi6XmTrraMSzhPmMBbmgcxmqWry0U3PGapCU1yB4/LqCcom7qhHZiF/jGfQ=="],
 
+    "lucide-react": ["lucide-react@0.544.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-t5tS44bqd825zAW45UQxpG2CvcC4urOwn2TrwSH8u+MjeE+1NnWl6QqeQ/6NdjMqdOygyiT9p3Ev0p1NJykxjw=="],
+
     "make-dir": ["make-dir@3.1.0", "", { "dependencies": { "semver": "^6.0.0" } }, "sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw=="],
 
     "makeerror": ["makeerror@1.0.12", "", { "dependencies": { "tmpl": "1.0.5" } }, "sha512-JmqCvUhmt43madlpFzG4BQzG2Z3m6tvQDNKdClZnO3VbIudJYmxsT0FNJMeiB2+JTSlTQTSbU8QdesVmwJcmLg=="],
@@ -1694,6 +1721,8 @@
     "next-seo": ["next-seo@6.8.0", "", { "peerDependencies": { "next": "^8.1.1-canary.54 || >=9.0.0", "react": ">=16.0.0", "react-dom": ">=16.0.0" } }, "sha512-zcxaV67PFXCSf8e6SXxbxPaOTgc8St/esxfsYXfQXMM24UESUVSXFm7f2A9HMkAwa0Gqn4s64HxYZAGfdF4Vhg=="],
 
     "next-sitemap": ["next-sitemap@4.2.3", "", { "dependencies": { "@corex/deepmerge": "^4.0.43", "@next/env": "^13.4.3", "fast-glob": "^3.2.12", "minimist": "^1.2.8" }, "peerDependencies": { "next": "*" }, "bin": { "next-sitemap": "bin/next-sitemap.mjs", "next-sitemap-cjs": "bin/next-sitemap.cjs" } }, "sha512-vjdCxeDuWDzldhCnyFCQipw5bfpl4HmZA7uoo3GAaYGjGgfL4Cxb1CiztPuWGmS+auYs7/8OekRS8C2cjdAsjQ=="],
+
+    "next-themes": ["next-themes@0.4.6", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc" } }, "sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA=="],
 
     "node-int64": ["node-int64@0.4.0", "", {}, "sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw=="],
 
@@ -2276,8 +2305,6 @@
     "@workspace/auth/@types/bcryptjs": ["@types/bcryptjs@3.0.0", "", { "dependencies": { "bcryptjs": "*" } }, "sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg=="],
 
     "@workspace/common/prettier-plugin-tailwindcss": ["prettier-plugin-tailwindcss@0.6.14", "", { "peerDependencies": { "@ianvs/prettier-plugin-sort-imports": "*", "@prettier/plugin-hermes": "*", "@prettier/plugin-oxc": "*", "@prettier/plugin-pug": "*", "@shopify/prettier-plugin-liquid": "*", "@trivago/prettier-plugin-sort-imports": "*", "@zackad/prettier-plugin-twig": "*", "prettier": "^3.0", "prettier-plugin-astro": "*", "prettier-plugin-css-order": "*", "prettier-plugin-import-sort": "*", "prettier-plugin-jsdoc": "*", "prettier-plugin-marko": "*", "prettier-plugin-multiline-arrays": "*", "prettier-plugin-organize-attributes": "*", "prettier-plugin-organize-imports": "*", "prettier-plugin-sort-imports": "*", "prettier-plugin-style-order": "*", "prettier-plugin-svelte": "*" }, "optionalPeers": ["@ianvs/prettier-plugin-sort-imports", "@prettier/plugin-hermes", "@prettier/plugin-oxc", "@prettier/plugin-pug", "@shopify/prettier-plugin-liquid", "@trivago/prettier-plugin-sort-imports", "@zackad/prettier-plugin-twig", "prettier-plugin-astro", "prettier-plugin-css-order", "prettier-plugin-import-sort", "prettier-plugin-jsdoc", "prettier-plugin-marko", "prettier-plugin-multiline-arrays", "prettier-plugin-organize-attributes", "prettier-plugin-organize-imports", "prettier-plugin-sort-imports", "prettier-plugin-style-order", "prettier-plugin-svelte"] }, "sha512-pi2e/+ZygeIqntN+vC573BcW5Cve8zUB0SSAGxqpB4f96boZF4M3phPVoOFCeypwkpRYdi7+jQ5YJJUwrkGUAg=="],
-
-    "@workspace/dashboard/bcryptjs": ["bcryptjs@2.4.3", "", {}, "sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ=="],
 
     "@workspace/database/bcryptjs": ["bcryptjs@2.4.3", "", {}, "sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ=="],
 

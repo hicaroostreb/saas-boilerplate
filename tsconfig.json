@@ -15,21 +15,35 @@
     "**/*.config.mjs"
   ],
   "references": [
-    { "path": "packages/database" },
-    { "path": "packages/auth" },
-    { "path": "packages/billing" },
+    // Foundation Layer
     { "path": "packages/common" },
     { "path": "packages/routes" },
-    { "path": "packages/ui" },
+
+    // Infrastructure Layer
     { "path": "packages/rate-limiter" },
+    { "path": "packages/database" },
+
+    // Domain Services Layer
+    { "path": "packages/auth" },
+    { "path": "packages/billing" },
+    { "path": "packages/webhooks" },
+
+    // Application Layer
+    { "path": "packages/ui" },
+
+    // Apps Layer
+    { "path": "apps/marketing" },
+    { "path": "apps/dashboard" },
+
+    // Testing
     { "path": "packages/e2e" },
+
+    // Tooling
     { "path": "tooling/eslint-config" },
     { "path": "tooling/prettier-config" },
     { "path": "tooling/requirements-check" },
     { "path": "tooling/tailwind-config" },
-    { "path": "tooling/typescript-config" },
-    { "path": "apps/dashboard" },
-    { "path": "apps/marketing" }
+    { "path": "tooling/typescript-config" }
   ],
   "compilerOptions": {
     "composite": true,

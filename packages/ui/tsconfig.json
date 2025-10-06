@@ -12,10 +12,12 @@
     "paths": {
       "~/*": ["./src/*"],
       "@workspace/common": ["../common/src"],
-      "@workspace/common/*": ["../common/src/*"]
+      "@workspace/common/*": ["../common/src/*"],
+      "@workspace/routes": ["../routes/src"],
+      "@workspace/routes/*": ["../routes/src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../common" }]
+  "references": [{ "path": "../common" }, { "path": "../routes" }]
 }
