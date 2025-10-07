@@ -1,12 +1,14 @@
 import { BillingSettings } from '@/components/organizations/BillingSettings';
 
 interface BillingPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
-export default function BillingPage({ params }: BillingPageProps) {
+export default async function BillingPage({ params }: BillingPageProps) {
+  const { slug } = await params;
+
   return (
     <div className="space-y-6">
       <div>
@@ -18,7 +20,7 @@ export default function BillingPage({ params }: BillingPageProps) {
         </p>
       </div>
 
-      <BillingSettings organizationSlug={params.slug} />
+      <BillingSettings organizationSlug={slug} />
     </div>
   );
 }

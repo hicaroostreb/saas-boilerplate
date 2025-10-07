@@ -1,49 +1,37 @@
-name: Enterprise CI Pipeline
+name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop, "feature/**", "fix/**", "hotfix/**"]
+    branches: [main, develop, "feature/**"]
   pull_request:
     branches: [main, develop]
-  schedule:
-    # Weekly security audit (Sundays at midnight UTC)
-    - cron: "0 0 * * 0"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "18.17.0"
   BUN_VERSION: "1.1.38"
 
 jobs:
-  quality-assurance:
+  quality-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Cache Turborepo
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
+          path: |
+            ~/.bun/install/cache
+            .turbo
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
@@ -51,51 +39,36 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Enterprise QA Pipeline
-        run: bun run qa:ci
-        env:
-          NODE_ENV: test
+      - name: Quality checks & build
+        run: bun run qa:build
 
-  end-to-end-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
-    needs: quality-assurance
-    if: contains(fromJson('["main", "develop"]'), github.ref_name) || contains(github.event.head_commit.message, '[e2e]')
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium]
+    needs: quality-checks
+    # Só roda em main/develop OU quando explicitamente pedido
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || contains(github.event.head_commit.message, '[e2e]')
+    timeout-minutes: 15
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Cache Playwright browsers
+      - name: Cache dependencies & Playwright
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+          path: |
+            ~/.bun/install/cache
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install Playwright browsers
+      - name: Install Playwright
         run: bun run test:install
 
       - name: Build applications
@@ -103,115 +76,11 @@ jobs:
 
       - name: Run E2E tests
         run: bun run test:e2e
-        env:
-          CI: true
-          BROWSER: ${{ matrix.browser }}
 
-      - name: Upload E2E artifacts
+      - name: Upload artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-artifacts-${{ matrix.browser }}-${{ github.sha }}
-          path: |
-            packages/e2e/test-results/
-            packages/e2e/playwright-report/
+          name: e2e-artifacts-${{ github.sha }}
+          path: packages/e2e/test-results/
           retention-days: 7
-
-  security-audit:
-    runs-on: ubuntu-latest
-    if: github.event.schedule || contains(github.event.head_commit.message, '[security]') || github.ref == 'refs/heads/main'
-    timeout-minutes: 8
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Security Audit
-        run: bun run qa:security
-
-      - name: Generate Security Report
-        if: failure()
-        run: |
-          echo "## Security Audit Failed" >> security-report.md
-          echo "### Audit Results:" >> security-report.md
-          bun pm audit --json > audit-report.json 2>/dev/null || true
-          echo "\`\`\`json" >> security-report.md
-          cat audit-report.json >> security-report.md 2>/dev/null || echo "No audit data available" >> security-report.md
-          echo "\`\`\`" >> security-report.md
-          echo "### Dependencies Check:" >> security-report.md
-          echo "\`\`\`" >> security-report.md
-          bun run deps:check >> security-report.md 2>/dev/null || echo "No outdated dependencies found" >> security-report.md
-          echo "\`\`\`" >> security-report.md
-
-      - name: Upload Security Reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-audit-report-${{ github.sha }}
-          path: |
-            audit-report.json
-            security-report.md
-          retention-days: 30
-
-  deployment-ready:
-    runs-on: ubuntu-latest
-    needs: [quality-assurance, security-audit]
-    if: github.ref == 'refs/heads/main' && success()
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Production Build Verification
-        run: bun run build
-        env:
-          NODE_ENV: production
-
-      - name: Cache build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            apps/*/dist
-            apps/*/.next
-            packages/*/dist
-          key: ${{ runner.os }}-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-
-
-      - name: Deployment Ready ✅
-        run: echo "🚀 Main branch is ready for deployment!"

@@ -1,26 +1,27 @@
-import { getServerSession } from '@workspace/auth';
-import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@workspace/auth/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { name, slug } = await req.json();
+    const body = await request.json();
 
-    // Create organization
-    // TODO: Implementation with @workspace/database
-    console.warn('Creating organization:', { name, slug });
+    // TODO: Implementation with organization service
+    console.warn('Create organization:', body, 'for user:', session.user.id);
 
     return NextResponse.json({
+      success: true,
       message: 'Organization created',
-      organization: { name, slug },
     });
-  } catch {
+  } catch (error) {
+    console.error('Create organization error:', error);
     return NextResponse.json(
-      { error: 'Failed to create organization' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

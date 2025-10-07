@@ -1,7 +1,7 @@
 'use client';
 
 import { forgotPasswordSchema } from '@workspace/auth';
-import { Button, FormField, Input } from '@workspace/ui';
+import { Button, FormField } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -38,15 +38,14 @@ export function ForgotPasswordForm() {
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-      <FormField label="Email address" required>
-        <Input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Email address"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        required
+      />
 
       {message && (
         <div className="text-sm text-center text-gray-600">{message}</div>

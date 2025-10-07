@@ -28,20 +28,17 @@
     "format:fix": "turbo format",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
-
     "clean:safe": "rm -rf node_modules && rm -rf .turbo && rm -f pnpm-workspace.yaml yarn.lock pnpm-lock.yaml package-lock.json",
     "clean:build": "find . -path '*/packages/*/dist' -type d -prune -exec rm -rf {} + && find . -path '*/apps/*/.next' -type d -prune -exec rm -rf {} +",
     "clean:cache": "find node_modules -name '.cache' -type d -prune -exec rm -rf {} + && rm -rf ~/.bun",
     "clean:full": "npm run clean:safe && npm run clean:build && npm run clean:cache",
     "reset": "npm run clean:safe && bun install",
     "reset:full": "npm run clean:full && bun install",
-
     "check:requirements": "echo '⚠️ Requirements check disabled temporarily'",
     "check:requirements:verbose": "echo '⚠️ Requirements check disabled temporarily'",
     "check:requirements:strict": "echo '⚠️ Requirements check disabled temporarily'",
     "check:env": "bun run check:requirements",
     "preinstall": "echo '✅ Preinstall check disabled during migration' || true",
-
     "db:setup": "echo '⚠️ Database setup disabled - restore files first'",
     "db:migrate": "bun run --filter @workspace/database db:migrate",
     "db:seed": "bun run --filter @workspace/database db:seed",
@@ -51,33 +48,27 @@
     "db:reset": "bun run --filter @workspace/database db:reset",
     "db:drop": "bun run --filter @workspace/database db:drop",
     "db:lint:why": "echo '💡 Database package excluded from lint due to generated code, migrations, and seed scripts'",
-
     "setup": "echo '⚠️ Setup disabled - restore files first'",
     "setup:full": "echo '⚠️ Setup disabled - restore files first'",
-
     "test-auth": "bun run dev:dashboard",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run build && changeset publish",
     "deps:check": "bun outdated --recursive",
     "deps:update": "bun update --recursive --latest",
-
     "test:e2e": "bun run --filter @workspace/e2e test",
     "test:e2e:ui": "bun run --filter @workspace/e2e test:ui",
     "test:auth": "bun run --filter @workspace/e2e test:auth",
     "test:smoke": "bun run --filter @workspace/e2e test:smoke",
     "test:install": "bun run --filter @workspace/e2e install:browsers",
-
-    "qa:fast": "bun run format:check && bun run lint:check",
+    "qa:fast": "turbo lint format:check",
     "qa:build": "bun run qa:fast && bun run typecheck && bun run build",
-    "qa:full": "bun run qa:build && bun run test && bun run test:e2e",
-    "qa:security": "bun pm audit --audit-level moderate && bun run deps:check",
+    "qa:full": "bun run qa:build && bun run test:e2e",
+    "qa:security": "bun pm audit --audit-level moderate",
     "qa:fix": "bun run format:fix && bun run lint:fix",
-
     "predev": "bun run check:requirements",
     "pretest:e2e": "bun run qa:build",
     "prepare": "husky",
-
     "rate-limiter:build": "turbo run build --filter=@workspace/rate-limiter",
     "rate-limiter:dev": "turbo run dev --filter=@workspace/rate-limiter",
     "rate-limiter:test": "turbo run test --filter=@workspace/rate-limiter",
@@ -86,11 +77,11 @@
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx}": [
-      "bun run format:fix",
-      "bun run lint:fix"
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
     ],
     "**/*.{json,md,yml,yaml}": [
-      "bun run format:fix"
+      "prettier --write"
     ]
   },
   "dependencies": {

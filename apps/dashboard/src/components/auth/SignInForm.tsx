@@ -1,7 +1,7 @@
 'use client';
 
 import { signInSchema } from '@workspace/auth';
-import { Button, FormField, Input } from '@workspace/ui';
+import { Button, FormField } from '@workspace/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -30,10 +30,10 @@ export function SignInForm() {
       if (response.ok) {
         router.push('/dashboard');
       } else {
-        setError('Invalid email or password.');
+        setError('Invalid email or password. Please try again.');
       }
     } catch {
-      setError('Please check your email and password.');
+      setError('Please enter valid credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -41,25 +41,23 @@ export function SignInForm() {
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-      <FormField label="Email address" required>
-        <Input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Email address"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        required
+      />
 
-      <FormField label="Password" required>
-        <Input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Password"
+        type="password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        placeholder="Enter your password"
+        required
+      />
 
       {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 
@@ -75,6 +73,15 @@ export function SignInForm() {
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Signing in...' : 'Sign in'}
       </Button>
+
+      <div className="text-center">
+        <Link
+          href="/auth/sign-up"
+          className="text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          Don&apost have an account? Sign up
+        </Link>
+      </div>
     </form>
   );
 }

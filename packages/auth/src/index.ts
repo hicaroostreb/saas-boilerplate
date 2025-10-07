@@ -1,4 +1,4 @@
-// packages/auth/src/index.ts - PRAGMATIC ARCHITECTURE EXPORTS
+// packages/auth/src/index.ts - CLIENT-SAFE EXPORTS ONLY
 
 // ============================================
 // FLOWS (PRIMARY API)
@@ -15,13 +15,13 @@ export {
 } from './flows';
 
 // ============================================
-// SCHEMAS & TYPES
+// SCHEMAS & TYPES (CLIENT-SAFE)
 // ============================================
 export * from './types';
 export * from './types/schemas';
 
 // ============================================
-// NEXTAUTH INTEGRATION (WORKING)
+// NEXTAUTH CLIENT-SIDE ONLY
 // ============================================
 export { authConfig } from './lib/nextauth/config';
 export {
@@ -32,15 +32,11 @@ export {
   signOut,
   signOutAction,
 } from './lib/nextauth/handlers';
-export { getServerSession, requireAuth } from './server';
+
+// ❌ REMOVIDO: export { getServerSession, requireAuth } from './server';
 
 // ============================================
-// CORE SERVICES (ENTERPRISE)
-// ============================================
-export * from './core/services';
-
-// ============================================
-// UTILS
+// UTILS (CLIENT-SAFE)
 // ============================================
 export * from './utils';
 

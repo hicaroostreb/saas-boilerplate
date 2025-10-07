@@ -1,5 +1,4 @@
 // Remova exports que não existem ainda
-export * from './auth';
 export * from './hooks';
 export * from './patterns';
 export * from './primitives';

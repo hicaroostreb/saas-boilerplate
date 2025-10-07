@@ -1,26 +1,27 @@
-import { getServerSession } from '@workspace/auth';
-import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@workspace/auth/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { priceId } = await req.json();
+    const body = await request.json();
 
-    // Create Stripe checkout session
-    // TODO: Implementation with @workspace/billing
-    console.warn('Creating checkout session for priceId:', priceId);
+    // TODO: Implementation with Stripe
+    console.warn('Stripe checkout:', body, 'for user:', session.user.id);
 
     return NextResponse.json({
-      url: 'https://checkout.stripe.com/session-id',
-      sessionId: 'session-id',
+      success: true,
+      message: 'Checkout session created',
     });
-  } catch {
+  } catch (error) {
+    console.error('Stripe checkout error:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
