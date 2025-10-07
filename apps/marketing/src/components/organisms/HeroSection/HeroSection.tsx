@@ -42,7 +42,7 @@ export const HeroSection = ({
   },
   secondaryAction = {
     text: 'Talk to sales',
-    href: routes.marketing.contact || '#',
+    href: routes.marketing.contact ?? '#',
   },
 }: HeroSectionProps) => {
   return (

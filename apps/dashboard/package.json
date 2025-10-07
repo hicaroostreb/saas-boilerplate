@@ -20,11 +20,14 @@
     "dev:debug": "NODE_OPTIONS='--inspect' next dev --port 3001"
   },
   "dependencies": {
+    "@workspace/auth": "workspace:*",
+    "@workspace/database": "workspace:*",
     "@workspace/common": "workspace:*",
     "@workspace/routes": "workspace:*",
     "@workspace/ui": "workspace:*",
     "nanoid": "^5.0.4",
     "next": "^15.5.4",
+    "next-auth": "^5.0.0-beta.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "next-safe-action": "^7.9.8"

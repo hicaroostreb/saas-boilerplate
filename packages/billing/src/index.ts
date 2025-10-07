@@ -1,24 +1,9 @@
-/**
- * @workspace/billing - Enterprise Billing Management
- * Single Point of Interface following SOLID principles
- */
-
-// Plan definitions
-export * from './plans';
-
-// Subscription management
-export * from './subscriptions';
-
-// Payment processing
-export * from './payments';
-
-// Billing events
 export * from './events';
-
-// Utilities
+export * from './payments';
+export * from './plans';
+export * from './subscriptions';
 export * from './utils';
 
-// Stripe integration
 export {
   createCheckoutSession,
   createCustomerPortalSession,
@@ -28,8 +13,6 @@ export {
   stripe,
 } from './lib/payments/stripe';
 
-// Server actions
-export * from './lib/payments/actions';
+export * from './lib/payments/action';
 
-// Convenience grouped exports
 export { billing } from './utils';

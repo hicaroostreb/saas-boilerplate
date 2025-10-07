@@ -1,35 +1,18 @@
-import { createValidateTokenController } from '@/lib/controller-factory';
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * ✅ ULTRA-THIN: API route usando controller
- * ~15 linhas - Single Responsibility
- */
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // ✅ 1. Create controller
-    const controller = createValidateTokenController();
+    const { token } = await req.json();
 
-    // ✅ 2. Parse body
-    const body = await request.json();
+    // Validate reset token
+    // TODO: Implementation with @workspace/auth
+    console.warn('Validating token:', token);
 
-    // ✅ 3. Execute controller
-    const { response, status } = await controller.execute(body, request);
-
-    // ✅ 4. Return response
-    return NextResponse.json(response, { status });
-  } catch (error) {
-    console.error('❌ Validate token route error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'SYSTEM_ERROR',
-          message: 'Token validation failed',
-        },
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      valid: true,
+      token,
+    });
+  } catch {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
   }
 }

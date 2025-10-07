@@ -18,10 +18,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@types/*": ["./src/types/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
       "@workspace/common": ["../../packages/common/src"],
       "@workspace/routes": ["../../packages/routes/src"],
@@ -42,7 +42,10 @@
     "../../packages/ui/src/**/*.ts",
     "../../packages/ui/src/**/*.tsx",
     "../../packages/common/src/**/*.ts",
-    "../../packages/routes/src/**/*.ts"
+    "../../packages/routes/src/**/*.ts",
+    "../../packages/auth/src/**/*.ts",
+    "../../packages/database/src/**/*.ts",
+    "middleware.ts"
   ],
   "exclude": ["node_modules"]
 }

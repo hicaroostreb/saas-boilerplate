@@ -1,8 +1,3 @@
-/**
- * Payment Processing & Gateway Integration
- * SRP: Processar pagamentos e integrar com gateways
- */
-
 import type { Plan } from './plans';
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'canceled';
@@ -25,7 +20,6 @@ export interface ProcessPaymentOptions {
   method: PaymentMethod;
 }
 
-// Strategy Pattern para diferentes gateways
 export interface PaymentGateway {
   processPayment(options: ProcessPaymentOptions): Promise<Payment>;
   refundPayment(paymentId: string): Promise<void>;
@@ -34,13 +28,10 @@ export interface PaymentGateway {
 export const processPayment = async (
   gateway: PaymentGateway,
   options: ProcessPaymentOptions
-): Promise<Payment> => {
-  return gateway.processPayment(options);
-};
+): Promise<Payment> => gateway.processPayment(options);
 
-// Mock gateway para desenvolvimento
 export const createMockGateway = (): PaymentGateway => ({
-  processPayment: async ({ subscriptionId, plan }): Promise<Payment> => ({
+  processPayment: async ({ subscriptionId, plan }) => ({
     id: `pay_${Date.now()}`,
     subscriptionId,
     amountCents: plan.priceCents,
@@ -50,7 +41,5 @@ export const createMockGateway = (): PaymentGateway => ({
     createdAt: new Date(),
     processedAt: new Date(),
   }),
-  refundPayment: async (_paymentId: string): Promise<void> => {
-    // Mock refund
-  },
+  refundPayment: async (_paymentId: string): Promise<void> => {},
 });

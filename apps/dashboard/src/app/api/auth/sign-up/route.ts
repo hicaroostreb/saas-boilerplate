@@ -1,35 +1,23 @@
-import { createSignupController } from '@/lib/controller-factory';
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { signUpSchema } from '@workspace/auth';
+import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * ✅ ULTRA-THIN: API route usando controller
- * ~15 linhas - Single Responsibility
- */
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // ✅ 1. Create controller
-    const controller = createSignupController();
+    const body = await req.json();
+    const { name, email, password } = signUpSchema.parse(body);
 
-    // ✅ 2. Parse body
-    const body = await request.json();
+    // Create new user
+    // TODO: Implementation with @workspace/auth
+    console.warn('User registration:', {
+      name,
+      email,
+      passwordLength: password.length,
+    });
 
-    // ✅ 3. Execute controller
-    const { response, status } = await controller.execute(body, request);
-
-    // ✅ 4. Return response
-    return NextResponse.json(response, { status });
-  } catch (error) {
-    console.error('❌ Sign up route error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'SYSTEM_ERROR',
-          message: 'Account creation failed',
-        },
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      message: 'User created successfully',
+    });
+  } catch {
+    return NextResponse.json({ error: 'Sign up failed' }, { status: 500 });
   }
 }

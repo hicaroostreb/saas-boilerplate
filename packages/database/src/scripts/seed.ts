@@ -41,15 +41,16 @@ if (!envLoaded) {
 }
 
 // ============================================
-// IMPORTS
+// IMPORTS - FIXED PATHS
 // ============================================
 
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-import { closeConnection, db, healthCheck } from '../connection/index.js';
-import { users } from '../schemas/auth/index.js';
-import { memberships, organizations } from '../schemas/business/index.js';
-import { authAuditLogs } from '../schemas/security/index.js';
+// ✅ CORRIGIDO: Remover extensões .js e usar paths corretos
+import { closeConnection, db, healthCheck } from '../connection';
+import { users } from '../schemas/auth';
+import { memberships, organizations } from '../schemas/business';
+import { authAuditLogs } from '../schemas/security';
 
 // ============================================
 // MINIMAL SEED CONFIGURATION

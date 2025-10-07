@@ -1,16 +1,10 @@
-/**
- * Billing Utilities & Helpers
- * ISP: Funções específicas e reutilizáveis
- */
-
 import { PLANS, type Plan, type PlanId } from './plans';
 import type { Subscription } from './subscriptions';
 
 export const formatPrice = (cents: number, currency = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(cents / 100);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
+    cents / 100
+  );
 };
 
 export const calculateProration = (
@@ -23,17 +17,13 @@ export const calculateProration = (
   return Math.round((newDailyRate - oldDailyRate) * daysRemaining);
 };
 
-export const validatePlanId = (planId: string): planId is PlanId => {
-  return planId in PLANS;
-};
+export const validatePlanId = (planId: string): planId is PlanId =>
+  planId in PLANS;
 
-export const getPlan = (planId: PlanId): Plan => {
-  return PLANS[planId] as Plan;
-};
+export const getPlan = (planId: PlanId): Plan => PLANS[planId] as Plan;
 
-export const isActiveSub = (subscription: Subscription): boolean => {
-  return subscription.status === 'active' || subscription.status === 'trialing';
-};
+export const isActiveSub = (subscription: Subscription): boolean =>
+  subscription.status === 'active' || subscription.status === 'trialing';
 
 export const getDaysUntilRenewal = (subscription: Subscription): number => {
   if (!subscription.endsAt) return 0;
@@ -42,7 +32,6 @@ export const getDaysUntilRenewal = (subscription: Subscription): number => {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
-// Convenience grouped utilities
 export const billing = {
   format: { price: formatPrice },
   calculate: { proration: calculateProration },

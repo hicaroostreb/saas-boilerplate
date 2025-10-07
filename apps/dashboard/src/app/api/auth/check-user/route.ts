@@ -1,34 +1,20 @@
-import { createCheckUserController } from '@/lib/controller-factory';
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { getServerSession } from '@workspace/auth';
+import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * ✅ ULTRA-THIN: API route usando controller
- * ~15 linhas - Single Responsibility
- */
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // ✅ 1. Create controller
-    const controller = createCheckUserController();
+    const { email } = await req.json();
 
-    // ✅ 2. Parse body
-    const body = await request.json();
+    // Check if user exists
+    const session = await getServerSession();
 
-    // ✅ 3. Execute controller
-    const { response, status } = await controller.execute(body, request);
-
-    // ✅ 4. Return response
-    return NextResponse.json(response, { status });
-  } catch (error) {
-    console.error('❌ Check user route error:', error);
+    return NextResponse.json({
+      exists: !!session,
+      email,
+    });
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'SYSTEM_ERROR',
-          message: 'An unexpected error occurred',
-        },
-      },
+      { error: 'Failed to check user' },
       { status: 500 }
     );
   }

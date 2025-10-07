@@ -11,6 +11,65 @@ export * from './config.types';
 // Não exportar session.types para evitar conflitos com base
 
 // ============================================
+// AUTH CONTEXT TYPES (COMPLETE WITH ALL PROPERTIES)
+// ============================================
+export interface AuthContext {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    image?: string;
+    isActive: boolean;
+    isSuperAdmin: boolean;
+  };
+  session: {
+    id: string;
+    userId: string;
+    expires: Date;
+    enterprise: {
+      organizationId: string | null;
+      role: string;
+      roles: string[];
+      permissions: string[];
+      securityLevel: 'normal' | 'elevated' | 'high_risk' | 'critical';
+      riskScore: number;
+    };
+  };
+}
+
+export interface AuthContextInput {
+  organizationId?: string;
+  deviceId?: string;
+}
+
+export interface SessionWithUser {
+  id: string;
+  userId: string;
+  expires: Date;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    image?: string;
+    isActive: boolean;
+    isSuperAdmin: boolean;
+  };
+}
+
+export interface EnhancedAuthContext extends AuthContext {
+  device?: {
+    id: string;
+    fingerprint: string;
+  };
+  security?: {
+    riskScore: number;
+    securityLevel: string;
+    lastLoginAt: Date;
+  };
+}
+
+// ============================================
 // UTILITY TYPES
 // ============================================
 export type DeepPartial<T> = {

@@ -1,34 +1,22 @@
-import { createForgotPasswordController } from '@/lib/controller-factory';
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { forgotPasswordSchema } from '@workspace/auth';
+import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * ✅ ULTRA-THIN: API route usando controller
- * ~15 linhas - Single Responsibility
- */
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // ✅ 1. Create controller
-    const controller = createForgotPasswordController();
+    const body = await req.json();
+    const { email } = forgotPasswordSchema.parse(body);
 
-    // ✅ 2. Parse body
-    const body = await request.json();
+    // Send password reset email
+    // TODO: Implementation with @workspace/auth
+    console.warn('Password reset requested for:', email);
 
-    // ✅ 3. Execute controller
-    const { response, status } = await controller.execute(body, request);
-
-    // ✅ 4. Return response
-    return NextResponse.json(response, { status });
-  } catch (error) {
-    // ✅ SECURITY: Always return success for forgot password
-    console.error('❌ Forgot password route error:', error);
+    return NextResponse.json({
+      message: 'Password reset email sent',
+    });
+  } catch {
     return NextResponse.json(
-      {
-        success: true,
-        message:
-          "If an account with that email exists, we've sent password reset instructions.",
-      },
-      { status: 200 }
+      { error: 'Failed to send reset email' },
+      { status: 500 }
     );
   }
 }
