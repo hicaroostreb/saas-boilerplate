@@ -5,6 +5,15 @@
 // ============================================
 export * from './core/flows';
 
+// ✅ NEW: Flow exports (CRÍTICO!)
+export {
+  checkEmailAvailabilityFlow,
+  requestPasswordResetFlow,
+  resetPasswordFlow,
+  signUpFlow,
+  validateResetTokenFlow,
+} from './flows';
+
 // ============================================
 // SCHEMAS & TYPES (CLIENT-SAFE)
 // ============================================
@@ -30,6 +39,19 @@ export {
 // UTILS (CLIENT-SAFE)
 // ============================================
 export * from './utils';
+
+// ✅ NEW: Flow types
+export type {
+  CheckEmailAvailabilityRequest,
+  CheckEmailAvailabilityResult,
+  RequestPasswordResetFlowRequest,
+  ResetPasswordFlowRequest,
+  ResetPasswordFlowResult,
+  SignUpFlowRequest,
+  SignUpFlowResult,
+  ValidateResetTokenFlowRequest,
+  ValidateResetTokenFlowResult,
+} from './flows';
 
 // ============================================
 // CONSTANTS

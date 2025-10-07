@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn';
 export interface ThemeToggleProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'outline' | 'ghost';
+  variant?: 'outline' | 'ghost' | 'template';
 }
 
 /**
@@ -28,7 +28,7 @@ export interface ThemeToggleProps {
 export function ThemeToggle({
   className,
   size = 'md',
-  variant = 'outline',
+  variant = 'template',
 }: ThemeToggleProps): JSX.Element {
   const { theme, toggleTheme, mounted } = useTheme();
 
@@ -37,7 +37,7 @@ export function ThemeToggle({
       <ThemeToggleSkeleton
         size={size}
         variant={variant}
-        className={className || undefined}
+        className={className}
       />
     );
   }
@@ -150,7 +150,7 @@ function ThemeToggleSkeleton({
   className,
 }: {
   size: 'sm' | 'md' | 'lg';
-  variant: 'outline' | 'ghost';
+  variant: 'outline' | 'ghost' | 'template';
   className?: string;
 }): JSX.Element {
   return (
