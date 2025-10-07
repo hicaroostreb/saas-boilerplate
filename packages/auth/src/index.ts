@@ -5,6 +5,15 @@
 // ============================================
 export * from './core/flows';
 
+// ✅ NEW: Flow exports (CRÍTICO!)
+export {
+  checkEmailAvailabilityFlow,
+  requestPasswordResetFlow,
+  resetPasswordFlow,
+  signUpFlow,
+  validateResetTokenFlow,
+} from './flows';
+
 // ============================================
 // SCHEMAS & TYPES
 // ============================================
@@ -21,6 +30,19 @@ export { auth, handlers, signIn, signOut } from './lib/nextauth/handlers';
 // UTILS
 // ============================================
 export * from './utils';
+
+// ✅ NEW: Flow types
+export type {
+  CheckEmailAvailabilityRequest,
+  CheckEmailAvailabilityResult,
+  RequestPasswordResetFlowRequest,
+  ResetPasswordFlowRequest,
+  ResetPasswordFlowResult,
+  SignUpFlowRequest,
+  SignUpFlowResult,
+  ValidateResetTokenFlowRequest,
+  ValidateResetTokenFlowResult,
+} from './flows';
 
 // ============================================
 // CONSTANTS

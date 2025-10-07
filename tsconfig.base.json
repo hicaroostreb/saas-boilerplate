@@ -84,6 +84,8 @@
       "@workspace/ui/*": ["packages/ui/src/*"],
       "@workspace/rate-limiter": ["packages/rate-limiter/src"],
       "@workspace/rate-limiter/*": ["packages/rate-limiter/src/*"],
+      "@workspace/webhooks": ["packages/webhooks/src"],
+      "@workspace/webhooks/*": ["packages/webhooks/src/*"],
       "@workspace/e2e": ["packages/e2e/src"],
       "@workspace/e2e/*": ["packages/e2e/src/*"],
 
