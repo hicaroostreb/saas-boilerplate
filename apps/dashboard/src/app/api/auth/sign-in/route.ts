@@ -6,10 +6,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = signInSchema.parse(body);
 
-    const result = await signInAction({ email, password });
+    // Criar FormData para signInAction
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+
+    const result = await signInAction(formData);
 
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    console.error('Sign in API error:', error);
     return NextResponse.json({ error: 'Sign in failed' }, { status: 401 });
   }
 }

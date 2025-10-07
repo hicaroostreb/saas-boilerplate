@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, FormField, Input } from '@workspace/ui';
+import { Button, FormField } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -51,22 +51,24 @@ export function OrganizationSetup() {
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-      <FormField label="Organization name" required>
-        <Input
-          type="text"
-          value={name}
-          onChange={handleNameChange}
-          placeholder="Enter organization name"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Organization name"
+        type="text"
+        value={name}
+        onChange={handleNameChange}
+        placeholder="Enter organization name"
+        required
+      />
 
-      <FormField label="Organization URL" required>
+      <div className="space-y-2">
+        <label className="text-sm font-medium leading-none">
+          Organization URL *
+        </label>
         <div className="flex">
           <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
             yourapp.com/
           </span>
-          <Input
+          <FormField
             type="text"
             value={slug}
             onChange={e => setSlug(e.target.value)}
@@ -75,7 +77,7 @@ export function OrganizationSetup() {
             required
           />
         </div>
-      </FormField>
+      </div>
 
       {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 

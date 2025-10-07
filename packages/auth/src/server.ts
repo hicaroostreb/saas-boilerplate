@@ -1,6 +1,6 @@
-// packages/auth/src/server.ts - SERVER EXPORTS (updated)
+// packages/auth/src/server.ts - SERVER EXPORTS (CLEAN)
 
-// NextAuth integration
+// NextAuth integration only
 export { authConfig } from './lib/nextauth/config';
 export {
   auth,
@@ -11,7 +11,7 @@ export {
   signOutAction,
 } from './lib/nextauth/handlers';
 
-// Server-side helpers
+// Server-side helpers only
 export async function getServerSession() {
   const { auth } = await import('./lib/nextauth/handlers');
   return await auth();
@@ -25,7 +25,7 @@ export async function requireAuth() {
   return session;
 }
 
-// Enterprise services (backward compatibility)
-export * from './core/services/audit.service';
-export * from './core/services/password.service';
-export * from './core/services/security.service';
+// ❌ REMOVIDO: Services exports que causam database leak
+// export * from './core/services/audit.service';
+// export * from './core/services/password.service';
+// export * from './core/services/security.service';

@@ -1,10 +1,12 @@
 interface SettingsPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
-export default function SettingsPage({ params }: SettingsPageProps) {
+export default async function SettingsPage({ params }: SettingsPageProps) {
+  const { slug } = await params;
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,7 +22,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
         <h2 className="text-lg font-medium text-gray-900 mb-4">
           General Settings
         </h2>
-        <p className="text-gray-600">Organization settings for {params.slug}</p>
+        <p className="text-gray-600">Organization settings for {slug}</p>
       </div>
     </div>
   );

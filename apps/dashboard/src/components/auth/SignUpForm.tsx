@@ -1,7 +1,8 @@
 'use client';
 
 import { signUpSchema } from '@workspace/auth';
-import { Button, FormField, Input } from '@workspace/ui';
+import { Button, FormField } from '@workspace/ui';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -41,41 +42,47 @@ export function SignUpForm() {
 
   return (
     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-      <FormField label="Full name" required>
-        <Input
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Enter your full name"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Full name"
+        type="text"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        placeholder="Enter your full name"
+        required
+      />
 
-      <FormField label="Email address" required>
-        <Input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Email address"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        required
+      />
 
-      <FormField label="Password" required>
-        <Input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          required
-        />
-      </FormField>
+      <FormField
+        label="Password"
+        type="password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        placeholder="Enter your password"
+        required
+      />
 
       {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Creating account...' : 'Create account'}
       </Button>
+
+      <div className="text-center">
+        <Link
+          href="/auth/sign-in"
+          className="text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          Already have an account? Sign in
+        </Link>
+      </div>
     </form>
   );
 }

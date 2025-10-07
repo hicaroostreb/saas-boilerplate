@@ -2,12 +2,14 @@ import { InvitationForm } from '@/components/organizations/InvitationForm';
 import { MembersList } from '@/components/organizations/MembersList';
 
 interface MembersPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
-export default function MembersPage({ params }: MembersPageProps) {
+export default async function MembersPage({ params }: MembersPageProps) {
+  const { slug } = await params;
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,8 +19,8 @@ export default function MembersPage({ params }: MembersPageProps) {
         </p>
       </div>
 
-      <InvitationForm organizationSlug={params.slug} />
-      <MembersList organizationSlug={params.slug} />
+      <InvitationForm organizationSlug={slug} />
+      <MembersList organizationSlug={slug} />
     </div>
   );
 }

@@ -1,20 +1,19 @@
-import { getServerSession } from '@workspace/auth';
-import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@workspace/auth/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function GET() {
   try {
-    const { email } = await req.json();
-
-    // Check if user exists
     const session = await getServerSession();
 
-    return NextResponse.json({
-      exists: !!session,
-      email,
-    });
-  } catch {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    return NextResponse.json({ user: session.user });
+  } catch (error) {
+    console.error('Auth check error:', error);
     return NextResponse.json(
-      { error: 'Failed to check user' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
