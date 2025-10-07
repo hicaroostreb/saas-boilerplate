@@ -24,7 +24,6 @@
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
-    "@workspace/billing": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/common": "workspace:*",

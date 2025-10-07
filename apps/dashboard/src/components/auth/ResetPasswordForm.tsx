@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { resetPasswordSchema } from '@workspace/auth';
+import { Button, FormField, Input } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
-import { Button, Input, FormField } from '@workspace/ui';
-import { resetPasswordSchema } from '@/schemas/auth/reset-password-schema';
+import { useState } from 'react';
 
 interface ResetPasswordFormProps {
   token: string;
@@ -21,8 +21,12 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     setIsLoading(true);
 
     try {
-      const data = resetPasswordSchema.parse({ token, password, confirmPassword });
-      
+      const data = resetPasswordSchema.parse({
+        token,
+        password,
+        confirmPassword,
+      });
+
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,7 +52,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         <Input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           placeholder="Enter new password"
           required
         />
@@ -58,23 +62,17 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         <Input
           type="password"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={e => setConfirmPassword(e.target.value)}
           placeholder="Confirm new password"
           required
         />
       </FormField>
 
       {message && (
-        <div className="text-sm text-center text-gray-600">
-          {message}
-        </div>
+        <div className="text-sm text-center text-gray-600">{message}</div>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Resetting...' : 'Reset Password'}
       </Button>
     </form>

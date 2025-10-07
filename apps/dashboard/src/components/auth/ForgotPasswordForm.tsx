@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { forgotPasswordSchema } from '@workspace/auth';
+import { Button, FormField, Input } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
-import { Button, Input, FormField } from '@workspace/ui';
-import { forgotPasswordSchema } from '@/schemas/auth/forgot-password-schema';
+import { useState } from 'react';
 
 export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
 
     try {
       const data = forgotPasswordSchema.parse({ email });
-      
+
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,23 +42,17 @@ export function ForgotPasswordForm() {
         <Input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           placeholder="Enter your email"
           required
         />
       </FormField>
 
       {message && (
-        <div className="text-sm text-center text-gray-600">
-          {message}
-        </div>
+        <div className="text-sm text-center text-gray-600">{message}</div>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Sending...' : 'Send Reset Email'}
       </Button>
 

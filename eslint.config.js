@@ -23,6 +23,7 @@ export default [
   // ✅ PERFORMANCE: Ignores otimizados
   {
     ignores: [
+      '**/*.d.ts',
       '**/node_modules/**',
       '**/dist/**',
       '**/.next/**',

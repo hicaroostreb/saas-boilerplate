@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@workspace/auth';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
-    
+
     // Check if user exists
     const session = await getServerSession();
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       exists: !!session,
-      email
+      email,
     });
   } catch {
     return NextResponse.json(

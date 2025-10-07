@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { signUpSchema } from '@workspace/auth';
+import { Button, FormField, Input } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
-import { Button, Input, FormField } from '@workspace/ui';
-import { signUpSchema } from '@/schemas/auth/sign-up-schema';
+import { useState } from 'react';
 
 export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +20,7 @@ export function SignUpForm() {
 
     try {
       const data = signUpSchema.parse({ name, email, password });
-      
+
       const response = await fetch('/api/auth/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,7 @@ export function SignUpForm() {
         <Input
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={e => setName(e.target.value)}
           placeholder="Enter your full name"
           required
         />
@@ -55,7 +55,7 @@ export function SignUpForm() {
         <Input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           placeholder="Enter your email"
           required
         />
@@ -65,23 +65,15 @@ export function SignUpForm() {
         <Input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           placeholder="Enter your password"
           required
         />
       </FormField>
 
-      {error && (
-        <div className="text-sm text-red-600 text-center">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Creating account...' : 'Create account'}
       </Button>
     </form>

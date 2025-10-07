@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Subscription {
   id: string;
@@ -19,8 +19,10 @@ export function useSubscription(organizationSlug: string) {
     const fetchSubscription = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/organizations/${organizationSlug}/subscription`);
-        
+        const response = await fetch(
+          `/api/organizations/${organizationSlug}/subscription`
+        );
+
         if (response.ok) {
           const data = await response.json();
           setSubscription(data.subscription);
@@ -43,9 +45,12 @@ export function useSubscription(organizationSlug: string) {
   }, [organizationSlug]);
 
   const cancelSubscription = async () => {
-    const response = await fetch(`/api/organizations/${organizationSlug}/subscription/cancel`, {
-      method: 'POST',
-    });
+    const response = await fetch(
+      `/api/organizations/${organizationSlug}/subscription/cancel`,
+      {
+        method: 'POST',
+      }
+    );
 
     if (response.ok) {
       const updatedSubscription = await response.json();

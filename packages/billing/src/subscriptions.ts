@@ -1,8 +1,3 @@
-/**
- * Subscription Management & Lifecycle
- * SRP: CRUD e gestão de estados de assinaturas
- */
-
 import type { PlanId } from './plans';
 
 export type SubscriptionStatus =
@@ -24,21 +19,19 @@ export interface Subscription {
   readonly canceledAt: Date | null;
 }
 
-export interface CreateSubscriptionOptions {
-  teamId: string;
-  planId: PlanId;
-  stripeSubscriptionId?: string | null;
-  stripeCustomerId?: string | null;
-  trialDays?: number;
-}
-
 export const createSubscription = ({
   teamId,
   planId,
   stripeSubscriptionId = null,
   stripeCustomerId = null,
   trialDays = 0,
-}: CreateSubscriptionOptions): Subscription => ({
+}: {
+  teamId: string;
+  planId: PlanId;
+  stripeSubscriptionId?: string | null;
+  stripeCustomerId?: string | null;
+  trialDays?: number;
+}): Subscription => ({
   id: `sub_${Date.now()}`,
   teamId,
   planId,

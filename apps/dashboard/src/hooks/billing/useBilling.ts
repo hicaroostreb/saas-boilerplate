@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface BillingInfo {
   plan: string;
@@ -18,8 +18,10 @@ export function useBilling(organizationSlug: string) {
     const fetchBilling = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/organizations/${organizationSlug}/billing`);
-        
+        const response = await fetch(
+          `/api/organizations/${organizationSlug}/billing`
+        );
+
         if (response.ok) {
           const data = await response.json();
           setBilling(data.billing);

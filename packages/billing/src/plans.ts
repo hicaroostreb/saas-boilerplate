@@ -1,8 +1,3 @@
-/**
- * Plan Definitions & Pricing Models
- * SRP: Única responsabilidade - definir planos e estruturas de preço
- */
-
 export interface Plan {
   readonly id: string;
   readonly name: string;
@@ -81,22 +76,8 @@ export const PLANS = {
 } as const satisfies Record<string, Plan>;
 
 export type PlanId = keyof typeof PLANS;
-export type PlanInterval = Plan['interval'];
 
-// Utility functions para trabalhar com planos
 export const isContactOnlyPlan = (planId: PlanId): boolean => {
   const plan = PLANS[planId] as Plan;
   return Boolean(plan.isContactOnly);
-};
-
-export const getPurchasablePlans = (): Array<[PlanId, Plan]> => {
-  return (Object.entries(PLANS) as Array<[PlanId, Plan]>).filter(
-    ([_, plan]) => !(plan as Plan).isContactOnly
-  );
-};
-
-export const getContactOnlyPlans = (): Array<[PlanId, Plan]> => {
-  return (Object.entries(PLANS) as Array<[PlanId, Plan]>).filter(([_, plan]) =>
-    Boolean((plan as Plan).isContactOnly)
-  );
 };

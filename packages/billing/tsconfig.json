@@ -1,28 +1,15 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tooling/typescript-config/base.json",
   "compilerOptions": {
-    "composite": true,
-    "rootDir": "src",
-    "outDir": "dist",
-    "strict": true,
-    "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexedAccess": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"],
-      "@workspace/database": ["../database/src"],
-      "@workspace/database/*": ["../database/src/*"],
-      "@workspace/auth": ["../auth/src"],
-      "@workspace/auth/*": ["../auth/src/*"],
-      "@workspace/common": ["../common/src"],
-      "@workspace/common/*": ["../common/src/*"]
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@lib/*": ["src/lib/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@types/*": ["src/types/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../database" }, { "path": "../auth" }, { "path": "../common" }]
+  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
 }

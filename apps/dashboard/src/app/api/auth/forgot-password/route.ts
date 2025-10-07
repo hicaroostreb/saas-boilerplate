@@ -1,5 +1,5 @@
+import { forgotPasswordSchema } from '@workspace/auth';
 import { NextRequest, NextResponse } from 'next/server';
-import { forgotPasswordSchema } from '@/schemas/auth/forgot-password-schema';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,9 +9,9 @@ export async function POST(req: NextRequest) {
     // Send password reset email
     // TODO: Implementation with @workspace/auth
     console.warn('Password reset requested for:', email);
-    
-    return NextResponse.json({ 
-      message: 'Password reset email sent' 
+
+    return NextResponse.json({
+      message: 'Password reset email sent',
     });
   } catch {
     return NextResponse.json(

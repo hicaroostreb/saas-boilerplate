@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Member {
   id: string;
@@ -19,8 +19,10 @@ export function useMembers(organizationSlug: string) {
     const fetchMembers = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/organizations/${organizationSlug}/members`);
-        
+        const response = await fetch(
+          `/api/organizations/${organizationSlug}/members`
+        );
+
         if (response.ok) {
           const data = await response.json();
           setMembers(data.members);

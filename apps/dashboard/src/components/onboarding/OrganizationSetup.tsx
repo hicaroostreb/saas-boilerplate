@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Button, FormField, Input } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
-import { Button, Input, FormField } from '@workspace/ui';
+import { useState } from 'react';
 
 export function OrganizationSetup() {
   const [name, setName] = useState('');
@@ -69,7 +69,7 @@ export function OrganizationSetup() {
           <Input
             type="text"
             value={slug}
-            onChange={(e) => setSlug(e.target.value)}
+            onChange={e => setSlug(e.target.value)}
             placeholder="organization-slug"
             className="rounded-l-none"
             required
@@ -77,11 +77,7 @@ export function OrganizationSetup() {
         </div>
       </FormField>
 
-      {error && (
-        <div className="text-sm text-red-600 text-center">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 
       <Button
         type="submit"

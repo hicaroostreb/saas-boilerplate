@@ -104,7 +104,7 @@
         "tsconfig.json",
         "package.json"
       ],
-      "outputs": [".eslintcache"],
+      "outputs": [],
       "cache": true,
       "persistent": false,
       "outputLogs": "errors-only"

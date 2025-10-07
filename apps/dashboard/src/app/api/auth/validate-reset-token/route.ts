@@ -7,15 +7,12 @@ export async function POST(req: NextRequest) {
     // Validate reset token
     // TODO: Implementation with @workspace/auth
     console.warn('Validating token:', token);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       valid: true,
-      token
+      token,
     });
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid token' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
   }
 }

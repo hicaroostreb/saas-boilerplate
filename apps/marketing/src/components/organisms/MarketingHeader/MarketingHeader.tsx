@@ -14,7 +14,7 @@ export const MarketingHeader = ({ className }: MarketingHeaderProps) => {
 
   return (
     <section
-      className={`sticky inset-x-0 top-0 z-40 border-b bg-background py-4 ${className || ''}`}
+      className={`sticky inset-x-0 top-0 z-40 border-b bg-background py-4 ${className ?? ''}`}
     >
       <div className="container">
         {/* Desktop Navigation */}

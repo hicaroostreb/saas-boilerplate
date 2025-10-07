@@ -46,7 +46,7 @@
     "@workspace/database": "workspace:*",
     "bcryptjs": "^3.0.2",
     "cookies": "^0.9.1",
-    "next-auth": "5.0.0-beta.25",
+    "next-auth": "^5.0.0-beta.29",
     "react": "^18.2.0",
     "zod": "^3.25.76"
   },

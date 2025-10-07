@@ -1,5 +1,4 @@
-import { signOutAction } from '@workspace/auth';
-import { requireAuth } from '@workspace/auth/server';
+import { requireAuth, signOutAction } from '@workspace/auth';
 
 export default async function DashboardHome() {
   const session = await requireAuth();

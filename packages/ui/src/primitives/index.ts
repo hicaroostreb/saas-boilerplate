@@ -5,6 +5,10 @@
  * Esta camada só pode importar tokens, utils e hooks.
  */
 
+// === BRANDING PRIMITIVES ===
+export { Logo, LogoIconOnly } from './Logo';
+export type { LogoProps } from './Logo';
+
 // === FORM PRIMITIVES ===
 export { Button } from './Button';
 export type { ButtonProps } from './Button';

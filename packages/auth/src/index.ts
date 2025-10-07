@@ -12,10 +12,23 @@ export * from './types';
 export * from './types/schemas';
 
 // ============================================
-// NEXTAUTH INTEGRATION
+// NEXTAUTH INTEGRATION (WORKING)
 // ============================================
 export { authConfig } from './lib/nextauth/config';
-export { auth, handlers, signIn, signOut } from './lib/nextauth/handlers';
+export {
+  auth,
+  handlers,
+  signIn,
+  signInAction,
+  signOut,
+  signOutAction,
+} from './lib/nextauth/handlers';
+export { getServerSession, requireAuth } from './server';
+
+// ============================================
+// CORE SERVICES (ENTERPRISE)
+// ============================================
+export * from './core/services';
 
 // ============================================
 // UTILS

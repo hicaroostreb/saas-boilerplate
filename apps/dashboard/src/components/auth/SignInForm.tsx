@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { signInSchema } from '@workspace/auth';
+import { Button, FormField, Input } from '@workspace/ui';
 import Link from 'next/link';
-import { Button, Input, FormField } from '@workspace/ui';
-import { signInSchema } from '@/schemas/auth/sign-in-schema';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +20,7 @@ export function SignInForm() {
 
     try {
       const data = signInSchema.parse({ email, password });
-      
+
       const response = await fetch('/api/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,7 @@ export function SignInForm() {
         <Input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           placeholder="Enter your email"
           required
         />
@@ -55,17 +55,13 @@ export function SignInForm() {
         <Input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           placeholder="Enter your password"
           required
         />
       </FormField>
 
-      {error && (
-        <div className="text-sm text-red-600 text-center">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-sm text-red-600 text-center">{error}</div>}
 
       <div className="flex items-center justify-between">
         <Link
@@ -76,11 +72,7 @@ export function SignInForm() {
         </Link>
       </div>
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Signing in...' : 'Sign in'}
       </Button>
     </form>

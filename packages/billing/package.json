@@ -16,15 +16,13 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "dev": "tsc --build --watch",
-    "lint": "eslint . --config ../../eslint.config.js",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "echo '⚠️ Tests not configured yet'",
+    "lint": "eslint .",
+    "format": "prettier --write .",
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
+    "@workspace/webhooks": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/common": "workspace:*",
@@ -33,10 +31,12 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "eslint": "^9.36.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-config-next": "^14.2.0",
     "prettier": "^3.6.2",
+    "tailwindcss": "^3.4.4",
     "typescript": "^5.9.2"
   }
 }

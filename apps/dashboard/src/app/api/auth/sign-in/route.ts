@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { signInSchema } from '@/schemas/auth/sign-in-schema';
-import { signInAction } from '@workspace/auth';
+import { signInAction, signInSchema } from '@workspace/auth';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,12 +7,9 @@ export async function POST(req: NextRequest) {
     const { email, password } = signInSchema.parse(body);
 
     const result = await signInAction({ email, password });
-    
+
     return NextResponse.json(result);
   } catch {
-    return NextResponse.json(
-      { error: 'Sign in failed' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Sign in failed' }, { status: 401 });
   }
 }

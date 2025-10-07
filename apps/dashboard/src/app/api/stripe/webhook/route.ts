@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     // Process Stripe webhook
     // TODO: Implementation with @workspace/billing
     console.warn('Processing webhook:', { bodyLength: body.length, signature });
-    
+
     return NextResponse.json({ received: true });
   } catch {
     return NextResponse.json(

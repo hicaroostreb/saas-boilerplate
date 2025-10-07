@@ -11,7 +11,13 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+}: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -58,15 +64,15 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           className="fixed inset-0 bg-black bg-opacity-50"
           onClick={onClose}
         />
-        <div className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]}`}>
+        <div
+          className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]}`}
+        >
           {title && (
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">{title}</h3>
             </div>
           )}
-          <div className="px-6 py-4">
-            {children}
-          </div>
+          <div className="px-6 py-4">{children}</div>
         </div>
       </div>
     </div>,

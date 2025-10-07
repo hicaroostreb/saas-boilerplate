@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Organization {
   id: string;
@@ -21,7 +21,7 @@ export function useOrganizations() {
       try {
         setLoading(true);
         const response = await fetch('/api/organizations');
-        
+
         if (response.ok) {
           const data = await response.json();
           setOrganizations(data.organizations);
