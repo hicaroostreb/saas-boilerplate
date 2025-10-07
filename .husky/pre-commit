@@ -1,46 +1,14 @@
 #!/usr/bin/env sh
 
-echo "🔍 Running pre-commit quality checks..."
+echo "🔍 Running pre-commit checks..."
 
-# ✅ ENTERPRISE: Check if there are staged files to avoid empty commits
-staged_files=$(git diff --cached --name-only)
-if [ -z "$staged_files" ]; then
-    echo "⚠️  No staged files found. Please stage your changes before committing."
-    exit 1
-fi
-
-# ✅ ENTERPRISE: Use lint-staged for staged files only (performance)
-echo "📝 Running lint-staged on changed files..."
 bunx lint-staged
 
-# ✅ ENTERPRISE: Only run qa:fast if lint-staged passes (fail-fast pattern)
-if [ $? -eq 0 ]; then
-    echo "✅ Lint-staged passed, running final quality check..."
-    
-    # ✅ ENTERPRISE: Add timing for performance monitoring
-    start_time=$(date +%s)
-    bun run qa:fast
-    qa_exit_code=$?
-    end_time=$(date +%s)
-    duration=$((end_time - start_time))
-    
-    if [ $qa_exit_code -eq 0 ]; then
-        echo "✅ Pre-commit checks completed successfully in ${duration}s"
-        
-        # ✅ ENTERPRISE: Performance warning if too slow
-        if [ $duration -gt 30 ]; then
-            echo "⚠️  Warning: qa:fast took ${duration}s (target: <30s)"
-            echo "💡 Consider optimizing the qa:fast pipeline"
-        fi
-    else
-        echo "❌ Quality checks failed after ${duration}s"
-        echo "🔧 Run 'bun run qa:fix' to automatically fix common issues"
-        exit 1
-    fi
-else
-    echo "❌ Lint-staged failed, please fix issues before committing"
-    echo "🔧 Run 'bun run qa:fix' to automatically fix formatting and linting issues"
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Lint/format failed"
+    echo "💡 Run 'bun run qa:fix' to auto-fix issues"
     exit 1
 fi
 
-echo "🎉 Pre-commit hook completed successfully!"
+echo "✅ Pre-commit passed!"

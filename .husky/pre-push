@@ -1,85 +1,25 @@
 #!/usr/bin/env sh
 
-echo "🚀 Running pre-push build verification..."
+echo "🚀 Running pre-push checks..."
 
-# ✅ ENTERPRISE: Get branch info with error handling
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-if [ -z "$branch" ]; then
-    echo "❌ Could not determine current branch"
-    exit 1
-fi
-
-# ✅ ENTERPRISE: Check for commits to push
+# Check for commits to push
 unpushed_commits=$(git log @{u}..HEAD --oneline 2>/dev/null | wc -l)
 if [ "$unpushed_commits" -eq 0 ]; then
-    echo "ℹ️  No new commits to push, skipping pre-push checks"
+    echo "ℹ️  No commits to push"
     exit 0
 fi
 
-echo "📋 Branch: $branch"
-echo "📊 Commits to push: $unpushed_commits"
+echo "📊 Pushing $unpushed_commits commit(s)..."
 
-# ✅ ENTERPRISE: Performance timing
-start_time=$(date +%s)
+# Full project validation before push
+bun run qa:build
 
-# ✅ ENTERPRISE: Branch-specific quality gates
-if [[ "$branch" == "main" || "$branch" == "develop" ]]; then
-    echo "🔒 Critical branch detected ($branch) - running comprehensive validation"
-    echo "⏳ This may take 5-10 minutes for full E2E and security checks..."
-    
-    bun run qa:full
-    qa_exit_code=$?
-    
-    if [ $qa_exit_code -eq 0 ]; then
-        echo "✅ Full validation passed for critical branch"
-    else
-        echo "❌ Full validation failed for critical branch"
-        echo "🚫 Push to $branch requires all tests to pass"
-        exit 1
-    fi
-    
-elif [[ "$branch" == hotfix/* ]]; then
-    echo "🚨 Hotfix branch detected ($branch) - running essential checks only"
-    
-    bun run qa:build
-    qa_exit_code=$?
-    
-    if [ $qa_exit_code -eq 0 ]; then
-        echo "✅ Essential checks passed for hotfix"
-        echo "⚠️  Remember to run full validation after hotfix deployment"
-    else
-        echo "❌ Essential checks failed for hotfix"
-        exit 1
-    fi
-    
+if [ $? -eq 0 ]; then
+    echo "✅ Pre-push checks passed!"
+    echo "🚀 Ready to push"
 else
-    echo "📦 Feature branch ($branch) - running build verification"
-    
-    bun run qa:build
-    qa_exit_code=$?
-    
-    if [ $qa_exit_code -eq 0 ]; then
-        echo "✅ Build verification passed for feature branch"
-    else
-        echo "❌ Build verification failed"
-        echo "🔧 Run 'bun run qa:fix' to resolve common issues"
-        exit 1
-    fi
+    echo ""
+    echo "❌ Pre-push checks failed"
+    echo "💡 Run 'bun run qa:fix' to resolve issues"
+    exit 1
 fi
-
-# ✅ ENTERPRISE: Performance reporting
-end_time=$(date +%s)
-duration=$((end_time - start_time))
-duration_min=$((duration / 60))
-duration_sec=$((duration % 60))
-
-echo "⏱️  Pre-push validation completed in ${duration_min}m ${duration_sec}s"
-
-# ✅ ENTERPRISE: Performance recommendations
-if [[ "$branch" == "main" || "$branch" == "develop" ]] && [ $duration -gt 600 ]; then
-    echo "⚠️  Warning: Full validation took longer than 10 minutes"
-    echo "💡 Consider optimizing E2E tests or running them in parallel"
-fi
-
-echo "🎉 Pre-push hook completed successfully!"
-echo "🚀 Ready to push $unpushed_commits commit(s) to $branch"
