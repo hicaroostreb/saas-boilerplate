@@ -35,7 +35,7 @@ export function InvitationForm({ organizationSlug }: InvitationFormProps) {
       } else {
         setMessage('Failed to send invitation. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setMessage('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

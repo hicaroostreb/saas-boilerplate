@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, FormField } from '@workspace/ui';
-import { forgotPasswordSchema, type ForgotPasswordData } from '@/schemas/auth/forgot-password-schema';
+import { forgotPasswordSchema } from '@/schemas/auth/forgot-password-schema';
 
 export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +29,7 @@ export function ForgotPasswordForm() {
       } else {
         setMessage('Failed to send reset email. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setMessage('Please enter a valid email address.');
     } finally {
       setIsLoading(false);

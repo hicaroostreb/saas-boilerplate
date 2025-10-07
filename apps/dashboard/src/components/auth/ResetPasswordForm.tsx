@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, FormField } from '@workspace/ui';
-import { resetPasswordSchema, type ResetPasswordData } from '@/schemas/auth/reset-password-schema';
+import { resetPasswordSchema } from '@/schemas/auth/reset-password-schema';
 
 interface ResetPasswordFormProps {
   token: string;
@@ -35,7 +35,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       } else {
         setMessage('Failed to reset password. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setMessage('Please check your password requirements.');
     } finally {
       setIsLoading(false);

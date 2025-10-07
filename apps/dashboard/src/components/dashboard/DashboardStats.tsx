@@ -15,15 +15,17 @@ const mockStats: StatItem[] = [
 export function DashboardStats() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {mockStats.map((stat) => (
+      {mockStats.map(stat => (
         <div key={stat.title} className="bg-white rounded-lg shadow p-6">
           <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
           <div className="mt-2 flex items-baseline">
             <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
             {stat.change && (
-              <p className={`ml-2 text-sm ${
-                stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p
+                className={`ml-2 text-sm ${
+                  stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
                 {stat.change}
               </p>
             )}

@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({ 
       exists: !!session,
-      email: email 
+      email
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to check user' },
       { status: 500 }

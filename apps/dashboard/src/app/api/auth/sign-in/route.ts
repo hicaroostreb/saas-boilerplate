@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const result = await signInAction({ email, password });
     
     return NextResponse.json(result);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Sign in failed' },
       { status: 401 }

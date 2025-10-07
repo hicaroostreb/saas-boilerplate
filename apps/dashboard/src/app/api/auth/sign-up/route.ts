@@ -7,12 +7,13 @@ export async function POST(req: NextRequest) {
     const { name, email, password } = signUpSchema.parse(body);
 
     // Create new user
-    // Implementation with @workspace/auth
+    // TODO: Implementation with @workspace/auth
+    console.warn('User registration:', { name, email, passwordLength: password.length });
     
     return NextResponse.json({ 
       message: 'User created successfully' 
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Sign up failed' },
       { status: 500 }

@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { Button } from '@workspace/ui';
+import Link from 'next/link';
 
 interface OrganizationCardProps {
   name: string;
@@ -8,7 +8,12 @@ interface OrganizationCardProps {
   description?: string;
 }
 
-export function OrganizationCard({ name, slug, memberCount, description }: OrganizationCardProps) {
+export function OrganizationCard({
+  name,
+  slug,
+  memberCount,
+  description,
+}: OrganizationCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between">
@@ -22,7 +27,7 @@ export function OrganizationCard({ name, slug, memberCount, description }: Organ
           </p>
         </div>
       </div>
-      
+
       <div className="mt-4 flex space-x-2">
         <Link href={`/organizations/${slug}`}>
           <Button variant="outline" size="sm">

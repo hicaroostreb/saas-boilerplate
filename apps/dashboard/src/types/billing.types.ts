@@ -27,7 +27,7 @@ export interface Subscription {
   plan: Plan;
 }
 
-export type SubscriptionStatus = 
+export type SubscriptionStatus =
   | 'active'
   | 'canceled'
   | 'incomplete'
@@ -47,7 +47,7 @@ export interface Invoice {
   stripeInvoiceId: string;
 }
 
-export type InvoiceStatus = 
+export type InvoiceStatus =
   | 'draft'
   | 'open'
   | 'paid'

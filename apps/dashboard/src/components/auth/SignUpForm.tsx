@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, FormField } from '@workspace/ui';
-import { signUpSchema, type SignUpData } from '@/schemas/auth/sign-up-schema';
+import { signUpSchema } from '@/schemas/auth/sign-up-schema';
 
 export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +32,7 @@ export function SignUpForm() {
       } else {
         setError('Failed to create account. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setError('Please check your information and try again.');
     } finally {
       setIsLoading(false);

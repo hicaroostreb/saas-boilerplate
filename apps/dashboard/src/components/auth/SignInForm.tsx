@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input, FormField } from '@workspace/ui';
-import { signInSchema, type SignInData } from '@/schemas/auth/sign-in-schema';
+import { signInSchema } from '@/schemas/auth/sign-in-schema';
 
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +32,7 @@ export function SignInForm() {
       } else {
         setError('Invalid email or password.');
       }
-    } catch (error) {
+    } catch {
       setError('Please check your email and password.');
     } finally {
       setIsLoading(false);

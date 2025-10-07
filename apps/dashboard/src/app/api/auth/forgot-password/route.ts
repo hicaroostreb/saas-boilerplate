@@ -7,12 +7,13 @@ export async function POST(req: NextRequest) {
     const { email } = forgotPasswordSchema.parse(body);
 
     // Send password reset email
-    // Implementation with @workspace/auth
+    // TODO: Implementation with @workspace/auth
+    console.warn('Password reset requested for:', email);
     
     return NextResponse.json({ 
       message: 'Password reset email sent' 
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to send reset email' },
       { status: 500 }

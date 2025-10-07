@@ -7,12 +7,13 @@ export async function POST(req: NextRequest) {
     const { token, password } = resetPasswordSchema.parse(body);
 
     // Reset password with token
-    // Implementation with @workspace/auth
+    // TODO: Implementation with @workspace/auth
+    console.warn('Password reset for token:', token, 'password length:', password.length);
     
     return NextResponse.json({ 
       message: 'Password reset successful' 
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to reset password' },
       { status: 500 }

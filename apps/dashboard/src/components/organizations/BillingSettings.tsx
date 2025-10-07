@@ -17,7 +17,7 @@ export function BillingSettings({ organizationSlug }: BillingSettingsProps) {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId, organizationSlug }),
       });
 
       const { url } = await response.json();
@@ -40,6 +40,7 @@ export function BillingSettings({ organizationSlug }: BillingSettingsProps) {
           <div>
             <p className="text-2xl font-bold text-gray-900">Free Plan</p>
             <p className="text-gray-600">Up to 5 team members</p>
+            <p className="text-xs text-gray-500 mt-1">Organization: {organizationSlug}</p>
           </div>
           <Button
             onClick={() => handleUpgrade('price_premium')}

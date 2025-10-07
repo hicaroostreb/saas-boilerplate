@@ -14,13 +14,14 @@ export async function POST(req: NextRequest) {
     const { priceId } = await req.json();
 
     // Create Stripe checkout session
-    // Implementation with @workspace/billing
+    // TODO: Implementation with @workspace/billing
+    console.warn('Creating checkout session for priceId:', priceId);
     
     return NextResponse.json({ 
       url: 'https://checkout.stripe.com/session-id',
       sessionId: 'session-id'
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 }

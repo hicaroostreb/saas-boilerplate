@@ -30,7 +30,7 @@ export function useSubscription(organizationSlug: string) {
         } else {
           setError('Failed to fetch subscription');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while fetching subscription');
       } finally {
         setLoading(false);

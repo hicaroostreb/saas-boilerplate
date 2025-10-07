@@ -42,7 +42,7 @@ export function OrganizationSetup() {
       } else {
         setError('Failed to create organization. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

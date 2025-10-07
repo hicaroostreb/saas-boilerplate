@@ -27,7 +27,7 @@ export function useMembers(organizationSlug: string) {
         } else {
           setError('Failed to fetch members');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while fetching members');
       } finally {
         setLoading(false);

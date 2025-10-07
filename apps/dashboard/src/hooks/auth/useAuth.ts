@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useContext, createContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 interface User {
   id: string;
@@ -25,7 +25,11 @@ export function useAuth() {
   return context;
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -68,9 +72,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
+  const contextValue: AuthContextType = {
+    user,
+    loading,
+    signIn,
+    signOut,
+  };
+
+  return React.createElement(
+    AuthContext.Provider,
+    { value: contextValue },
+    children
   );
 }

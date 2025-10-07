@@ -28,7 +28,7 @@ export function useOrganizations() {
         } else {
           setError('Failed to fetch organizations');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while fetching organizations');
       } finally {
         setLoading(false);

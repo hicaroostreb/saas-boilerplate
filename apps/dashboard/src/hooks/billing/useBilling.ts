@@ -26,7 +26,7 @@ export function useBilling(organizationSlug: string) {
         } else {
           setError('Failed to fetch billing information');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while fetching billing information');
       } finally {
         setLoading(false);

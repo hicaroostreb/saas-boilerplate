@@ -14,13 +14,14 @@ export async function POST(req: NextRequest) {
     const { name, slug } = await req.json();
 
     // Create organization
-    // Implementation with @workspace/database
+    // TODO: Implementation with @workspace/database
+    console.warn('Creating organization:', { name, slug });
     
     return NextResponse.json({ 
       message: 'Organization created',
       organization: { name, slug }
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create organization' },
       { status: 500 }

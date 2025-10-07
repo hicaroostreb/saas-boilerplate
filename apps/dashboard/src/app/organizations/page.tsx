@@ -11,10 +11,10 @@ export default function OrganizationsPage() {
           <Button>Create Organization</Button>
         </Link>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Organizations will be loaded here */}
-        <OrganizationCard 
+        <OrganizationCard
           name="Example Org"
           slug="example-org"
           memberCount={5}

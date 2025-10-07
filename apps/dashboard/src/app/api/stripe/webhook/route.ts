@@ -6,10 +6,11 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('stripe-signature');
 
     // Process Stripe webhook
-    // Implementation with @workspace/billing
+    // TODO: Implementation with @workspace/billing
+    console.warn('Processing webhook:', { bodyLength: body.length, signature });
     
     return NextResponse.json({ received: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 400 }

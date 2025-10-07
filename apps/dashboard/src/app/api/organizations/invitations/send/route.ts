@@ -14,13 +14,14 @@ export async function POST(req: NextRequest) {
     const { email, organizationId, role } = await req.json();
 
     // Send invitation email
-    // Implementation with @workspace/auth
+    // TODO: Implementation with @workspace/auth
+    console.warn('Sending invitation:', { email, organizationId, role });
     
     return NextResponse.json({ 
       message: 'Invitation sent',
-      email: email 
+      email
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to send invitation' },
       { status: 500 }
