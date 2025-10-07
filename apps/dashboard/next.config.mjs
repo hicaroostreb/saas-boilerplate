@@ -1,71 +1,55 @@
-import { config } from 'dotenv';
-
-// Carregar variáveis de ambiente da raiz do monorepo
-config({ path: '../../.env.local' });
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Transpilação de packages do workspace
+  reactStrictMode: true,
+
+  // Transpile workspace packages
   transpilePackages: [
     '@workspace/ui',
     '@workspace/auth',
     '@workspace/database',
-    '@workspace/billing',
     '@workspace/common',
     '@workspace/routes',
   ],
 
-  // Configuração de ambiente otimizada (SEM NODE_ENV!)
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
-    NEXTAUTH_SECRET: process.env.AUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3001',
-  },
-
-  // Configurações experimentais
+  // Experimental optimizations
   experimental: {
-    externalDir: true,
-    optimizePackageImports: ['lucide-react', 'date-fns'],
+    optimizePackageImports: ['lucide-react', '@workspace/ui'],
   },
 
-  // Configuração ESLint otimizada
-  eslint: {
-    dirs: ['app', 'actions', 'schemas', 'lib', 'components'],
-    ignoreDuringBuilds: true, // ← IGNORAR DURANTE BUILD
-  },
-
-  // Configuração TypeScript
+  // TypeScript strict mode
   typescript: {
     ignoreBuildErrors: false,
   },
 
-  // Headers de segurança para produção
+  // ESLint during builds
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+
+  // Security headers
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/:path*',
         headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
           },
         ],
       },
     ];
   },
 
-  // Otimizações de bundle
+  // Production optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
   },
 };
 
