@@ -1,222 +1,185 @@
-# SaaS Boilerplate - Guia Técnico do Desenvolvedor
+# SaaS Boilerplate
 
-Este repositório é um monorepo Turborepo para o desenvolvimento de aplicações SaaS.
+Monorepo Turborepo para desenvolvimento de aplicações SaaS enterprise.
 
-## Estrutura do Monorepo
+## Stack
+
+- **Runtime:** Bun 1.1.38
+- **Framework:** Next.js 15 (App Router)
+- **Database:** PostgreSQL + Drizzle ORM
+- **Auth:** Auth.js v5
+- **Payments:** Stripe
+- **UI:** shadcn/ui + Tailwind CSS
+- **Monorepo:** Turborepo
+
+## Estrutura
 
 ```
 saas-boilerplate/
-├── packages/
-│   ├── @workspace/auth          # Lógica de autenticação (Auth.js v5)
-│   ├── @workspace/billing       # Integração com Stripe
-│   ├── @workspace/database      # Schema (Drizzle ORM), migrações e queries
-│   ├── @workspace/ui            # Componentes de UI compartilhados (shadcn/ui)
-│   ├── @workspace/common        # Utilitários e tipos compartilhados
-│   └── tooling/
-│       ├── eslint-config        # Configuração do ESLint
-│       ├── prettier-config      # Configuração do Prettier
-│       ├── tailwind-config      # Configuração do Tailwind CSS
-│       └── typescript-config    # Configuração do TypeScript
-└── apps/
-    ├── dashboard/               # Aplicação principal (localhost:3001)
-    └── marketing/               # Landing page (localhost:3000)
+├── apps/
+│   ├── marketing/        # Landing page (localhost:3000)
+│   └── dashboard/        # Dashboard (localhost:3001)
+└── packages/
+    ├── @workspace/auth
+    ├── @workspace/billing
+    ├── @workspace/database
+    ├── @workspace/ui
+    └── @workspace/common
 ```
 
-## Setup do Ambiente
+## Quick Start
 
 ### Pré-requisitos
 
-- **Node.js v18+**
-- **Bun v1.0+** (`curl -fsSL https://bun.sh/install | bash`)
-- **Docker** (Para banco de dados PostgreSQL local)
-- **Stripe CLI** (Para webhooks locais)
+- Node.js 18+
+- Bun 1.0+ ([Install](https://bun.sh))
+- Docker (PostgreSQL)
+- Stripe CLI ([Install](https://stripe.com/docs/stripe-cli))
 
-### 1. Instalação e Configuração
+### Setup
 
-O script de setup automatizado é o método recomendado. Ele validará os pré-requisitos, configurará o banco de dados, chaves de API e gerará os arquivos `.env`.
-
-```
-# Clone o repositório
-git clone <your-repo-url>
+```bash
+# Clone e instale
+git clone <repo-url>
 cd saas-boilerplate
+bun install
 
-# Execute o setup automatizado
+# Configure ambiente (automatizado)
 bun run scripts/setup.js
-```
 
-### 2. Rodando Localmente
-
-Após o setup, inicie todos os aplicativos e pacotes em modo de desenvolvimento.
-
-```
+# Inicie o projeto
 bun run dev
 ```
 
-- **Marketing App**: `http://localhost:3000`
-- **Dashboard App**: `http://localhost:3001`
+**Acesse:**
 
-### Credenciais de Teste Padrão
+- Marketing: http://localhost:3000
+- Dashboard: http://localhost:3001
 
-- **Email**: `test@test.com`
-- **Password**: `admin123`
+**Login de teste:**
 
-***
+- Email: `test@test.com`
+- Senha: `admin123`
 
-## Comandos de Limpeza Enterprise
+## Comandos Principais
 
-O projeto utiliza scripts padronizados para limpeza em diferentes níveis:
+### Desenvolvimento
 
-### Level 1: Safe Clean
 ```bash
-bun run clean:safe
+bun run dev              # Inicia todos os apps
+bun run dev:marketing    # Só marketing
+bun run dev:dashboard    # Só dashboard
 ```
-**Remove**: dependencies e cache Turborepo  
-**Quando usar**: Problemas de cache ou troca de package manager  
-**Seguro**: Preserva builds e código fonte
 
-### Level 2: Build Clean
+### Qualidade (ordem obrigatória)
+
 ```bash
-bun run clean:build
+bun run format          # 1. Formata código
+bun run lint            # 2. Verifica qualidade
+bun run typecheck       # 3. Valida tipos
+bun run test            # 4. Roda testes
+bun run build           # 5. Build produção
 ```
-**Remove**: Apenas outputs compilados (dist/, .next/)  
-**Quando usar**: Após mudanças de config TypeScript/Next.js  
-**Seguro**: Mantém dependencies instaladas
 
-### Level 3: Cache Clean
+### Atalhos QA
+
 ```bash
-bun run clean:cache
+bun run qa:fix          # Auto-fix format + lint
+bun run qa:build        # format + lint + typecheck + build
+bun run qa:full         # Tudo + E2E tests
 ```
-**Remove**: Caches de ferramentas (Babel, ESLint, Bun)  
-**Quando usar**: Falhas misteriosas de lint/test/dev  
-**Seguro**: Não afeta código ou builds
 
-### Level 4: Full Clean
+### Database
+
 ```bash
-bun run clean:full
+bun run db:generate     # Gera migração
+bun run db:push         # Aplica schema
+bun run db:seed         # Popula dados teste
+bun run db:studio       # Abre Drizzle Studio
 ```
-**Remove**: Tudo dos níveis 1+2+3  
-**Quando usar**: Migração de tools ou corrupção profunda  
-**Cuidado**: Remove tudo menos código fonte
 
-### Level 5: Reset
+### Limpeza
+
 ```bash
-bun run reset
+bun run clean:safe      # Remove node_modules + cache
+bun run clean:build     # Remove dist/ .next/
+bun run reset           # clean:safe + install
+bun run reset:full      # Limpa tudo + install
 ```
-**Executa**: Safe clean + bun install  
-**Quando usar**: Recuperação rápida após clean:safe
 
-### Level 6: Full Reset
+## Workflow Git
+
+### Branches
+
+Padrão: `type/scope/description`
+
+Exemplos:
+
+- `feat/auth/add-google-oauth`
+- `fix/billing/stripe-webhook-error`
+- `refactor/database/user-repository`
+
+### Proteções
+
+- **Pre-commit:** lint-staged (rápido, só arquivos alterados)
+- **Pre-push:** qa:build (completo, ~30-60s)
+- **CI:** qa:build + E2E tests (em main/develop)
+
+### Pull Requests
+
+- PRs para `main` exigem CI passando
+- Linear history obrigatório
+- Force push bloqueado
+
+## Deployment
+
+### Variáveis Obrigatórias
+
+```env
+DATABASE_URL="postgresql://..."
+NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_SECRET="..."
+AUTH_SECRET="..."
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+### Steps
+
+1. Configure variáveis no provider (Vercel/Railway)
+2. Configure webhook Stripe: `https://yourdomain.com/api/stripe/webhook`
+3. Deploy
+4. Execute migrações: `bun run db:push`
+
+## Troubleshooting
+
+### Problemas de cache
+
 ```bash
 bun run reset:full
 ```
-**Executa**: Full clean + bun install  
-**Quando usar**: Reset completo do ambiente
 
-***
+### Erro de types/lint após pull
 
-## Fluxo de Trabalho e Padrões de Qualidade
-
-Este projeto segue padrões enterprise rigorosos para garantir a qualidade e a manutenibilidade do código.
-
-### 1. Nomenclatura de Branches
-
-Siga o padrão `type/scope/short-description` para todas as branches.
-
-- **`type`**: `refactor`, `feat`, `fix`, `chore`, `docs`.
-- **`scope`**: Nome do pacote ou área afetada (`database`, `auth`, `ui`, `ci`).
-- **`short-description`**: Descrição curta em kebab-case (ex: `create-user-repository`).
-
-**Exemplos:**
-
-- `refactor/database/create-user-repository`
-- `feat/billing/implement-subscription-cancel`
-- `fix/ui/correct-button-variant-color`
-
-### 2. Ciclo de Verificação de Qualidade (Ordem Obrigatória)
-
-Todos os Pull Requests **devem passar** nos seguintes checks. Execute-os localmente para validar seu trabalho antes do push.
-
-```
-# 1. Formata todo o código (o mais rápido)
-bun run format
-
-# 2. Encontra erros de qualidade de código
-bun run lint
-
-# 3. Valida os tipos do TypeScript
-bun run typecheck
-
-# 4. Roda testes unitários/integração
-bun run test
-
-# 5. Compila a aplicação para produção (o mais lento)
-bun run build
+```bash
+bun run qa:fix
 ```
 
-O pipeline de CI/CD executará esta sequência exata. Código que não passa em qualquer uma dessas etapas não será mesclado.
+### Banco de dados dessincronizado
 
----
-
-## Comandos Úteis
-
-### Comandos Gerais (via Turborepo)
-
-```
-# Iniciar todos os apps em modo de desenvolvimento
-bun run dev
-
-# Construir todos os pacotes e apps para produção
-bun run build
-
-# Rodar todos os testes
-bun run test
-
-# Limpar todos os artefatos de build (node_modules, .turbo, dist)
-bun run clean
+```bash
+bun run db:push
 ```
 
-### Operações de Banco de Dados (`@workspace/database`)
+### Stripe webhook não funciona
 
-```
-# Gerar um novo arquivo de migração a partir das mudanças no schema
-bun run --filter "@workspace/database" generate
-
-# Aplicar as migrações e empurrar o schema para o banco de dados
-bun run --filter "@workspace/database" push
-
-# Popular o banco de dados com dados de teste (idempotente)
-bun run --filter "@workspace/database" seed
-
-# Abrir o Drizzle Studio para visualizar e editar os dados
-bun run --filter "@workspace/database" studio
-```
-
-### Webhooks do Stripe
-
-O setup automatizado lida com isso. Para rodar manualmente, use o comando fornecido pelo Stripe CLI após o login, encaminhando para a porta da sua aplicação (neste caso, `3000` para a API route).
-
-```
+```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-***
+## Suporte
 
-## Deployment em Produção
-
-1. **Variáveis de Ambiente:** Crie um arquivo `.env.production.local` ou configure as seguintes variáveis no seu provedor de hosting (Vercel, Railway, etc.):
-   ```
-   DATABASE_URL="postgres://user:pass@host:port/db"
-   NEXTAUTH_URL="https://yourdomain.com"
-   NEXTAUTH_SECRET="gere_uma_chave_segura_com_openssl"
-   AUTH_SECRET="use_a_mesma_chave_acima"
-   STRIPE_SECRET_KEY="sk_live_..."
-   STRIPE_WEBHOOK_SECRET="whsec_..."
-   # ... outras variáveis necessárias
-   ```
-2. **Configurar Webhook de Produção:** No dashboard do Stripe, aponte o webhook para `https://yourdomain.com/api/stripe/webhook`.
-3. **Deploy:** Faça o deploy para a sua plataforma de preferência.
-4. **Setup do Banco de Dados em Produção:** Execute os comandos de push e seed no ambiente de produção (a maioria das plataformas permite rodar comandos de build/release).
-   ```
-   bun run --filter "@workspace/database" push
-   # bun run --filter "@workspace/database" seed  // Opcional, se precisar de dados iniciais
-   ```
+- [Documentação Turborepo](https://turbo.build/repo/docs)
+- [Next.js Docs](https://nextjs.org/docs)
+- [Drizzle ORM Docs](https://orm.drizzle.team)
+- [Auth.js Docs](https://authjs.dev)
