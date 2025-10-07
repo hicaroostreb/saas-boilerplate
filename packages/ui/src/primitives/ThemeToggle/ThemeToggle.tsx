@@ -1,33 +1,40 @@
 'use client';
 
 import { useTheme } from '../../hooks/useTheme';
-import { cn, focusRing, interactive } from '../../utils/cn';
+import { cn, createVariants, focusRing, interactive } from '../../utils/cn';
+
+const themeToggleVariants = createVariants({
+  base: 'inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 relative',
+  variants: {
+    variant: {
+      outline:
+        'border border-input hover:bg-accent hover:text-accent-foreground bg-background',
+      ghost: 'hover:bg-accent hover:text-accent-foreground',
+      template:
+        'border border-input hover:bg-accent hover:text-accent-foreground bg-background rounded-xl border-none shadow-none',
+    },
+    size: {
+      sm: 'h-8 w-8',
+      md: 'size-9',
+      lg: 'h-10 w-10',
+    },
+  },
+  defaultVariants: {
+    variant: 'template',
+    size: 'md',
+  },
+});
 
 export interface ThemeToggleProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'outline' | 'ghost';
+  variant?: 'outline' | 'ghost' | 'template';
 }
 
-/**
- * ThemeToggle component - Toggle between light and dark themes
- *
- * @example
- * ```
- * function Header() {
- *   return (
- *     <div className="flex items-center gap-4">
- *       <h1>My App</h1>
- *       <ThemeToggle size="md" variant="outline" />
- *     </div>
- *   );
- * }
- * ```
- */
 export function ThemeToggle({
   className,
   size = 'md',
-  variant = 'outline',
+  variant = 'template',
 }: ThemeToggleProps): JSX.Element {
   const { theme, toggleTheme, mounted } = useTheme();
 
@@ -36,7 +43,7 @@ export function ThemeToggle({
       <ThemeToggleSkeleton
         size={size}
         variant={variant}
-        className={className || undefined}
+        className={className}
       />
     );
   }
@@ -47,85 +54,58 @@ export function ThemeToggle({
     <button
       onClick={toggleTheme}
       className={cn(
-        // Base styles
-        'relative inline-flex items-center justify-center font-medium transition-colors',
+        themeToggleVariants({ variant, size }),
         interactive(),
         focusRing(),
-        'disabled:pointer-events-none disabled:opacity-50',
-
-        // Size variants
-        {
-          'h-8 w-8': size === 'sm',
-          'h-9 w-9': size === 'md',
-          'h-10 w-10': size === 'lg',
-        },
-
-        // Style variants
-        {
-          'border border-input bg-background shadow-sm hover:bg-accent':
-            variant === 'outline',
-          'hover:bg-accent': variant === 'ghost',
-        },
-
+        'relative overflow-hidden',
         className
       )}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
     >
-      {/* Sun Icon */}
-      <SunIcon
-        className={cn(
-          'transition-all duration-300 ease-in-out',
-          {
-            'h-4 w-4': size === 'sm',
-            'h-5 w-5': size === 'md',
-            'h-6 w-6': size === 'lg',
-          },
-          isDark
-            ? '-rotate-90 scale-0 opacity-0'
-            : 'rotate-0 scale-100 opacity-100'
-        )}
-      />
+      {/* Sun Icon - Mostrar apenas no light mode */}
+      {!isDark && (
+        <SunIcon
+          className={cn('lucide lucide-sun transition-all duration-300', {
+            'size-4': size === 'sm',
+            'size-5': size === 'md',
+            'size-6': size === 'lg',
+          })}
+          aria-hidden={true}
+        />
+      )}
 
-      {/* Moon Icon */}
-      <MoonIcon
-        className={cn(
-          'absolute transition-all duration-300 ease-in-out',
-          {
-            'h-4 w-4': size === 'sm',
-            'h-5 w-5': size === 'md',
-            'h-6 w-6': size === 'lg',
-          },
-          isDark
-            ? 'rotate-0 scale-100 opacity-100'
-            : 'rotate-90 scale-0 opacity-0'
-        )}
-      />
+      {/* Moon Icon - Mostrar apenas no dark mode */}
+      {isDark && (
+        <MoonIcon
+          className={cn('lucide lucide-moon transition-all duration-300', {
+            'size-4': size === 'sm',
+            'size-5': size === 'md',
+            'size-6': size === 'lg',
+          })}
+          aria-hidden={true}
+        />
+      )}
+
+      <span className="sr-only">Toggle theme</span>
     </button>
   );
 }
 
-// Loading skeleton
+// Resto do código igual...
 function ThemeToggleSkeleton({
   size,
   variant,
   className,
 }: {
   size: 'sm' | 'md' | 'lg';
-  variant: 'outline' | 'ghost';
+  variant: 'outline' | 'ghost' | 'template';
   className?: string;
 }): JSX.Element {
   return (
     <div
       className={cn(
-        'inline-flex items-center justify-center animate-pulse bg-muted',
-        {
-          'h-8 w-8': size === 'sm',
-          'h-9 w-9': size === 'md',
-          'h-10 w-10': size === 'lg',
-        },
-        {
-          'border border-input shadow-sm': variant === 'outline',
-        },
+        themeToggleVariants({ variant, size }),
+        'animate-pulse bg-muted',
         className
       )}
       aria-hidden="true"
@@ -135,45 +115,60 @@ function ThemeToggleSkeleton({
   );
 }
 
-// Icons
-function SunIcon({ className }: { className?: string }): JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m6.34 17.66-1.41 1.41" />
-      <path d="m19.07 4.93-1.41 1.41" />
-    </svg>
-  );
-}
+const SunIcon = ({
+  className,
+  ...props
+}: {
+  className?: string;
+  'aria-hidden'?: boolean;
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2" />
+    <path d="M12 20v2" />
+    <path d="m4.93 4.93 1.41 1.41" />
+    <path d="m17.66 17.66 1.41 1.41" />
+    <path d="M2 12h2" />
+    <path d="M20 12h2" />
+    <path d="m6.34 17.66-1.41 1.41" />
+    <path d="m19.07 4.93-1.41 1.41" />
+  </svg>
+);
 
-function MoonIcon({ className }: { className?: string }): JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
-  );
-}
+const MoonIcon = ({
+  className,
+  ...props
+}: {
+  className?: string;
+  'aria-hidden'?: boolean;
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+  </svg>
+);
+
+ThemeToggle.displayName = 'ThemeToggle';
