@@ -22,9 +22,13 @@ saas-boilerplate/
 └── packages/
     ├── @workspace/auth
     ├── @workspace/billing
+    ├── @workspace/common
     ├── @workspace/database
+    ├── @workspace/e2e
+    ├── @workspace/rate-limiter
+    ├── @workspace/routes
     ├── @workspace/ui
-    └── @workspace/common
+    └── @workspace/webhooks
 ```
 
 ## Quick Start
