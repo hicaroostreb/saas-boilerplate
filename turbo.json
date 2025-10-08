@@ -296,6 +296,5 @@
     "signature": true,
     "preflight": false,
     "timeout": 60
-  },
-  "cacheDir": ".turbo"
+  }
 }
