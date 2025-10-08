@@ -20,6 +20,18 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts", "middleware.ts"],
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".next/types/**/*.ts",
+    "middleware.ts",
+    "../../packages/ui/src/**/*.ts",
+    "../../packages/ui/src/**/*.tsx",
+    "../../packages/common/src/**/*.ts",
+    "../../packages/routes/src/**/*.ts",
+    "../../packages/auth/src/**/*.ts",
+    "../../packages/database/src/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }
