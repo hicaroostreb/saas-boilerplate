@@ -1,6 +1,6 @@
+import { OrganizationCard } from '@/components/organizations/OrganizationCard';
 import { Button } from '@workspace/ui';
 import Link from 'next/link';
-import { OrganizationCard } from '../../components/organizations/OrganizationCard';
 
 export default function OrganizationsPage() {
   return (

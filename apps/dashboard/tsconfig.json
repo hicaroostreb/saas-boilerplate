@@ -1,13 +1,24 @@
 {
   "extends": "../../tooling/typescript-config/nextjs.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
       "@workspace/common": ["../../packages/common/src"],
       "@workspace/routes": ["../../packages/routes/src"],
       "@workspace/auth": ["../../packages/auth/src"],
       "@workspace/database": ["../../packages/database/src"]
-    }
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",

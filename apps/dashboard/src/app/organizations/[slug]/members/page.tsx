@@ -1,5 +1,5 @@
-import { InvitationForm } from '../../../../components/organizations/InvitationForm';
-import { MembersList } from '../../../../components/organizations/MembersList';
+import { InvitationForm } from '@/components/organizations/InvitationForm';
+import { MembersList } from '@/components/organizations/MembersList';
 
 interface MembersPageProps {
   params: Promise<{

@@ -1,4 +1,4 @@
-import { BillingSettings } from '../../../../components/organizations/BillingSettings';
+import { BillingSettings } from '@/components/organizations/BillingSettings';
 
 interface BillingPageProps {
   params: Promise<{

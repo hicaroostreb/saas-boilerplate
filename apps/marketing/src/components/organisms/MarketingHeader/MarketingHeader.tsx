@@ -1,9 +1,9 @@
 'use client';
 
+import { routes } from '@lib/constants/routes';
 import { Logo, ThemeToggle } from '@workspace/ui';
 import Link from 'next/link';
 import { useState } from 'react';
-import { routes } from '../../../lib/constants/routes';
 
 export interface MarketingHeaderProps {
   className?: string;

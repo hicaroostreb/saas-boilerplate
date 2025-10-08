@@ -1,6 +1,6 @@
+import { generateSeoMetadata } from '@lib/seo/metadata';
 import type { Metadata } from 'next';
 import { MarketingHeader } from '../../components/organisms/MarketingHeader';
-import { generateSeoMetadata } from '../../lib/seo/metadata';
 
 export const metadata: Metadata = generateSeoMetadata({
   title: 'Preços - SaaS Universal',
