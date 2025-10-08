@@ -42,7 +42,7 @@ saas-boilerplate/
 
 ### Setup
 
-```bash
+```
 # Clone e instale
 git clone <repo-url>
 cd saas-boilerplate
@@ -69,7 +69,7 @@ bun run dev
 
 ### Desenvolvimento
 
-```bash
+```
 bun run dev              # Inicia todos os apps
 bun run dev:marketing    # Só marketing
 bun run dev:dashboard    # Só dashboard
@@ -77,7 +77,7 @@ bun run dev:dashboard    # Só dashboard
 
 ### Qualidade (ordem obrigatória)
 
-```bash
+```
 bun run format          # 1. Formata código
 bun run lint            # 2. Verifica qualidade
 bun run typecheck       # 3. Valida tipos
@@ -87,7 +87,7 @@ bun run build           # 5. Build produção
 
 ### Atalhos QA
 
-```bash
+```
 bun run qa:fix          # Auto-fix format + lint
 bun run qa:build        # format + lint + typecheck + build
 bun run qa:full         # Tudo + E2E tests
@@ -95,21 +95,35 @@ bun run qa:full         # Tudo + E2E tests
 
 ### Database
 
-```bash
+```
 bun run db:generate     # Gera migração
 bun run db:push         # Aplica schema
 bun run db:seed         # Popula dados teste
 bun run db:studio       # Abre Drizzle Studio
 ```
 
-### Limpeza
+### Limpeza (6 Níveis - Enterprise Grade)
 
-```bash
-bun run clean:safe      # Remove node_modules + cache
-bun run clean:build     # Remove dist/ .next/
-bun run reset           # clean:safe + install
-bun run reset:full      # Limpa tudo + install
 ```
+# Nível 1-2: Diário (1-5s)
+bun run clean:cache     # Cache only (Turbo + Next.js + ESLint)
+bun run clean:outputs   # Build artifacts (.next, dist)
+
+# Nível 3-4: Troubleshooting (30-60s)
+bun run clean:builds    # Cache + builds
+bun run reset           # Dependencies + install
+
+# Nível 5-6: Emergency (60-120s)
+bun run reset:full      # Everything + install
+bun run reset:nuclear   # ⚠️ Including lockfile
+```
+
+**Quando usar:**
+
+- **`clean:cache`** - Daily dev, hot reload issues
+- **`reset`** - After git pull, dependency problems
+- **`reset:full`** - Major issues, "nothing works"
+- **`reset:nuclear`** - Migration, corruption (⚠️ changes lockfile)
 
 ## Workflow Git
 
@@ -139,7 +153,7 @@ Exemplos:
 
 ### Variáveis Obrigatórias
 
-```env
+```
 DATABASE_URL="postgresql://..."
 NEXTAUTH_URL="https://yourdomain.com"
 NEXTAUTH_SECRET="..."
@@ -157,29 +171,15 @@ STRIPE_WEBHOOK_SECRET="whsec_..."
 
 ## Troubleshooting
 
-### Problemas de cache
-
-```bash
-bun run reset:full
-```
-
-### Erro de types/lint após pull
-
-```bash
-bun run qa:fix
-```
-
-### Banco de dados dessincronizado
-
-```bash
-bun run db:push
-```
-
-### Stripe webhook não funciona
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
+| Problema              | Comando                                                        | Tempo |
+| --------------------- | -------------------------------------------------------------- | ----- |
+| Cache desatualizado   | `bun run clean:cache`                                          | ~2s   |
+| Build inconsistente   | `bun run clean:outputs`                                        | ~5s   |
+| Deps após pull        | `bun run reset`                                                | ~30s  |
+| "Nada funciona"       | `bun run reset:full`                                           | ~60s  |
+| Types/lint após pull  | `bun run qa:fix`                                               | ~10s  |
+| Banco dessincronizado | `bun run db:push`                                              | ~5s   |
+| Stripe webhook        | `stripe listen --forward-to localhost:3000/api/stripe/webhook` | -     |
 
 ## Suporte
 
