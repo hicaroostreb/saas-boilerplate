@@ -45,7 +45,7 @@ export const Logo = ({
   showText = true,
   text = 'Acme',
 }: LogoProps) => {
-  const baseClasses = `flex items-center gap-2 ${className || ''}`;
+  const baseClasses = `flex items-center gap-2 ${className ?? ''}`;
 
   return (
     <Link href={href} className={baseClasses}>
@@ -58,7 +58,7 @@ export const Logo = ({
 };
 
 export const LogoIconOnly = ({ className }: { className?: string }) => (
-  <div className={className || ''}>
+  <div className={className ?? ''}>
     <LogoIcon />
   </div>
 );

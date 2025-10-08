@@ -137,11 +137,15 @@ export async function verifyPassword(
       const [, salt, hash] = hashedPassword.split(':');
 
       // ✅ CORRIGIDO: Linha 138 - Validar salt antes do uso
-      if (!salt) throw new Error('Salt is required');
+      if (!salt) {
+        throw new Error('Salt is required');
+      }
       const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
 
       // ✅ CORRIGIDO: Linha 139 - Validar hash antes do uso
-      if (!hash) throw new Error('Hash is required');
+      if (!hash) {
+        throw new Error('Hash is required');
+      }
       const expectedHash = Buffer.from(hash, 'hex');
 
       // ✅ SECURITY: Timing-safe comparison
@@ -286,14 +290,22 @@ export function validatePasswordStrength(
   }
 
   // ✅ ENTERPRISE: Length bonus
-  if (password.length >= 12) score += 10;
-  if (password.length >= 16) score += 10;
-  if (password.length >= 20) score += 10;
+  if (password.length >= 12) {
+    score += 10;
+  }
+  if (password.length >= 16) {
+    score += 10;
+  }
+  if (password.length >= 20) {
+    score += 10;
+  }
 
   // ✅ ENTERPRISE: Character diversity bonus
   const uniqueChars = new Set(password).size;
   const diversityRatio = uniqueChars / password.length;
-  if (diversityRatio > 0.7) score += 10;
+  if (diversityRatio > 0.7) {
+    score += 10;
+  }
 
   // ✅ ENTERPRISE: Mixed case bonus
   if (hasUppercase && hasLowercase && hasNumbers && hasSpecialChars) {
@@ -354,7 +366,7 @@ export async function validatePasswordReuse(
     // ✅ CORRIGIDO: Linha 359 - Filtrar hashes válidos e usar Promise.all
     const validHashes = previousPasswordHashes
       .slice(0, maxCheck)
-      .filter(hash => hash != null);
+      .filter(hash => hash !== null);
 
     const verificationPromises = validHashes.map(hash =>
       verifyPassword(newPassword, hash)
@@ -430,18 +442,27 @@ function estimateCrackTime(password: string): string {
 
   const secondsToCrack = combinations / 2 / guessesPerSecond; // Divide by 2 for average case
 
-  if (secondsToCrack < 1) return 'Less than 1 second';
-  if (secondsToCrack < 60) return `${Math.round(secondsToCrack)} seconds`;
-  if (secondsToCrack < 3600)
+  if (secondsToCrack < 1) {
+    return 'Less than 1 second';
+  }
+  if (secondsToCrack < 60) {
+    return `${Math.round(secondsToCrack)} seconds`;
+  }
+  if (secondsToCrack < 3600) {
     return `${Math.round(secondsToCrack / 60)} minutes`;
-  if (secondsToCrack < 86400)
+  }
+  if (secondsToCrack < 86400) {
     return `${Math.round(secondsToCrack / 3600)} hours`;
-  if (secondsToCrack < 31536000)
+  }
+  if (secondsToCrack < 31536000) {
     return `${Math.round(secondsToCrack / 86400)} days`;
-  if (secondsToCrack < 315360000)
+  }
+  if (secondsToCrack < 315360000) {
     return `${Math.round(secondsToCrack / 31536000)} years`;
-  if (secondsToCrack < 31536000000)
+  }
+  if (secondsToCrack < 31536000000) {
     return `${Math.round(secondsToCrack / 31536000)} years`;
+  }
 
   return 'Centuries or more';
 }
@@ -452,11 +473,18 @@ function estimateCrackTime(password: string): string {
 function calculatePasswordCombinations(password: string): number {
   let characterSpace = 0;
 
-  if (/[a-z]/.test(password)) characterSpace += 26;
-  if (/[A-Z]/.test(password)) characterSpace += 26;
-  if (/[0-9]/.test(password)) characterSpace += 10;
-  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password))
+  if (/[a-z]/.test(password)) {
+    characterSpace += 26;
+  }
+  if (/[A-Z]/.test(password)) {
+    characterSpace += 26;
+  }
+  if (/[0-9]/.test(password)) {
+    characterSpace += 10;
+  }
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     characterSpace += 32;
+  }
 
   return Math.pow(characterSpace, password.length);
 }
@@ -467,11 +495,21 @@ function calculatePasswordCombinations(password: string): number {
 export function getPasswordStrengthLevel(
   score: number
 ): 'very-weak' | 'weak' | 'fair' | 'good' | 'strong' | 'very-strong' {
-  if (score < 20) return 'very-weak';
-  if (score < 40) return 'weak';
-  if (score < 60) return 'fair';
-  if (score < 80) return 'good';
-  if (score < 95) return 'strong';
+  if (score < 20) {
+    return 'very-weak';
+  }
+  if (score < 40) {
+    return 'weak';
+  }
+  if (score < 60) {
+    return 'fair';
+  }
+  if (score < 80) {
+    return 'good';
+  }
+  if (score < 95) {
+    return 'strong';
+  }
   return 'very-strong';
 }
 
@@ -479,10 +517,20 @@ export function getPasswordStrengthLevel(
  * ✅ ENTERPRISE: Password strength color mapping for UI
  */
 export function getPasswordStrengthColor(score: number): string {
-  if (score < 20) return '#ff4757'; // red
-  if (score < 40) return '#ff6348'; // orange-red
-  if (score < 60) return '#ffa502'; // orange
-  if (score < 80) return '#2ed573'; // green
-  if (score < 95) return '#1e90ff'; // blue
+  if (score < 20) {
+    return '#ff4757';
+  } // red
+  if (score < 40) {
+    return '#ff6348';
+  } // orange-red
+  if (score < 60) {
+    return '#ffa502';
+  } // orange
+  if (score < 80) {
+    return '#2ed573';
+  } // green
+  if (score < 95) {
+    return '#1e90ff';
+  } // blue
   return '#8c7ae6'; // purple
 }

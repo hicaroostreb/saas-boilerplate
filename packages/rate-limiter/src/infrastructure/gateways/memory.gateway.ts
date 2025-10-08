@@ -205,7 +205,9 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
       const entities = keys.map(key => {
         const entry = this.store.get(key);
         if (!entry || this.isExpired(entry)) {
-          if (entry) this.store.delete(key);
+          if (entry) {
+            this.store.delete(key);
+          }
           return { key, entity: null };
         }
         return { key, entity: entry.entity };
@@ -246,8 +248,12 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
       totalSize += 200; // Rough entity size
 
       const createdAt = entry.entity.createdAt;
-      if (createdAt < oldestTime) oldestTime = createdAt;
-      if (createdAt > newestTime) newestTime = createdAt;
+      if (createdAt < oldestTime) {
+        oldestTime = createdAt;
+      }
+      if (createdAt > newestTime) {
+        newestTime = createdAt;
+      }
     }
 
     return {

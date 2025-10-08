@@ -32,7 +32,9 @@ export const formatFileSize = (
     throw new Error('Tamanho deve ser um número não negativo');
   }
 
-  if (bytes === 0) return `0${separator}Bytes`;
+  if (bytes === 0) {
+    return `0${separator}Bytes`;
+  }
 
   const base = units === 'binary' ? 1024 : 1000;
   const sizes =

@@ -55,7 +55,9 @@ export class AuthSessionService {
     try {
       const actualUserId =
         userId ?? (await this.authContextService.getCurrentUserId());
-      if (!actualUserId) return [];
+      if (!actualUserId) {
+        return [];
+      }
 
       // For now, return empty array - would integrate with session store
       // TODO: Implement session store integration
@@ -136,7 +138,9 @@ export class AuthSessionService {
     try {
       const actualUserId =
         userId ?? (await this.authContextService.getCurrentUserId());
-      if (!actualUserId) return false;
+      if (!actualUserId) {
+        return false;
+      }
 
       await this.authContextService.updateLastAccess(actualUserId);
       return true;
@@ -170,11 +174,15 @@ export class AuthSessionService {
     try {
       const actualUserId =
         userId ?? (await this.authContextService.getCurrentUserId());
-      if (!actualUserId) return null;
+      if (!actualUserId) {
+        return null;
+      }
 
       const securityInfo =
         await this.authContextService.getUserSecurityInfo(actualUserId);
-      if (!securityInfo) return null;
+      if (!securityInfo) {
+        return null;
+      }
 
       return {
         riskScore: securityInfo.riskScore,

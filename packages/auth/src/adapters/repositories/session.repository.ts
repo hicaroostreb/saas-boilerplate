@@ -197,7 +197,7 @@ export class SessionRepository {
   async revoke(
     sessionToken: string,
     _revokedBy: string,
-    _reason: string = 'user_request'
+    _reason = 'user_request'
   ): Promise<void> {
     try {
       // Since we don't have isRevoked field, we'll set expires to past date
@@ -226,7 +226,7 @@ export class SessionRepository {
     userId: string,
     exceptSessionToken?: string,
     _revokedBy?: string,
-    _reason: string = 'revoke_all'
+    _reason = 'revoke_all'
   ): Promise<number> {
     try {
       let whereConditions = and(

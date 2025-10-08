@@ -61,11 +61,11 @@
     "test:auth": "bun run --filter @workspace/e2e test:auth",
     "test:smoke": "bun run --filter @workspace/e2e test:smoke",
     "test:install": "bun run --filter @workspace/e2e install:browsers",
-    "qa:fast": "turbo run qa:fast",
+    "qa:fast": "turbo format && turbo lint",
     "qa:build": "bun run qa:fast && bun run typecheck && bun run build",
     "qa:full": "bun run qa:build && bun run test:e2e",
     "qa:security": "bun pm audit --audit-level moderate",
-    "qa:fix": "turbo format lint:fix",
+    "qa:fix": "turbo format && turbo lint:fix",
     "predev": "bun run check:requirements",
     "pretest:e2e": "bun run qa:build",
     "prepare": "husky",
@@ -78,7 +78,7 @@
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx}": [
       "prettier --write",
-      "eslint --fix --max-warnings 0"
+      "eslint --fix --max-warnings=0 --no-warn-ignored"
     ],
     "**/*.{json,md,yml,yaml}": [
       "prettier --write"

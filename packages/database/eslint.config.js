@@ -1,8 +1,8 @@
-import nextConfig from '@workspace/eslint-config/next.js';
+import baseConfig from '@workspace/eslint-config';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  ...nextConfig,
+  ...baseConfig,
   {
     files: ['**/*.{js,mjs,ts,tsx}'],
     languageOptions: {
@@ -11,19 +11,15 @@ export default [
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    settings: {
-      next: {
-        rootDir: './',
-      },
-      react: {
-        version: 'detect',
-      },
+    rules: {
+      // Database permite any em schemas gerados
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-console': 'off',
     },
   },
   {
     ignores: [
-      'out/**', // Específico Next.js export
-      'public/**', // Assets estáticos
+      '*.generated.*', // Únicos específicos não cobertos pelo base
     ],
   },
 ];

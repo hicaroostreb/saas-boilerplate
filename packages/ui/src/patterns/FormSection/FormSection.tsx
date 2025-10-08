@@ -51,7 +51,7 @@ export function FormSection({
   const content = (
     <>
       {/* Header */}
-      {(title || description) && (
+      {(title ?? description) && (
         <div
           className={cn('space-y-1', variant === 'inline' ? 'mb-4' : 'mb-6')}
         >

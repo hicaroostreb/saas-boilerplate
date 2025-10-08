@@ -40,33 +40,53 @@ export function parseDeviceInfo(userAgent?: string | null): DeviceInfo {
   const isTablet = /iPad|Tablet/i.test(userAgent);
 
   let deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown' = 'unknown';
-  if (isTablet) deviceType = 'tablet';
-  else if (isMobile) deviceType = 'mobile';
-  else deviceType = 'desktop';
+  if (isTablet) {
+    deviceType = 'tablet';
+  } else if (isMobile) {
+    deviceType = 'mobile';
+  } else {
+    deviceType = 'desktop';
+  }
 
   // Extract browser info
   let browser: string | undefined = undefined;
-  if (userAgent.includes('Chrome')) browser = 'Chrome';
-  else if (userAgent.includes('Firefox')) browser = 'Firefox';
-  else if (userAgent.includes('Safari')) browser = 'Safari';
-  else if (userAgent.includes('Edge')) browser = 'Edge';
+  if (userAgent.includes('Chrome')) {
+    browser = 'Chrome';
+  } else if (userAgent.includes('Firefox')) {
+    browser = 'Firefox';
+  } else if (userAgent.includes('Safari')) {
+    browser = 'Safari';
+  } else if (userAgent.includes('Edge')) {
+    browser = 'Edge';
+  }
 
   // Extract OS info
   let os: string | undefined = undefined;
-  if (userAgent.includes('Windows')) os = 'Windows';
-  else if (userAgent.includes('Mac')) os = 'macOS';
-  else if (userAgent.includes('Linux')) os = 'Linux';
-  else if (userAgent.includes('Android')) os = 'Android';
-  else if (userAgent.includes('iOS')) os = 'iOS';
+  if (userAgent.includes('Windows')) {
+    os = 'Windows';
+  } else if (userAgent.includes('Mac')) {
+    os = 'macOS';
+  } else if (userAgent.includes('Linux')) {
+    os = 'Linux';
+  } else if (userAgent.includes('Android')) {
+    os = 'Android';
+  } else if (userAgent.includes('iOS')) {
+    os = 'iOS';
+  }
 
   // Extract platform
   let platform: string | undefined = undefined;
-  if (userAgent.includes('Win')) platform = 'Windows';
-  else if (userAgent.includes('Mac')) platform = 'macOS';
-  else if (userAgent.includes('Linux')) platform = 'Linux';
-  else if (userAgent.includes('Android')) platform = 'Android';
-  else if (userAgent.includes('iPhone') || userAgent.includes('iPad'))
+  if (userAgent.includes('Win')) {
+    platform = 'Windows';
+  } else if (userAgent.includes('Mac')) {
+    platform = 'macOS';
+  } else if (userAgent.includes('Linux')) {
+    platform = 'Linux';
+  } else if (userAgent.includes('Android')) {
+    platform = 'Android';
+  } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
     platform = 'iOS';
+  }
 
   return {
     name: browser && os ? `${browser} on ${os}` : 'Unknown Device',
@@ -171,9 +191,13 @@ export function calculateRiskScore(context: {
 
   // Determine security level
   let securityLevel: SecurityLevel = 'normal';
-  if (riskScore >= 90) securityLevel = 'critical';
-  else if (riskScore >= 75) securityLevel = 'high_risk';
-  else if (riskScore >= 50) securityLevel = 'elevated';
+  if (riskScore >= 90) {
+    securityLevel = 'critical';
+  } else if (riskScore >= 75) {
+    securityLevel = 'high_risk';
+  } else if (riskScore >= 50) {
+    securityLevel = 'elevated';
+  }
 
   return {
     riskScore: Math.min(riskScore, 100), // Cap at 100
@@ -396,7 +420,7 @@ export function getSessionRiskLevel(
 /**
  * ✅ GENERATE: Secure random string
  */
-export function generateSecureToken(length: number = 32): string {
+export function generateSecureToken(length = 32): string {
   return randomBytes(length).toString('hex');
 }
 

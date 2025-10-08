@@ -58,7 +58,9 @@ export class AuditService {
   async logAuthEventsBatch(
     events: Partial<EnterpriseAuditEvent>[]
   ): Promise<void> {
-    if (events.length === 0) return;
+    if (events.length === 0) {
+      return;
+    }
 
     try {
       const auditLogs = events.map(event => ({
@@ -101,12 +103,18 @@ export class AuditService {
       // Build where conditions
       const whereConditions = [];
 
-      if (userId) whereConditions.push(eq(authAuditLogs.userId, userId));
-      if (organizationId)
+      if (userId) {
+        whereConditions.push(eq(authAuditLogs.userId, userId));
+      }
+      if (organizationId) {
         whereConditions.push(eq(authAuditLogs.organizationId, organizationId));
-      if (startDate)
+      }
+      if (startDate) {
         whereConditions.push(gte(authAuditLogs.createdAt, startDate));
-      if (endDate) whereConditions.push(lte(authAuditLogs.createdAt, endDate));
+      }
+      if (endDate) {
+        whereConditions.push(lte(authAuditLogs.createdAt, endDate));
+      }
 
       // Execute query
       const events = await db
@@ -242,12 +250,20 @@ export class AuditService {
   private formatLocation(
     geolocation: GeolocationContext | null
   ): string | null {
-    if (!geolocation) return null;
+    if (!geolocation) {
+      return null;
+    }
 
     const { country, city } = geolocation;
-    if (country && city) return `${city}, ${country}`;
-    if (country) return country;
-    if (city) return city;
+    if (country && city) {
+      return `${city}, ${country}`;
+    }
+    if (country) {
+      return country;
+    }
+    if (city) {
+      return city;
+    }
     return null;
   }
 

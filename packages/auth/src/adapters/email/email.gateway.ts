@@ -172,7 +172,7 @@ export class EmailGateway {
     email: string,
     code: string,
     userName?: string,
-    expiryMinutes: number = 10
+    expiryMinutes = 10
   ): Promise<EmailResult> {
     const template = this.getMfaCodeTemplate();
     const variables = {

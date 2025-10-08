@@ -26,13 +26,14 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Cache dependencies
+      - name: Cache dependencies & ESLint
         uses: actions/cache@v4
         with:
           path: |
             ~/.bun/install/cache
             .turbo
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+            .eslintcache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}-${{ hashFiles('tooling/eslint-config/**') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 

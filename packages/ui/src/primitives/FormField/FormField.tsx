@@ -53,7 +53,7 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
     },
     ref
   ) => {
-    const fieldId = id || `field-${Math.random().toString(36).substr(2, 9)}`;
+    const fieldId = id ?? `field-${Math.random().toString(36).substr(2, 9)}`;
     const helperId = helperText ? `${fieldId}-helper` : undefined;
 
     return (

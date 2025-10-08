@@ -9,23 +9,49 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
-  // Global ignores
+  // Global ignores - TODOS OS IGNORES CRÍTICOS MIGRADOS
   {
     ignores: [
-      'dist/**',
-      'build/**',
-      '.next/**',
-      '.turbo/**',
-      'node_modules/**',
-      '*.config.{js,mjs,cjs}',
-      'coverage/**',
+      // Dependencies
+      '**/node_modules/',
+
+      // Build outputs
+      '**/dist/',
+      '**/build/',
+      '**/.next/',
+      '**/.turbo/',
+      '**/coverage/',
+
+      // Database generated (CRITICAL!)
+      'packages/database/',
+      '**/drizzle/',
+      '**/migrations/',
+      '**/seed.ts',
+
+      // Test & Documentation generated
+      '**/playwright-report/',
+      '**/storybook-static/',
+
+      // Generated files
       '**/*.d.ts',
+
+      // OS files (migrados do .eslintignore)
+      '**/.DS_Store',
+      '**/Thumbs.db',
+
+      // Specific configs (NÃO todo .js)
+      '**/*.config.{js,mjs,cjs}',
+      '**/next.config.{js,mjs}',
+      '**/tailwind.config.{js,ts}',
+      '**/postcss.config.{js,mjs}',
+      '**/vite.config.{js,ts}',
+      '**/drizzle.config.{js,ts}',
     ],
   },
 
-  // Main configuration
+  // TypeScript files configuration
   {
-    files: ['**/*.{js,mjs,ts,tsx}'],
+    files: ['**/*.{ts,tsx}'],
 
     languageOptions: {
       ecmaVersion: 'latest',
@@ -35,6 +61,7 @@ export default tseslint.config(
         ecmaFeatures: {
           jsx: true,
         },
+        project: true, // Enable type information
       },
       globals: {
         ...globals.browser,
@@ -51,59 +78,113 @@ export default tseslint.config(
 
     plugins: {
       '@typescript-eslint': tseslint.plugin,
-      turbo: turbo,
+      turbo,
     },
 
     rules: {
-      // Turbo específicas
+      // Turbo integration
       'turbo/no-undeclared-env-vars': 'warn',
 
-      // TypeScript específicas
+      // 🔒 SAFETY CRITICAL (ERROR) - Só 5 regras que quebram aplicação
+      curly: ['error', 'all'],
+      'no-duplicate-imports': 'error',
+      eqeqeq: ['error', 'always'],
+      'prefer-const': 'error',
+      'no-var': 'error',
+
+      // ⚠️ QUALITY GUIDELINES (WARN) - Melhora código, não trava dev
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/no-inferrable-types': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-template': 'warn',
+      'object-shorthand': 'warn',
+
+      // 📋 DEVELOPER EXPERIENCE
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
           destructuredArrayIgnorePattern: '^_',
         },
       ],
+
+      // 🚫 FLEXIBILIDADE TOTAL (OFF)
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-as-const': 'error',
-      '@typescript-eslint/no-inferrable-types': 'warn',
+      '@typescript-eslint/no-empty-function': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
 
-      // JavaScript/ES6+ específicas
-      'prefer-const': 'error',
-      'no-var': 'error',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      eqeqeq: ['error', 'always'],
+      // ✅ MANTIDOS
+      '@typescript-eslint/prefer-as-const': 'error',
+      'no-unused-expressions': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+    },
+  },
+
+  // JavaScript files configuration (NO TypeScript parser/rules)
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      // NO TypeScript parser for JS files
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2021,
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        global: 'readonly',
+      },
+    },
+
+    plugins: {
+      turbo,
+    },
+
+    rules: {
+      // Turbo integration
+      'turbo/no-undeclared-env-vars': 'warn',
+
+      // 🔒 SAFETY CRITICAL (ERROR) - Só regras JS básicas
       curly: ['error', 'all'],
       'no-duplicate-imports': 'error',
+      eqeqeq: ['error', 'always'],
+      'prefer-const': 'error',
+      'no-var': 'error',
+
+      // ⚠️ QUALITY GUIDELINES (WARN) - Só JS
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-template': 'warn',
+      'object-shorthand': 'warn',
+
+      // 📋 DEVELOPER EXPERIENCE
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+
+      // ✅ MANTIDOS
       'no-unused-expressions': 'error',
-      'prefer-template': 'error',
-      'object-shorthand': 'error',
-    },
-  },
 
-  // TypeScript específico - REGRAS BALANCEADAS ✅
-  {
-    files: ['**/*.{ts,tsx}'],
-    rules: {
-      // ✅ CORRIGIDO: ERROR → WARN (alinhado com comportamento local)
-      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn', // ← MUDANÇA CRÍTICA
-      '@typescript-eslint/prefer-optional-chain': 'warn', // ← MUDANÇA CRÍTICA
-    },
-  },
-
-  // JavaScript específico (menos rigoroso)
-  {
-    files: ['**/*.{js,mjs}'],
-    rules: {
-      // Desabilitar regras TypeScript para arquivos JS puros
+      // 🚫 DESABILITAR regras TypeScript para JS
       '@typescript-eslint/no-var-requires': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   }
 );

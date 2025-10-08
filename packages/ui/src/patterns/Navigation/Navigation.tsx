@@ -73,7 +73,7 @@ export function Navigation({
         <NavigationItemComponent
           key={item.id}
           item={item}
-          onClick={onItemClick || undefined}
+          onClick={onItemClick ?? undefined}
         />
       ))}
     </nav>

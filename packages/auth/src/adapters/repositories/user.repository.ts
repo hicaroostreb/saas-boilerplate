@@ -124,7 +124,9 @@ export class UserRepository {
         .where(eq(users.id, userId))
         .limit(1);
 
-      if (!user) return false;
+      if (!user) {
+        return false;
+      }
 
       // Handle both number and string types safely
       const currentAttempts =
@@ -307,7 +309,9 @@ export class UserRepository {
         .where(eq(users.id, userId))
         .limit(1);
 
-      if (!user) return null;
+      if (!user) {
+        return null;
+      }
 
       // Safely convert loginAttempts to number
       const loginAttempts =

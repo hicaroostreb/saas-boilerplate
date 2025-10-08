@@ -83,7 +83,7 @@ export function validateSignInInput(
  */
 export function sanitizeReturnUrl(
   returnTo?: string,
-  baseUrl: string = 'http://localhost:3001'
+  baseUrl = 'http://localhost:3001'
 ): string {
   if (returnTo) {
     try {

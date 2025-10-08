@@ -35,7 +35,7 @@ export class DeviceDetectionService {
     headers: Record<string, string | undefined>
   ): Promise<DeviceInfo> {
     try {
-      const userAgent = headers['user-agent'] || headers['User-Agent'] || '';
+      const userAgent = headers['user-agent'] ?? headers['User-Agent'] ?? '';
       return this.parseDeviceInfo(userAgent);
     } catch (error) {
       console.error(
@@ -72,7 +72,7 @@ export class DeviceDetectionService {
     ];
 
     for (const header of ipHeaders) {
-      const value = headers[header] || headers[header.toLowerCase()];
+      const value = headers[header] ?? headers[header.toLowerCase()];
       if (value) {
         // Handle comma-separated IPs (take first one)
         const ip = value.split(',')[0]?.trim();
@@ -149,33 +149,53 @@ export class DeviceDetectionService {
     const isTablet = /iPad|Tablet/i.test(userAgent);
 
     let deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown' = 'unknown';
-    if (isTablet) deviceType = 'tablet';
-    else if (isMobile) deviceType = 'mobile';
-    else deviceType = 'desktop';
+    if (isTablet) {
+      deviceType = 'tablet';
+    } else if (isMobile) {
+      deviceType = 'mobile';
+    } else {
+      deviceType = 'desktop';
+    }
 
     // Extract browser info
     let browser: string | undefined = undefined;
-    if (userAgent.includes('Chrome')) browser = 'Chrome';
-    else if (userAgent.includes('Firefox')) browser = 'Firefox';
-    else if (userAgent.includes('Safari')) browser = 'Safari';
-    else if (userAgent.includes('Edge')) browser = 'Edge';
+    if (userAgent.includes('Chrome')) {
+      browser = 'Chrome';
+    } else if (userAgent.includes('Firefox')) {
+      browser = 'Firefox';
+    } else if (userAgent.includes('Safari')) {
+      browser = 'Safari';
+    } else if (userAgent.includes('Edge')) {
+      browser = 'Edge';
+    }
 
     // Extract OS info
     let os: string | undefined = undefined;
-    if (userAgent.includes('Windows')) os = 'Windows';
-    else if (userAgent.includes('Mac')) os = 'macOS';
-    else if (userAgent.includes('Linux')) os = 'Linux';
-    else if (userAgent.includes('Android')) os = 'Android';
-    else if (userAgent.includes('iOS')) os = 'iOS';
+    if (userAgent.includes('Windows')) {
+      os = 'Windows';
+    } else if (userAgent.includes('Mac')) {
+      os = 'macOS';
+    } else if (userAgent.includes('Linux')) {
+      os = 'Linux';
+    } else if (userAgent.includes('Android')) {
+      os = 'Android';
+    } else if (userAgent.includes('iOS')) {
+      os = 'iOS';
+    }
 
     // Extract platform
     let platform: string | undefined = undefined;
-    if (userAgent.includes('Win')) platform = 'Windows';
-    else if (userAgent.includes('Mac')) platform = 'macOS';
-    else if (userAgent.includes('Linux')) platform = 'Linux';
-    else if (userAgent.includes('Android')) platform = 'Android';
-    else if (userAgent.includes('iPhone') || userAgent.includes('iPad'))
+    if (userAgent.includes('Win')) {
+      platform = 'Windows';
+    } else if (userAgent.includes('Mac')) {
+      platform = 'macOS';
+    } else if (userAgent.includes('Linux')) {
+      platform = 'Linux';
+    } else if (userAgent.includes('Android')) {
+      platform = 'Android';
+    } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
       platform = 'iOS';
+    }
 
     return {
       name: browser && os ? `${browser} on ${os}` : 'Unknown Device',

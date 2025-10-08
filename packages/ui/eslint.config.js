@@ -1,8 +1,8 @@
-import nextConfig from '@workspace/eslint-config/next.js';
+import baseConfig from '@workspace/eslint-config';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  ...nextConfig,
+  ...baseConfig,
   {
     files: ['**/*.{js,mjs,ts,tsx}'],
     languageOptions: {
@@ -12,18 +12,9 @@ export default [
       },
     },
     settings: {
-      next: {
-        rootDir: './',
-      },
       react: {
         version: 'detect',
       },
     },
-  },
-  {
-    ignores: [
-      'out/**', // Específico Next.js export
-      'public/**', // Assets estáticos
-    ],
   },
 ];
