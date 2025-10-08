@@ -31,9 +31,14 @@ export const sendWebhook = async ({
         },
         body,
       });
-      if (res.ok) return;
+
+      // ✅ CORREÇÃO: Adicionadas chaves obrigatórias
+      if (res.ok) {
+        return;
+      }
       throw new Error(`Status ${res.status}`);
     } catch (_err) {
+      // ✅ CORREÇÃO: Adicionadas chaves obrigatórias
       if (attempt === maxRetries - 1) {
         throw new Error('Webhook failed after retries');
       }

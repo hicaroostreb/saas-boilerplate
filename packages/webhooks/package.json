@@ -18,6 +18,7 @@
     "dev": "tsc --build --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "echo '⚠️ Tests not configured yet'",

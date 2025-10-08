@@ -22,12 +22,19 @@ export interface RedirectFunction {
  */
 let redirectImplementation: RedirectFunction;
 
-try {
-  // Dynamic import to avoid issues in non-Next.js environments
-  const { redirect } = require('next/navigation');
-  redirectImplementation = redirect;
-} catch {
-  // Fallback for testing or non-Next.js environments
+// Conditional import based on environment
+if (typeof window === 'undefined') {
+  // Server-side: import Next.js redirect
+  try {
+    const nextRedirect = eval('require')('next/navigation').redirect;
+    redirectImplementation = nextRedirect;
+  } catch {
+    redirectImplementation = (url: string) => {
+      throw new Error(`Redirect to: ${url}`);
+    };
+  }
+} else {
+  // Client-side: fallback
   redirectImplementation = (url: string) => {
     throw new Error(`Redirect to: ${url}`);
   };

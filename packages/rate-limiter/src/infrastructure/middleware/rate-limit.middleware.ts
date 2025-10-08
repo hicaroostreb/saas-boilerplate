@@ -411,7 +411,9 @@ export function createMultipleRateLimits(
       // Check path
       if (limiter.path) {
         if (limiter.path instanceof RegExp) {
-          if (!limiter.path.test(path)) return false;
+          if (!limiter.path.test(path)) {
+            return false;
+          }
         } else if (path !== limiter.path) {
           return false;
         }
@@ -422,7 +424,9 @@ export function createMultipleRateLimits(
         const methods = Array.isArray(limiter.method)
           ? limiter.method
           : [limiter.method];
-        if (!methods.includes(method)) return false;
+        if (!methods.includes(method)) {
+          return false;
+        }
       }
 
       return true;

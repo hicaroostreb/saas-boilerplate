@@ -26,18 +26,31 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Cache dependencies
+      - name: Cache dependencies & ESLint
         uses: actions/cache@v4
         with:
           path: |
             ~/.bun/install/cache
             .turbo
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+            .eslintcache
+          key: ${{ runner.os }}-bun-v2-${{ hashFiles('**/bun.lockb') }}-${{ hashFiles('**/tsconfig.json') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
+            ${{ runner.os }}-bun-v2-
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Debug - Check marketing structure
+        run: |
+          echo "=== Marketing tsconfig.json ==="
+          cat apps/marketing/tsconfig.json
+          echo ""
+          echo "=== Check if @lib files exist ==="
+          ls -la apps/marketing/src/lib/seo/
+          ls -la apps/marketing/src/lib/constants/
+          echo ""
+          echo "=== TypeScript resolved config ==="
+          cd apps/marketing && npx tsc --showConfig
 
       - name: Quality checks & build
         run: bun run qa:build
@@ -45,7 +58,6 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     needs: quality-checks
-    # Só roda em main/develop OU quando explicitamente pedido
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || contains(github.event.head_commit.message, '[e2e]')
     timeout-minutes: 15
     steps:

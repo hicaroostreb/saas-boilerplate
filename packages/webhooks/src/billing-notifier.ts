@@ -19,7 +19,7 @@ export class WebhookBillingNotifier implements IBillingNotifier {
       url: config.url,
       secret: config.secret,
       payload: event as unknown as Record<string, unknown>,
-      maxRetries: config.retries || 3,
+      maxRetries: config.retries ?? 3,
     });
   }
 }

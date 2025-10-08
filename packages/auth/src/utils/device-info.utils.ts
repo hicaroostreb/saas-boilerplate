@@ -31,28 +31,40 @@ export class DeviceInfoGateway {
     const isTablet = /iPad|Tablet/i.test(userAgent);
 
     let deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown' = 'unknown';
-    if (isTablet) deviceType = 'tablet';
-    else if (isMobile) deviceType = 'mobile';
-    else deviceType = 'desktop';
+    if (isTablet) {
+      deviceType = 'tablet';
+    } else if (isMobile) {
+      deviceType = 'mobile';
+    } else {
+      deviceType = 'desktop';
+    }
 
     // Extract browser
     let browser: string | undefined = undefined;
-    if (userAgent.includes('Chrome')) browser = 'Chrome';
-    else if (userAgent.includes('Firefox')) browser = 'Firefox';
-    else if (userAgent.includes('Safari')) browser = 'Safari';
-    else if (userAgent.includes('Edge')) browser = 'Edge';
+    if (userAgent.includes('Chrome')) {
+      browser = 'Chrome';
+    } else if (userAgent.includes('Firefox')) {
+      browser = 'Firefox';
+    } else if (userAgent.includes('Safari')) {
+      browser = 'Safari';
+    } else if (userAgent.includes('Edge')) {
+      browser = 'Edge';
+    }
 
     // Extract OS (FIXED - handle undefined match)
     let os: string | undefined = undefined;
-    if (userAgent.includes('Windows')) os = 'Windows';
-    else if (userAgent.includes('Mac OS X')) {
+    if (userAgent.includes('Windows')) {
+      os = 'Windows';
+    } else if (userAgent.includes('Mac OS X')) {
       const match = userAgent.match(/Mac OS X (\d+[._]\d+[._]\d+)?/);
       os = match?.[1] // ✅ FIX: Check if match[1] exists
         ? `macOS ${match[1].replace(/_/g, '.')}`
         : 'macOS';
-    } else if (userAgent.includes('Linux')) os = 'Linux';
-    else if (userAgent.includes('Android')) os = 'Android';
-    else if (userAgent.includes('iPhone OS') ?? userAgent.includes('iOS')) {
+    } else if (userAgent.includes('Linux')) {
+      os = 'Linux';
+    } else if (userAgent.includes('Android')) {
+      os = 'Android';
+    } else if (userAgent.includes('iPhone OS') ?? userAgent.includes('iOS')) {
       const match = userAgent.match(/(?:iPhone )?OS (\d+[._]\d+[._]?\d*)?/);
       os = match?.[1] // ✅ FIX: Check if match[1] exists
         ? `iOS ${match[1].replace(/_/g, '.')}`

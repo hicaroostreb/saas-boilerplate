@@ -2,12 +2,16 @@
 
 echo "🔍 Running pre-commit checks..."
 
+# Export NODE_ENV para garantir consistência
+export NODE_ENV=development
+
 bunx lint-staged
 
 if [ $? -ne 0 ]; then
     echo ""
     echo "❌ Lint/format failed"
     echo "💡 Run 'bun run qa:fix' to auto-fix issues"
+    echo "📋 Or run 'bun run lint --fix' for manual fixes"
     exit 1
 fi
 

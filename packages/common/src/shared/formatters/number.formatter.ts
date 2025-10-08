@@ -179,9 +179,15 @@ export const formatNumberToWords = (num: number): string => {
     'noventa',
   ];
 
-  if (num === 0) return 'zero';
-  if (num < 0) return `menos ${formatNumberToWords(-num)}`;
-  if (num >= 1000) return formatCompactNumber(num);
+  if (num === 0) {
+    return 'zero';
+  }
+  if (num < 0) {
+    return `menos ${formatNumberToWords(-num)}`;
+  }
+  if (num >= 1000) {
+    return formatCompactNumber(num);
+  }
 
   let result = '';
 
@@ -194,14 +200,18 @@ export const formatNumberToWords = (num: number): string => {
       result += `${units[hundreds]}centos`;
     }
     num %= 100;
-    if (num > 0) result += ' e ';
+    if (num > 0) {
+      result += ' e ';
+    }
   }
 
   // Dezenas e unidades
   if (num >= 20) {
     result += tens[Math.floor(num / 10)];
     num %= 10;
-    if (num > 0) result += ` e ${units[num]}`;
+    if (num > 0) {
+      result += ` e ${units[num]}`;
+    }
   } else if (num >= 10) {
     result += teens[num - 10];
   } else if (num > 0) {

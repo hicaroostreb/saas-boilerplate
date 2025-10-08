@@ -3,7 +3,6 @@ import nextConfig from '@workspace/eslint-config/next.js';
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   ...nextConfig,
-
   {
     files: ['**/*.{js,mjs,ts,tsx}'],
     languageOptions: {
@@ -20,21 +19,13 @@ export default [
         version: 'detect',
       },
     },
-    // ✅ REMOVIDAS regras conflitantes - usa apenas a base
-    rules: {},
   },
-
   {
     ignores: [
-      'next.config.mjs',
-      '.next/**',
       'out/**',
       'public/**',
-      'coverage/**',
-      '*.config.{js,mjs}',
-      'tailwind.config.js',
-      'src/content/**/*.md',
-      'src/content/**/*.mdx',
+      'src/content/**/*.md', // Content específico
+      'src/content/**/*.mdx', // Content específico
     ],
   },
 ];

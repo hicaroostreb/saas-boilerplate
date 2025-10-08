@@ -61,13 +61,13 @@ export function PasswordStrength({
   const analysis = analyzePassword(password, {
     minLength,
     requireSpecialChars,
-    email: email || undefined,
-    name: name || undefined,
+    email: email ?? undefined,
+    name: name ?? undefined,
   });
 
   if (variant === 'minimal') {
     return (
-      <MinimalView analysis={analysis} className={className || undefined} />
+      <MinimalView analysis={analysis} className={className ?? undefined} />
     );
   }
 
@@ -76,7 +76,7 @@ export function PasswordStrength({
       <DetailedView
         analysis={analysis}
         showRequirements={showRequirements}
-        className={className || undefined}
+        className={className ?? undefined}
       />
     );
   }
@@ -85,7 +85,7 @@ export function PasswordStrength({
     <ProgressView
       analysis={analysis}
       showRequirements={showRequirements}
-      className={className || undefined}
+      className={className ?? undefined}
     />
   );
 }
@@ -137,17 +137,16 @@ function analyzePassword(
     });
   }
 
-  // ✅ CORREÇÃO: Check for common patterns com null safety
-  if (
-    email &&
-    email.includes('@') &&
-    password.toLowerCase().includes(email.split('@')[0]?.toLowerCase() || '')
-  ) {
-    requirements.push({
-      label: 'Does not contain email',
-      met: false,
-      required: true,
-    });
+  if (email?.includes('@')) {
+    const emailPrefix = email.split('@')[0];
+    const emailLower = emailPrefix?.toLowerCase();
+    if (emailLower && password.toLowerCase().includes(emailLower)) {
+      requirements.push({
+        label: 'Does not contain email',
+        met: false,
+        required: true,
+      });
+    }
   }
 
   if (name && password.toLowerCase().includes(name.toLowerCase())) {
@@ -165,9 +164,13 @@ function analyzePassword(
 
   // Determine level
   let level: PasswordStrengthLevel = 'weak';
-  if (score >= 80) level = 'strong';
-  else if (score >= 60) level = 'good';
-  else if (score >= 40) level = 'fair';
+  if (score >= 80) {
+    level = 'strong';
+  } else if (score >= 60) {
+    level = 'good';
+  } else if (score >= 40) {
+    level = 'fair';
+  }
 
   // Required requirements must be met for good+ levels
   const requiredMet = requirements
@@ -210,14 +213,13 @@ function MinimalView({
   );
 }
 
-// ✅ CORREÇÃO: Adicionar showRequirements na interface
 function ProgressView({
   analysis,
   showRequirements = false,
   className,
 }: {
   analysis: ReturnType<typeof analyzePassword>;
-  showRequirements?: boolean; // ✅ ADICIONAR
+  showRequirements?: boolean;
   className?: string;
 }): JSX.Element {
   const { level, score, requirements } = analysis;
@@ -249,14 +251,13 @@ function ProgressView({
   );
 }
 
-// ✅ CORREÇÃO: Adicionar showRequirements na interface
 function DetailedView({
   analysis,
   showRequirements: _showRequirements,
   className,
 }: {
   analysis: ReturnType<typeof analyzePassword>;
-  showRequirements?: boolean; // ✅ ADICIONAR (mesmo que não usado)
+  showRequirements?: boolean;
   className?: string;
 }): JSX.Element {
   const { requirements, level } = analysis;
@@ -311,7 +312,7 @@ function getStrengthColor(level: PasswordStrengthLevel, index: number): string {
     good: ['bg-warning', 'bg-warning', 'bg-info', 'bg-muted'],
     strong: ['bg-success', 'bg-success', 'bg-success', 'bg-success'],
   };
-  return colors[level][index - 1] || 'bg-muted'; // ✅ CORREÇÃO: fallback
+  return colors[level][index - 1] ?? 'bg-muted';
 }
 
 function getTextColor(level: PasswordStrengthLevel): string {

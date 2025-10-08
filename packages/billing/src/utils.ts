@@ -26,7 +26,9 @@ export const isActiveSub = (subscription: Subscription): boolean =>
   subscription.status === 'active' || subscription.status === 'trialing';
 
 export const getDaysUntilRenewal = (subscription: Subscription): number => {
-  if (!subscription.endsAt) return 0;
+  if (!subscription.endsAt) {
+    return 0;
+  }
   const now = new Date();
   const diffMs = subscription.endsAt.getTime() - now.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));

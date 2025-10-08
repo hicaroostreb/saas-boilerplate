@@ -12,9 +12,9 @@ export class ApiError extends Error {
 
   constructor(
     message: string,
-    statusCode: number = 500,
-    code: string = 'INTERNAL_ERROR',
-    isOperational: boolean = true,
+    statusCode = 500,
+    code = 'INTERNAL_ERROR',
+    isOperational = true,
     path?: string
   ) {
     super(message);
@@ -33,7 +33,7 @@ export class ApiError extends Error {
  * Erro de recurso não encontrado (404)
  */
 export class NotFoundError extends ApiError {
-  constructor(resource: string = 'Recurso', path?: string) {
+  constructor(resource = 'Recurso', path?: string) {
     super(`${resource} não encontrado`, 404, 'NOT_FOUND', true, path);
   }
 }
@@ -42,7 +42,7 @@ export class NotFoundError extends ApiError {
  * Erro de não autorizado (401)
  */
 export class UnauthorizedError extends ApiError {
-  constructor(message: string = 'Não autorizado', path?: string) {
+  constructor(message = 'Não autorizado', path?: string) {
     super(message, 401, 'UNAUTHORIZED', true, path);
   }
 }
@@ -51,7 +51,7 @@ export class UnauthorizedError extends ApiError {
  * Erro de acesso negado (403)
  */
 export class ForbiddenError extends ApiError {
-  constructor(message: string = 'Acesso negado', path?: string) {
+  constructor(message = 'Acesso negado', path?: string) {
     super(message, 403, 'FORBIDDEN', true, path);
   }
 }
@@ -60,7 +60,7 @@ export class ForbiddenError extends ApiError {
  * Erro de conflito (409)
  */
 export class ConflictError extends ApiError {
-  constructor(message: string = 'Conflito', path?: string) {
+  constructor(message = 'Conflito', path?: string) {
     super(message, 409, 'CONFLICT', true, path);
   }
 }
@@ -69,7 +69,7 @@ export class ConflictError extends ApiError {
  * Erro de rate limit excedido (429)
  */
 export class RateLimitError extends ApiError {
-  constructor(message: string = 'Muitas tentativas', path?: string) {
+  constructor(message = 'Muitas tentativas', path?: string) {
     super(message, 429, 'RATE_LIMIT_EXCEEDED', true, path);
   }
 }
@@ -78,7 +78,7 @@ export class RateLimitError extends ApiError {
  * Erro de dados inválidos (422)
  */
 export class UnprocessableEntityError extends ApiError {
-  constructor(message: string = 'Dados inválidos', path?: string) {
+  constructor(message = 'Dados inválidos', path?: string) {
     super(message, 422, 'UNPROCESSABLE_ENTITY', true, path);
   }
 }
@@ -87,7 +87,7 @@ export class UnprocessableEntityError extends ApiError {
  * Erro de timeout (408)
  */
 export class TimeoutError extends ApiError {
-  constructor(message: string = 'Tempo esgotado', path?: string) {
+  constructor(message = 'Tempo esgotado', path?: string) {
     super(message, 408, 'TIMEOUT', true, path);
   }
 }
@@ -96,10 +96,7 @@ export class TimeoutError extends ApiError {
  * Erro de serviço indisponível (503)
  */
 export class ServiceUnavailableError extends ApiError {
-  constructor(
-    message: string = 'Serviço temporariamente indisponível',
-    path?: string
-  ) {
+  constructor(message = 'Serviço temporariamente indisponível', path?: string) {
     super(message, 503, 'SERVICE_UNAVAILABLE', true, path);
   }
 }
@@ -108,7 +105,7 @@ export class ServiceUnavailableError extends ApiError {
  * Erro de gateway (502)
  */
 export class BadGatewayError extends ApiError {
-  constructor(message: string = 'Erro no gateway', path?: string) {
+  constructor(message = 'Erro no gateway', path?: string) {
     super(message, 502, 'BAD_GATEWAY', true, path);
   }
 }

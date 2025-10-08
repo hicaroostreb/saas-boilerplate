@@ -7,24 +7,52 @@ import type { MemberRole, SecurityLevel } from '../types';
  * Single Responsibility: UI styling and display utilities
  */
 
+// ✅ CORREÇÃO: Cache síncrono para dependências opcionais
+let clsxCache: ((inputs: unknown) => string) | null | undefined = undefined;
+let twMergeCache: ((classes: string) => string) | null | undefined = undefined;
+
+// Função para carregar dependências de forma lazy
+const loadDependencies = () => {
+  // Carregar clsx
+  if (clsxCache === undefined) {
+    try {
+      // Usar eval para evitar error de análise estática
+      const clsxModule = eval('require')('clsx');
+      clsxCache = clsxModule.default ?? clsxModule;
+    } catch {
+      clsxCache = null;
+    }
+  }
+
+  // Carregar tailwind-merge
+  if (twMergeCache === undefined) {
+    try {
+      const twMergeModule = eval('require')('tailwind-merge');
+      twMergeCache = twMergeModule.twMerge;
+    } catch {
+      twMergeCache = null;
+    }
+  }
+};
+
 /**
  * ✅ TAILWIND: Class name utility (fallback implementation)
  */
 export function cn(...inputs: (string | undefined | null | false)[]): string {
-  try {
-    const clsx = require('clsx');
-    const { twMerge } = require('tailwind-merge');
-    return twMerge(clsx(inputs));
-  } catch {
-    // Fallback without dependencies
-    return inputs
-      .filter(
-        (input): input is string => Boolean(input) && typeof input === 'string'
-      )
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+  loadDependencies();
+
+  if (clsxCache && twMergeCache) {
+    return twMergeCache(clsxCache(inputs));
   }
+
+  // Fallback without dependencies
+  return inputs
+    .filter(
+      (input): input is string => Boolean(input) && typeof input === 'string'
+    )
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**

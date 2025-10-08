@@ -20,7 +20,7 @@ export class AuthContextService {
           email: session.user.email as string,
           name: session.user.name as string,
           role: 'user',
-          image: session.user.image || undefined,
+          image: session.user.image ?? undefined,
           isActive: true,
           isSuperAdmin: false,
         },
@@ -29,7 +29,7 @@ export class AuthContextService {
           userId: session.user.id as string,
           expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
           enterprise: {
-            organizationId: input.organizationId || null,
+            organizationId: input.organizationId ?? null,
             role: 'member',
             roles: ['user'],
             permissions: [],
@@ -68,14 +68,16 @@ export class AuthContextService {
   async getCurrentUser() {
     try {
       const session = await auth();
-      if (!session?.user) return null;
+      if (!session?.user) {
+        return null;
+      }
 
       return {
         id: session.user.id as string,
         email: session.user.email as string,
         name: session.user.name as string,
         role: 'user',
-        image: session.user.image || undefined,
+        image: session.user.image ?? undefined,
         isActive: true,
         isSuperAdmin: false,
       };
@@ -87,7 +89,7 @@ export class AuthContextService {
   async getCurrentUserId(): Promise<string | null> {
     try {
       const user = await this.getCurrentUser();
-      return user?.id || null;
+      return user?.id ?? null;
     } catch {
       return null;
     }

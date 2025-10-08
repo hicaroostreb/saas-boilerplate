@@ -41,7 +41,9 @@ export function formatLocation(
  * ✅ FLAG: Get country flag emoji
  */
 export function getCountryFlag(countryCode?: string | null): string {
-  if (!countryCode || countryCode.length !== 2) return '🌍';
+  if (!countryCode || countryCode.length !== 2) {
+    return '🌍';
+  }
 
   const flags: Record<string, string> = {
     BR: '🇧🇷',

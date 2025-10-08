@@ -152,9 +152,15 @@ export class RiskAssessmentService {
    * ✅ DETERMINE: Security level based on risk score
    */
   private determineSecurityLevel(riskScore: number): SecurityLevel {
-    if (riskScore >= 80) return 'critical';
-    if (riskScore >= 60) return 'high_risk';
-    if (riskScore >= 30) return 'elevated';
+    if (riskScore >= 80) {
+      return 'critical';
+    }
+    if (riskScore >= 60) {
+      return 'high_risk';
+    }
+    if (riskScore >= 30) {
+      return 'elevated';
+    }
     return 'normal';
   }
 

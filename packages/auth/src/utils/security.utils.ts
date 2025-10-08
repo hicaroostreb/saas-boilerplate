@@ -15,10 +15,15 @@ export function getRiskLevel(score: number): {
 } {
   let level: 'low' | 'medium' | 'high' | 'critical';
 
-  if (score >= 80) level = 'critical';
-  else if (score >= 60) level = 'high';
-  else if (score >= 30) level = 'medium';
-  else level = 'low';
+  if (score >= 80) {
+    level = 'critical';
+  } else if (score >= 60) {
+    level = 'high';
+  } else if (score >= 30) {
+    level = 'medium';
+  } else {
+    level = 'low';
+  }
 
   const config = {
     low: {

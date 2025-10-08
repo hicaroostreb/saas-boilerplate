@@ -63,8 +63,9 @@ export function ExpandableSection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const handleToggle = (): void => {
-    if (disabled) return;
-
+    if (disabled) {
+      return;
+    }
     const newExpanded = !isExpanded;
     setIsExpanded(newExpanded);
     onToggle?.(newExpanded);

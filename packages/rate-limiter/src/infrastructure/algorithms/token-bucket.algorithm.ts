@@ -56,7 +56,7 @@ export class TokenBucketAlgorithm {
    */
   processRequest(
     state: TokenBucketState,
-    tokensRequested: number = 1,
+    tokensRequested = 1,
     currentTime: number = Date.now()
   ): { result: TokenBucketResult; newState: TokenBucketState } {
     // Refill tokens based on elapsed time
@@ -122,7 +122,7 @@ export class TokenBucketAlgorithm {
    */
   wouldAllow(
     state: TokenBucketState,
-    tokensRequested: number = 1,
+    tokensRequested = 1,
     currentTime: number = Date.now()
   ): boolean {
     const updatedState = this.refillTokens(state, currentTime);
@@ -422,7 +422,7 @@ export const TokenBucketUtils = {
    */
   calculateOptimal: (
     targetRps: number,
-    allowedBurstMultiplier: number = 2
+    allowedBurstMultiplier = 2
   ): TokenBucketConfig => ({
     capacity: Math.floor(targetRps * allowedBurstMultiplier),
     refillRate: targetRps,

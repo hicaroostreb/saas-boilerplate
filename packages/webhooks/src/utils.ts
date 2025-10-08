@@ -10,6 +10,9 @@ export const signPayload = (secret: string, body: string): string => {
 };
 
 export const parseWebhookBody = (body: unknown): Record<string, unknown> => {
-  if (typeof body === 'string') return JSON.parse(body);
+  // ✅ CORREÇÃO: Adicionadas chaves obrigatórias
+  if (typeof body === 'string') {
+    return JSON.parse(body);
+  }
   throw new TypeError('Invalid webhook body');
 };

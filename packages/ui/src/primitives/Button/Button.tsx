@@ -77,7 +77,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const isButtonDisabled = Boolean(isDisabled || loading);
+    const isButtonDisabled = Boolean(isDisabled ?? loading);
 
     return (
       <button

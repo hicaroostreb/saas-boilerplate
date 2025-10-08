@@ -24,7 +24,7 @@ export abstract class DomainError extends Error {
  * Erro de validação de dados de negócio.
  */
 export class ValidationError extends DomainError {
-  constructor(message: string = 'Dados inválidos', field?: string) {
+  constructor(message = 'Dados inválidos', field?: string) {
     super(message, 'VALIDATION_ERROR', field ? { field } : undefined);
   }
 }

@@ -42,8 +42,9 @@ export function ErrorAlert({
   dismissible = false,
   onDismiss,
 }: ErrorAlertProps): JSX.Element | null {
-  if (!message) return null;
-
+  if (!message) {
+    return null;
+  }
   return (
     <div
       className={cn(

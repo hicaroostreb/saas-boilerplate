@@ -1,21 +1,8 @@
 {
   "extends": "../../tooling/typescript-config/nextjs.json",
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
     "baseUrl": ".",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
@@ -39,13 +26,13 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     ".next/types/**/*.ts",
+    "middleware.ts",
     "../../packages/ui/src/**/*.ts",
     "../../packages/ui/src/**/*.tsx",
     "../../packages/common/src/**/*.ts",
     "../../packages/routes/src/**/*.ts",
     "../../packages/auth/src/**/*.ts",
-    "../../packages/database/src/**/*.ts",
-    "middleware.ts"
+    "../../packages/database/src/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

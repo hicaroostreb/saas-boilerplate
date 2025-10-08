@@ -66,8 +66,9 @@ export function useTimeRemaining(
 
   // Format time string
   const formatTime = (): string => {
-    if (isExpired) return '00:00:00';
-
+    if (isExpired) {
+      return '00:00:00';
+    }
     if (days > 0) {
       return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }

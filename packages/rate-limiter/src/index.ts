@@ -1,5 +1,3 @@
-// packages/rate-limiter/src/index.ts
-
 // ===== DOMAIN EXPORTS =====
 
 // Types and Interfaces
@@ -107,7 +105,6 @@ export {
 import { RateLimitService } from './domain/services/rate-limit.service.js';
 import {
   RateLimitConfigSchema,
-  type IRateLimitService,
   type RateLimitConfig,
 } from './domain/types/rate-limit.types.js';
 import { MemoryRateLimitGateway } from './infrastructure/gateways/memory.gateway.js';
@@ -115,13 +112,20 @@ import {
   RedisRateLimitGateway,
   type RedisGatewayOptions,
 } from './infrastructure/gateways/redis.gateway.js';
+// ✅ CORREÇÃO: Import específico das funções de middleware
+import {
+  createExpressRateLimit,
+  createFastifyRateLimit,
+  createNextRateLimit,
+} from './infrastructure/middleware/rate-limit.middleware.js';
 
 /**
  * Factory function to create a complete rate limiter with memory storage
  */
 export function createMemoryRateLimiter(
   config: Partial<RateLimitConfig>
-): IRateLimitService {
+): RateLimitService {
+  // ✅ MUDANÇA: RateLimitService em vez de IRateLimitService
   // Validate configuration with defaults
   const validatedConfig = RateLimitConfigSchema.parse(config);
 
@@ -140,7 +144,8 @@ export function createMemoryRateLimiter(
 export function createRedisRateLimiter(
   config: Partial<RateLimitConfig>,
   redisOptions?: RedisGatewayOptions
-): IRateLimitService {
+): RateLimitService {
+  // ✅ MUDANÇA: RateLimitService em vez de IRateLimitService
   // Validate configuration with defaults
   const validatedConfig = RateLimitConfigSchema.parse(config);
 
@@ -161,7 +166,8 @@ export function createRateLimiter(
     redis?: RedisGatewayOptions;
     memory?: { cleanupIntervalMs?: number };
   }
-): IRateLimitService {
+): RateLimitService {
+  // ✅ MUDANÇA: RateLimitService em vez de IRateLimitService
   // Validate configuration with defaults
   const validatedConfig = RateLimitConfigSchema.parse(config);
 
@@ -172,12 +178,13 @@ export function createRateLimiter(
     (validatedConfig.redisUrl ? 'redis' : 'memory');
 
   switch (storageType) {
-    case 'redis':
+    case 'redis': {
       return createRedisRateLimiter(validatedConfig, storageOptions?.redis);
-
+    }
     case 'memory':
-    default:
+    default: {
       return createMemoryRateLimiter(validatedConfig);
+    }
   }
 }
 
@@ -188,7 +195,8 @@ export const RateLimiterPresets = {
   /**
    * API rate limiting - 100 requests per minute with Redis
    */
-  api: (redisOptions?: RedisGatewayOptions): IRateLimitService => {
+  api: (redisOptions?: RedisGatewayOptions): RateLimitService => {
+    // ✅ MUDANÇA
     return createRedisRateLimiter(
       {
         windowMs: 60 * 1000, // 1 minute
@@ -204,7 +212,8 @@ export const RateLimiterPresets = {
   /**
    * Strict API limiting - 50 requests per minute
    */
-  strict: (redisOptions?: RedisGatewayOptions): IRateLimitService => {
+  strict: (redisOptions?: RedisGatewayOptions): RateLimitService => {
+    // ✅ MUDANÇA
     return createRedisRateLimiter(
       {
         windowMs: 60 * 1000,
@@ -220,7 +229,8 @@ export const RateLimiterPresets = {
   /**
    * Burst-friendly limiting - allows traffic spikes
    */
-  burstFriendly: (redisOptions?: RedisGatewayOptions): IRateLimitService => {
+  burstFriendly: (redisOptions?: RedisGatewayOptions): RateLimitService => {
+    // ✅ MUDANÇA
     return createRedisRateLimiter(
       {
         windowMs: 60 * 1000,
@@ -236,7 +246,8 @@ export const RateLimiterPresets = {
   /**
    * Development/testing - in-memory with generous limits
    */
-  development: (): IRateLimitService => {
+  development: (): RateLimitService => {
+    // ✅ MUDANÇA
     return createMemoryRateLimiter({
       windowMs: 60 * 1000,
       maxRequests: 1000,
@@ -249,7 +260,8 @@ export const RateLimiterPresets = {
   /**
    * Authentication rate limiting - very strict
    */
-  auth: (redisOptions?: RedisGatewayOptions): IRateLimitService => {
+  auth: (redisOptions?: RedisGatewayOptions): RateLimitService => {
+    // ✅ MUDANÇA
     return createRedisRateLimiter(
       {
         windowMs: 15 * 60 * 1000, // 15 minutes
@@ -268,7 +280,8 @@ export const RateLimiterPresets = {
   global: (
     maxRequestsPerMinute: number,
     redisOptions?: RedisGatewayOptions
-  ): IRateLimitService => {
+  ): RateLimitService => {
+    // ✅ MUDANÇA
     return createRedisRateLimiter(
       {
         windowMs: 60 * 1000,
@@ -293,9 +306,8 @@ export function createCompleteRateLimit(options: {
     memory?: { cleanupIntervalMs?: number };
   };
   middleware?: {
-    identifierExtractor?: unknown;
-    onLimitReached?: unknown;
     framework?: 'express' | 'fastify' | 'next';
+    [key: string]: unknown;
   };
 }) {
   // Create the service
@@ -303,23 +315,24 @@ export function createCompleteRateLimit(options: {
 
   // Create middleware based on framework
   let middleware;
-  const {
-    createExpressRateLimit,
-    createFastifyRateLimit,
-    createNextRateLimit,
-  } = require('./infrastructure/middleware/rate-limit.middleware.js');
+
+  // ✅ CORREÇÃO: Type assertion específica em vez de 'any'
+  const middlewareOptions = options.middleware as Record<string, unknown>;
 
   switch (options.middleware?.framework) {
-    case 'fastify':
-      middleware = createFastifyRateLimit(service, options.middleware);
+    case 'fastify': {
+      middleware = createFastifyRateLimit(service, middlewareOptions);
       break;
-    case 'next':
-      middleware = createNextRateLimit(service, options.middleware);
+    }
+    case 'next': {
+      middleware = createNextRateLimit(service, middlewareOptions);
       break;
+    }
     case 'express':
-    default:
-      middleware = createExpressRateLimit(service, options.middleware);
+    default: {
+      middleware = createExpressRateLimit(service, middlewareOptions);
       break;
+    }
   }
 
   return {

@@ -18,8 +18,9 @@ export const buildUrl = {
     path: string,
     params: Record<string, string | number | boolean>
   ): string => {
-    if (!params || Object.keys(params).length === 0) return path;
-
+    if (!params || Object.keys(params).length === 0) {
+      return path;
+    }
     const url = new URL(path, 'http://localhost');
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, String(value));

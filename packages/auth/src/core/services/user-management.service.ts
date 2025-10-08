@@ -156,7 +156,9 @@ export class UserManagementService {
   async getUserById(userId: string): Promise<UserResult | null> {
     try {
       const user = await this.userRepository.findById(userId);
-      if (!user) return null;
+      if (!user) {
+        return null;
+      }
 
       // ✅ FIX: Safe conversion with unknown cast first
       const typedUser = user as unknown as UserResult;
@@ -179,7 +181,9 @@ export class UserManagementService {
   async getUserByEmail(email: string): Promise<UserResult | null> {
     try {
       const user = await this.userRepository.findByEmail(email);
-      if (!user) return null;
+      if (!user) {
+        return null;
+      }
 
       // ✅ FIX: Safe conversion with unknown cast first
       const typedUser = user as unknown as UserResult;

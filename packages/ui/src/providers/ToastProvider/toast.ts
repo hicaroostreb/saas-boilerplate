@@ -66,9 +66,9 @@ export const toast = {
   ): string | number => {
     // ✅ CORREÇÃO: Voltar para string | number
     return sonnerToast.promise(promise, {
-      loading: loading || 'Loading...',
-      success: success || 'Success!',
-      error: error || 'Something went wrong',
+      loading: loading ?? 'Loading...',
+      success: success ?? 'Success!',
+      error: error ?? 'Something went wrong',
       ...options,
     }) as string | number; // ✅ Type assertion correto
   },

@@ -16,6 +16,6 @@ export const verifyWebhook = ({
   body,
   secret,
 }: WebhookRequest): boolean => {
-  const signature = headers['x-signature'] || '';
+  const signature = headers['x-signature'] ?? '';
   return signature === signPayload(secret, body);
 };

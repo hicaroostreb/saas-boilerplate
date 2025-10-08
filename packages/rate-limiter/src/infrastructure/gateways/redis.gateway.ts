@@ -43,7 +43,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
     try {
       const redisKey = this.buildRedisKey(key);
       const data = await this.executeWithRetry(() => this.redis.get(redisKey));
-      if (!data) return null;
+      if (!data) {
+        return null;
+      }
       const entity = RateLimitEntity.fromRecord(JSON.parse(data));
       if (entity.isExpired()) {
         await this.executeWithRetry(() => this.redis.del(redisKey));
@@ -91,7 +93,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
     const keys = await this.executeWithRetry(() =>
       this.redis.keys(`${this.keyPrefix}*`)
     );
-    if (keys.length === 0) return 0;
+    if (keys.length === 0) {
+      return 0;
+    }
     const ttls = await Promise.all(keys.map(k => this.redis.ttl(k)));
     const expired = keys.filter((_, i) => {
       const ttl = ttls[i];
@@ -133,7 +137,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
   }
 
   override async resetMultiple(keys: string[]): Promise<void> {
-    if (keys.length === 0) return;
+    if (keys.length === 0) {
+      return;
+    }
     const redisKeys = keys.map(k => this.buildRedisKey(k));
     await this.executeWithRetry(() => this.redis.del(...redisKeys));
   }
@@ -142,7 +148,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
     keys: string[]
   ): Promise<Map<string, RateLimitEntity>> {
     const results = new Map<string, RateLimitEntity>();
-    if (keys.length === 0) return results;
+    if (keys.length === 0) {
+      return results;
+    }
     const redisKeys = keys.map(k => this.buildRedisKey(k));
     const values = await this.executeWithRetry(() =>
       this.redis.mget(...redisKeys)
@@ -152,7 +160,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
       if (val) {
         try {
           const entity = RateLimitEntity.fromRecord(JSON.parse(val));
-          if (!entity.isExpired()) results.set(orig, entity);
+          if (!entity.isExpired()) {
+            results.set(orig, entity);
+          }
         } catch {
           // skip
         }
@@ -274,7 +284,9 @@ export class RedisRateLimitGateway extends BaseRateLimitRepository {
 
   private setupEventHandlers(): void {
     this.redis.on('error', err => {
-      if (!this.isShuttingDown) console.error('Redis error:', err);
+      if (!this.isShuttingDown) {
+        console.error('Redis error:', err);
+      }
     });
     this.redis.on('connect', () => console.warn('Redis connected'));
     this.redis.on('disconnect', () => console.warn('Redis disconnected'));

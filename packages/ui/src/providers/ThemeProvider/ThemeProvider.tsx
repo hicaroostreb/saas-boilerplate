@@ -114,8 +114,9 @@ export function ThemeProvider({
 
   // Listen for system theme changes
   useEffect(() => {
-    if (!enableSystem) return;
-
+    if (!enableSystem) {
+      return;
+    }
     const media = window.matchMedia('(prefers-color-scheme: dark)');
 
     const updateSystemTheme = (): void => {

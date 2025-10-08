@@ -296,7 +296,8 @@ export class KeyGenerator {
         // Remove multiple consecutive underscores
         .replace(/_+/g, '_')
         // Remove leading/trailing underscores
-        .replace(/^_|_$/g, '') ??
+        .replace(/^_|_$/g, '') ||
+      // ✅ CORREÇÃO: Usado || em vez de ?? para string vazia
       // Ensure not empty
       'empty'
     );
@@ -321,10 +322,8 @@ export class KeyGenerator {
       throw new Error('Max length must be at least 10 characters');
     }
 
-    if (
-      this.options.prefix &&
-      this.options.prefix.includes(this.options.separator)
-    ) {
+    if (this.options.prefix?.includes(this.options.separator)) {
+      // ✅ CORREÇÃO: Usado optional chain (?.) na linha 325
       throw new Error('Prefix cannot contain the separator character');
     }
   }
