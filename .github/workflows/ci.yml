@@ -40,6 +40,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Debug - Check marketing structure
+        run: |
+          echo "=== Marketing tsconfig.json ==="
+          cat apps/marketing/tsconfig.json
+          echo ""
+          echo "=== Check if @lib files exist ==="
+          ls -la apps/marketing/src/lib/seo/
+          ls -la apps/marketing/src/lib/constants/
+          echo ""
+          echo "=== TypeScript resolved config ==="
+          cd apps/marketing && npx tsc --showConfig
+
       - name: Quality checks & build
         run: bun run qa:build
 
