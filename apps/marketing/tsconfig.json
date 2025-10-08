@@ -1,6 +1,7 @@
 {
   "extends": "@workspace/typescript-config/nextjs.json",
   "compilerOptions": {
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"],
       "@components/*": ["./src/components/*"],
