@@ -2,6 +2,7 @@
   "extends": "../../tooling/typescript-config/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
