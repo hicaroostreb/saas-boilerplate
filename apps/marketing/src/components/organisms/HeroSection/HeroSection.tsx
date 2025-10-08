@@ -1,6 +1,6 @@
 'use client';
 
-import { routes } from '@lib/constants/routes';
+import { routes } from '../../../lib/constants/routes';
 
 export interface HeroSectionProps {
   title?: string;

@@ -1,4 +1,4 @@
-import { OrganizationSetup } from '@/components/onboarding/OrganizationSetup';
+import { OrganizationSetup } from '../../../components/onboarding/OrganizationSetup';
 
 export default function OrganizationOnboardingPage() {
   return (

@@ -1,23 +1,12 @@
 {
   "extends": "@workspace/typescript-config/nextjs.json",
   "compilerOptions": {
-    "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
       "@workspace/common": ["../../packages/common/src"],
       "@workspace/routes": ["../../packages/routes/src"],
       "@workspace/rate-limiter": ["../../packages/rate-limiter/src"]
-    },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    }
   },
   "include": [
     "next-env.d.ts",
