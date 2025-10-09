@@ -10,7 +10,7 @@ export { ThemeProvider, ThemeProviderContext } from './ThemeProvider';
 export type { ThemeProviderProps, ThemeProviderState } from './ThemeProvider';
 
 // === TOAST PROVIDER ===
-export { ToastProvider, Toaster } from './ToastProvider';
+export { ToastProvider } from './ToastProvider';
 export type { ToastProviderProps } from './ToastProvider';
 export { sonnerToast, toast } from './ToastProvider/toast';
 

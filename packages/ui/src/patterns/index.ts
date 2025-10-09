@@ -17,6 +17,13 @@ export type { NavigationItem, NavigationProps } from './Navigation';
 export { PageLayout } from './PageLayout';
 export type { PageLayoutProps } from './PageLayout';
 
+export { AuthLayout } from './AuthLayout';
+export type { AuthLayoutProps } from './AuthLayout';
+
 // === FORM PATTERNS ===
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
+
+// === AUTH PATTERNS ===
+export { AuthCard } from './AuthCard';
+export type { AuthCardProps } from './AuthCard';

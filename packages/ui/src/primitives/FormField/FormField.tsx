@@ -10,35 +10,10 @@ export interface FormFieldProps extends Omit<InputProps, 'error'> {
   error?: boolean;
   organizationContext?: string;
   icon?: React.ReactNode;
+  rightElement?: React.ReactNode;
+  forgotPasswordLink?: string;
 }
 
-/**
- * FormField component - Input with label, validation, and help text
- *
- * @example
- * ```
- * function LoginForm() {
- *   return (
- *     <form>
- *       <FormField
- *         label="Email"
- *         type="email"
- *         placeholder="Enter your email"
- *         helperText="We'll never share your email"
- *         icon={<EmailIcon />}
- *       />
- *
- *       <FormField
- *         label="Password"
- *         type="password"
- *         error={true}
- *         helperText="Password must be at least 8 characters"
- *       />
- *     </form>
- *   );
- * }
- * ```
- */
 export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
   (
     {
@@ -48,58 +23,74 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
       error,
       organizationContext,
       icon,
+      rightElement,
+      forgotPasswordLink,
       id,
       ...props
     },
     ref
   ) => {
-    const fieldId = id ?? `field-${Math.random().toString(36).substr(2, 9)}`;
-    const helperId = helperText ? `${fieldId}-helper` : undefined;
+    const generatedId = React.useId();
+    const fieldId = id ?? generatedId;
 
     return (
-      <div className={cn('space-y-2', className)}>
-        {/* Label */}
+      <div className={cn('space-y-2 flex flex-col', className)}>
+        {/* Label with Forgot Password */}
         {label && (
-          <label
-            htmlFor={fieldId}
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            {label}
-            {organizationContext && (
-              <span className="ml-1 text-xs text-muted-foreground">
-                ({organizationContext})
-              </span>
+          <div className="flex flex-row items-center justify-between">
+            <label
+              htmlFor={fieldId}
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {label}
+              {organizationContext && (
+                <span className="ml-1 text-xs text-muted-foreground">
+                  ({organizationContext})
+                </span>
+              )}
+            </label>
+            {forgotPasswordLink && (
+              <a
+                className="ml-auto inline-block text-sm underline"
+                href={forgotPasswordLink}
+              >
+                Forgot password?
+              </a>
             )}
-          </label>
+          </div>
         )}
 
         {/* Input with icon */}
-        <div className="relative">
+        <div className="relative inline-block h-9 w-full">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <span className="absolute left-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
               {icon}
-            </div>
+            </span>
           )}
           <Input
             id={fieldId}
             ref={ref}
             className={cn(
               icon && 'pl-10',
-              error && 'border-error focus-visible:ring-error'
+              rightElement && 'pr-10',
+              error && 'border-destructive focus-visible:ring-destructive'
             )}
-            aria-describedby={helperId}
             error={Boolean(error)}
             {...props}
           />
+          {rightElement && (
+            <span className="absolute left-auto right-3 top-1/2 flex -translate-y-1/2 text-muted-foreground">
+              {rightElement}
+            </span>
+          )}
         </div>
 
         {/* Helper text */}
         {helperText && (
           <p
-            id={helperId}
             className={cn(
-              'text-xs',
-              error ? 'text-error' : 'text-muted-foreground'
+              'text-sm',
+              error ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
             {helperText}
