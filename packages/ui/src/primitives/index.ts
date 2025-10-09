@@ -6,7 +6,7 @@
  */
 
 // === BRANDING PRIMITIVES ===
-export { Logo, LogoIconOnly } from './Logo';
+export { Logo } from './Logo';
 export type { LogoProps } from './Logo';
 
 // === FORM PRIMITIVES ===

@@ -1,67 +1,50 @@
-// packages/ui/src/primitives/Logo/Logo.tsx
 'use client';
 
 import Link from 'next/link';
+import { cn } from '../../utils/cn';
 
 export interface LogoProps {
   href?: string;
-  className?: string;
-  showText?: boolean;
   text?: string;
+  showText?: boolean;
+  className?: string;
 }
 
-const LogoIcon = () => (
-  <div className="flex size-9 items-center justify-center p-1">
-    <div className="flex size-7 items-center justify-center rounded-md border text-primary-foreground bg-primary">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <g>
-          <path
-            d="M7.81815 8.36373L12 0L24 24H15.2809L7.81815 8.36373Z"
-            fill="currentColor"
-          />
-          <path
-            d="M4.32142 15.3572L8.44635 24H-1.14809e-06L4.32142 15.3572Z"
-            fill="currentColor"
-          />
-        </g>
-      </svg>
-    </div>
-  </div>
-);
-
-const LogoText = ({ text }: { text: string }) => (
-  <span className="font-bold">{text}</span>
-);
-
-export const Logo = ({
+export function Logo({
   href = '/',
-  className,
-  showText = true,
   text = 'Acme',
-}: LogoProps) => {
-  const baseClasses = `flex items-center gap-2 ${className ?? ''}`;
-
-  return (
-    <Link href={href} className={baseClasses}>
-      <div className="flex items-center space-x-2">
-        <LogoIcon />
-        {showText && <LogoText text={text} />}
+  showText = false,
+  className,
+}: LogoProps) {
+  const logoContent = (
+    <div className={cn('flex items-center space-x-2', className)}>
+      <div className="h-6 w-6 rounded bg-primary">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className="h-6 w-6 text-primary-foreground"
+        >
+          <path
+            d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+            fill="currentColor"
+            fillOpacity="0.5"
+          />
+          <path d="M12 2L22 7L12 12L2 7L12 2Z" fill="currentColor" />
+        </svg>
       </div>
-    </Link>
+      {showText && (
+        <span className="font-bold text-xl text-foreground">{text}</span>
+      )}
+    </div>
   );
-};
 
-export const LogoIconOnly = ({ className }: { className?: string }) => (
-  <div className={className ?? ''}>
-    <LogoIcon />
-  </div>
-);
+  if (href) {
+    return (
+      <Link href={href} className="transition-opacity hover:opacity-75">
+        {logoContent}
+      </Link>
+    );
+  }
 
-Logo.displayName = 'Logo';
-LogoIconOnly.displayName = 'LogoIconOnly';
+  return logoContent;
+}

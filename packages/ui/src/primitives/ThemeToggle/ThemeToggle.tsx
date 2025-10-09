@@ -1,80 +1,27 @@
 'use client';
 
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from 'next-themes';
+import * as React from 'react';
 import { cn } from '../../utils/cn';
 
 export interface ThemeToggleProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'outline' | 'ghost' | 'template';
 }
 
-/**
- * ThemeToggle component - Toggle between light and dark themes
- * Replicates the exact styling from the reference HTML
- *
- * @example
- * ```
- * function Header() {
- *   return (
- *     <div className="flex items-center gap-4">
- *       <h1>My App</h1>
- *       <ThemeToggle size="md" variant="outline" />
- *     </div>
- *   );
- * }
- * ```
- */
-export function ThemeToggle({
-  className,
-  size = 'md',
-  variant = 'template',
-}: ThemeToggleProps): JSX.Element {
-  const { theme, toggleTheme, mounted } = useTheme();
-
-  if (!mounted) {
-    return (
-      <ThemeToggleSkeleton
-        size={size}
-        variant={variant}
-        className={className}
-      />
-    );
-  }
-
-  const isDark = theme === 'dark';
+export function ThemeToggle({ className }: ThemeToggleProps) {
+  const { setTheme, theme } = useTheme();
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
       className={cn(
-        // Base styles - EXATO DA REFERÊNCIA HTML
-        'inline-flex items-center justify-center text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
-        'border border-input hover:bg-accent hover:text-accent-foreground',
-        'bg-background rounded-xl border-none shadow-none',
-
-        // Size variants - USANDO SIZE-X DA REFERÊNCIA
-        {
-          'size-8': size === 'sm',
-          'size-9': size === 'md', // size-9 como na referência
-          'size-10': size === 'lg',
-        },
-
-        // Variant overrides
-        {
-          // outline já está nas classes base
-          'border-none shadow-none': variant === 'outline',
-          'border-none shadow-none hover:bg-accent hover:text-accent-foreground':
-            variant === 'ghost',
-        },
-
+        'border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10',
         className
       )}
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
     >
-      {/* Sun Icon - CLASSES EXATAS DA REFERÊNCIA */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -85,19 +32,7 @@ export function ThemeToggle({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={cn(
-          'lucide lucide-sun transition-all',
-          {
-            'size-4': size === 'sm',
-            'size-5': size === 'md', // size-5 da referência
-            'size-6': size === 'lg',
-          },
-          // Estados dark/light da referência
-          isDark
-            ? '-rotate-90 scale-0' // dark:-rotate-90 dark:scale-0
-            : 'rotate-0 scale-100'
-        )}
-        aria-hidden="true"
+        className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
       >
         <circle cx="12" cy="12" r="4" />
         <path d="M12 2v2" />
@@ -109,8 +44,6 @@ export function ThemeToggle({
         <path d="m6.34 17.66-1.41 1.41" />
         <path d="m19.07 4.93-1.41 1.41" />
       </svg>
-
-      {/* Moon Icon - CLASSES EXATAS DA REFERÊNCIA */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -121,56 +54,11 @@ export function ThemeToggle({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={cn(
-          'lucide lucide-moon absolute transition-all',
-          {
-            'size-4': size === 'sm',
-            'size-5': size === 'md', // size-5 da referência
-            'size-6': size === 'lg',
-          },
-          // Estados invertidos para dark theme
-          isDark
-            ? 'rotate-0 scale-100' // dark:rotate-0 dark:scale-100
-            : 'rotate-90 scale-0'
-        )}
-        aria-hidden="true"
+        className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
       >
         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
       </svg>
-
       <span className="sr-only">Toggle theme</span>
     </button>
-  );
-}
-
-// Loading skeleton - ATUALIZADO PARA COMBINAR COM A REFERÊNCIA
-function ThemeToggleSkeleton({
-  size,
-  variant,
-  className,
-}: {
-  size: 'sm' | 'md' | 'lg';
-  variant: 'outline' | 'ghost' | 'template';
-  className?: string;
-}): JSX.Element {
-  return (
-    <div
-      className={cn(
-        'inline-flex items-center justify-center animate-pulse',
-        'bg-background rounded-xl border-none shadow-none',
-        {
-          'size-8': size === 'sm',
-          'size-9': size === 'md',
-          'size-10': size === 'lg',
-        },
-        {
-          'border border-input': variant === 'outline',
-        },
-        className
-      )}
-      aria-hidden="true"
-    >
-      <div className="size-4 bg-muted-foreground/20 rounded" />
-    </div>
   );
 }
