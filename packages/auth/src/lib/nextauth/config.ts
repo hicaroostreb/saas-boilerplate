@@ -1,4 +1,4 @@
-// packages/auth/src/lib/nextauth/config.ts - 100% CLIENT-SAFE CONFIG
+// packages/auth/src/lib/nextauth/config.ts - SIMPLE CLIENT-SAFE CONFIG
 
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
@@ -30,6 +30,8 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        // ✅ SIMPLE: NextAuth apenas valida formato básico
+        // A autenticação REAL acontece nas API routes
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -37,13 +39,12 @@ export const authConfig: NextAuthConfig = {
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        // Simplified validation - real auth logic moved to server actions
-        // This is just for NextAuth compatibility
-        if (email && password.length >= 6) {
+        // Validação básica apenas (sem database)
+        if (email.includes('@') && password.length >= 8) {
           return {
-            id: '1', // Temporary - real auth in server actions
+            id: 'temp-id', // Será substituído por JWT callback
             email,
-            name: 'User',
+            name: 'User', // Será atualizado após autenticação real
           };
         }
 
