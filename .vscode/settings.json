@@ -11,7 +11,7 @@
   // 🚀 BUN SPECIFIC CONFIGURATIONS
   "eslint.packageManager": "bun",
   "npm.packageManager": "bun",
-  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
   "terminal.integrated.env.windows": {
     "BUN_INSTALL": "C:\\Users\\%USERNAME%\\.bun"
   },

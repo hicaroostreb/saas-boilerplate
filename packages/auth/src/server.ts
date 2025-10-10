@@ -1,6 +1,13 @@
-// packages/auth/src/server.ts - SERVER EXPORTS (CLEAN)
+// packages/auth/src/server.ts - SERVER-ONLY EXPORTS
 
-// NextAuth integration only
+// ============================================
+// FLOWS (SERVER ONLY)
+// ============================================
+export * from './core/flows';
+
+// ============================================
+// NEXTAUTH SERVER INTEGRATION
+// ============================================
 export { authConfig } from './lib/nextauth/config';
 export {
   auth,
@@ -24,8 +31,3 @@ export async function requireAuth() {
   }
   return session;
 }
-
-// ❌ REMOVIDO: Services exports que causam database leak
-// export * from './core/services/audit.service';
-// export * from './core/services/password.service';
-// export * from './core/services/security.service';

@@ -13,6 +13,9 @@ export type { LogoProps } from './Logo';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 
+export { CheckboxField } from './CheckboxField';
+export type { CheckboxFieldProps } from './CheckboxField';
+
 export { FormField } from './FormField';
 export type { FormFieldProps } from './FormField';
 
