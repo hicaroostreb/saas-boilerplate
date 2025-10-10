@@ -41,10 +41,7 @@ export async function resetPasswordFlow(
     }
 
     // 2. Verificar se é realmente uma sessão de reset de senha
-    const sessionData = resetSession.sessionData as Record<
-      string,
-      unknown
-    > | null;
+    const sessionData = resetSession.sessionData;
     if (sessionData?.type !== 'password_reset') {
       return {
         success: false,
