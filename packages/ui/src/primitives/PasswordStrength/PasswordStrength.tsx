@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { cn } from '../../utils/cn';
 
 export type PasswordStrengthLevel = 'weak' | 'fair' | 'good' | 'strong';
@@ -19,35 +20,12 @@ export interface PasswordStrengthProps {
   email?: string;
   name?: string;
   variant?: 'minimal' | 'progress' | 'detailed';
+  onValidationChange?: (
+    isValid: boolean,
+    analysis: ReturnType<typeof analyzePassword>
+  ) => void;
 }
 
-/**
- * PasswordStrength component - Visual password strength indicator
- *
- * @example
- * ```
- * function PasswordForm() {
- *   const [password, setPassword] = useState('');
- *
- *   return (
- *     <div>
- *       <PasswordInput
- *         value={password}
- *         onChange={(e) => setPassword(e.target.value)}
- *       />
- *
- *       <PasswordStrength
- *         password={password}
- *         showRequirements={true}
- *         variant="detailed"
- *         minLength={8}
- *         requireSpecialChars={true}
- *       />
- *     </div>
- *   );
- * }
- * ```
- */
 export function PasswordStrength({
   password,
   className,
@@ -57,6 +35,7 @@ export function PasswordStrength({
   email,
   name,
   variant = 'progress',
+  onValidationChange,
 }: PasswordStrengthProps): JSX.Element {
   const analysis = analyzePassword(password, {
     minLength,
@@ -64,6 +43,16 @@ export function PasswordStrength({
     email: email ?? undefined,
     name: name ?? undefined,
   });
+
+  // Callback para validação externa
+  React.useEffect(() => {
+    if (onValidationChange) {
+      const requiredMet = analysis.requirements
+        .filter(req => req.required)
+        .every(req => req.met);
+      onValidationChange(requiredMet, analysis);
+    }
+  }, [analysis, onValidationChange]);
 
   if (variant === 'minimal') {
     return (
@@ -115,17 +104,17 @@ function analyzePassword(
     {
       label: 'Contains uppercase letter',
       met: /[A-Z]/.test(password),
-      required: false,
+      required: true,
     },
     {
       label: 'Contains lowercase letter',
       met: /[a-z]/.test(password),
-      required: false,
+      required: true,
     },
     {
       label: 'Contains number',
       met: /\d/.test(password),
-      required: false,
+      required: true,
     },
   ];
 
@@ -157,12 +146,10 @@ function analyzePassword(
     });
   }
 
-  // Calculate score
   const metCount = requirements.filter(req => req.met).length;
   const totalCount = requirements.length;
   const score = (metCount / totalCount) * 100;
 
-  // Determine level
   let level: PasswordStrengthLevel = 'weak';
   if (score >= 80) {
     level = 'strong';
@@ -172,7 +159,6 @@ function analyzePassword(
     level = 'fair';
   }
 
-  // Required requirements must be met for good+ levels
   const requiredMet = requirements
     .filter(req => req.required)
     .every(req => req.met);
@@ -183,7 +169,6 @@ function analyzePassword(
   return { requirements, level, score };
 }
 
-// View Components
 function MinimalView({
   analysis,
   className,
@@ -226,7 +211,6 @@ function ProgressView({
 
   return (
     <div className={cn('space-y-2', className)}>
-      {/* Progress bar */}
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
           <span>Password strength</span>
@@ -245,7 +229,6 @@ function ProgressView({
         </div>
       </div>
 
-      {/* Requirements */}
       {showRequirements && <RequirementsList requirements={requirements} />}
     </div>
   );
@@ -287,13 +270,14 @@ function RequirementsList({
         <li key={index} className="flex items-center gap-2 text-xs">
           <div
             className={cn(
-              'h-1.5 w-1.5 rounded-full',
-              requirement.met ? 'bg-success' : 'bg-muted-foreground'
+              'h-1.5 w-1.5 rounded-full transition-colors',
+              requirement.met ? 'bg-green-600' : 'bg-red-500'
             )}
           />
           <span
             className={cn(
-              requirement.met ? 'text-success' : 'text-muted-foreground'
+              'transition-colors',
+              requirement.met ? 'text-green-600' : 'text-red-500'
             )}
           >
             {requirement.label}
@@ -304,7 +288,6 @@ function RequirementsList({
   );
 }
 
-// Helper functions
 function getStrengthColor(level: PasswordStrengthLevel, index: number): string {
   const colors = {
     weak: ['bg-error', 'bg-muted', 'bg-muted', 'bg-muted'],

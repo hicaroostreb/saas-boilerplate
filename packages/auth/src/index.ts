@@ -1,11 +1,6 @@
 // packages/auth/src/index.ts - CLIENT-SAFE EXPORTS ONLY
 
 // ============================================
-// FLOWS (PRIMARY API)
-// ============================================
-export * from './core/flows';
-
-// ============================================
 // SCHEMAS & TYPES (CLIENT-SAFE)
 // ============================================
 export * from './types';
@@ -24,12 +19,12 @@ export {
   signOutAction,
 } from './lib/nextauth/handlers';
 
-// ❌ REMOVIDO: export { getServerSession, requireAuth } from './server';
-
 // ============================================
 // UTILS (CLIENT-SAFE)
 // ============================================
 export * from './utils';
+
+// ❌ REMOVIDO: export * from './core/flows'; // CAUSA DATABASE LEAK
 
 // ============================================
 // CONSTANTS
