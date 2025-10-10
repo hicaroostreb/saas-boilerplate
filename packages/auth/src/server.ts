@@ -18,9 +18,12 @@ export {
   signOutAction,
 } from './lib/nextauth/handlers';
 
+// ✅ FIX: Import direto ao invés de dinâmico
+import { auth } from './lib/nextauth/handlers';
+
 // Server-side helpers only
 export async function getServerSession() {
-  const { auth } = await import('./lib/nextauth/handlers');
+  // ✅ FIX: Usar import direto - mesma instância que o login
   return await auth();
 }
 

@@ -1,6 +1,6 @@
 import { generateSeoMetadata } from '@lib/seo/metadata';
-import { ThemeProvider } from '@workspace/ui';
 import type { Metadata } from 'next';
+import { ThemeProvider } from 'next-themes';
 import './globals.css';
 
 export const metadata: Metadata = generateSeoMetadata({

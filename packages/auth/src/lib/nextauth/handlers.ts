@@ -1,10 +1,14 @@
-// packages/auth/src/lib/nextauth/handlers.ts - NEXTAUTH HANDLERS WITH EXPLICIT TYPE ANNOTATIONS
+// packages/auth/src/lib/nextauth/handlers.ts - NEXTAUTH HANDLERS
 
 import NextAuth, { type NextAuthResult } from 'next-auth';
 import { authConfig } from './config';
 
-// Create NextAuth instance with proper typing
-const nextAuthResult: NextAuthResult = NextAuth(authConfig);
+// ✅ FIX: Usar apenas AUTH_SECRET que está no turbo.json
+const nextAuthResult: NextAuthResult = NextAuth({
+  ...authConfig,
+  // ✅ CRITICAL: Usar apenas AUTH_SECRET (que está em globalEnv)
+  secret: process.env.AUTH_SECRET ?? 'dev-secret-for-local-only-nextauth-12345',
+});
 
 // Export with explicit type annotations
 export const auth: typeof nextAuthResult.auth = nextAuthResult.auth;

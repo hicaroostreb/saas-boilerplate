@@ -21,16 +21,22 @@ export function SignInForm() {
     try {
       const data = signInSchema.parse({ email, password });
 
-      const response = await fetch('/api/auth/sign-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      // ✅ FIX: Usar NextAuth signIn ao invés de fetch direto
+      const { signIn } = await import('next-auth/react');
+
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false, // Handle redirect manually
       });
 
-      if (response.ok) {
-        router.push('/dashboard');
-      } else {
+      if (result?.error) {
         setError('Invalid email or password. Please try again.');
+      } else if (result?.ok) {
+        router.push('/dashboard');
+        router.refresh(); // Force refresh to update session
+      } else {
+        setError('Sign in failed. Please try again.');
       }
     } catch {
       setError('Please enter valid credentials.');
