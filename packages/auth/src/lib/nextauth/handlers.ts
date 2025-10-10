@@ -12,8 +12,10 @@ export const handlers: typeof nextAuthResult.handlers = nextAuthResult.handlers;
 export const signIn: typeof nextAuthResult.signIn = nextAuthResult.signIn;
 export const signOut: typeof nextAuthResult.signOut = nextAuthResult.signOut;
 
-// Action wrappers with proper return types
+// Action wrappers with proper return types and "use server"
 export async function signInAction(formData: FormData): Promise<void> {
+  'use server';
+
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -25,6 +27,8 @@ export async function signInAction(formData: FormData): Promise<void> {
 }
 
 export async function signOutAction(): Promise<void> {
+  'use server';
+
   await signOut({
     redirectTo: '/auth/sign-in',
   });
