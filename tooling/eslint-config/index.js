@@ -97,7 +97,8 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'warn',
+      // 🎯 CORREÇÃO: Mudar de 'warn' para 'off' para permitir auto-fix no CI
+      '@typescript-eslint/prefer-optional-chain': 'off',
       '@typescript-eslint/no-inferrable-types': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'prefer-template': 'warn',

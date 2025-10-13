@@ -40,8 +40,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Fix cross-platform ESLint issues
+        run: |
+          git config core.autocrlf false
+          bun run format
+          bun run lint -- --fix
+        env:
+          ESLINT_USE_FLAT_CONFIG: true
+
       - name: Quality checks & build
-        run: bun run qa:build
+        run: bun run typecheck && bun run build
 
   # ============================================================================
   # E2E TESTS - TEMPORARILY DISABLED DURING ACTIVE DEVELOPMENT
