@@ -115,7 +115,7 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async resetMultipleLimits(identifiers: string[]): Promise<void> {
-    if (!identifiers || identifiers.length === 0) {
+    if (!identifiers?.length) {
       throw new RateLimitValidationError(
         'Identifiers array cannot be empty',
         'identifiers'
