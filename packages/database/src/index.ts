@@ -1,19 +1,28 @@
 // ============================================
-// DATABASE PACKAGE - MAIN EXPORTS ENTERPRISE
+// DATABASE PACKAGE - SAFE EXPORTS ENTERPRISE
 // ============================================
 
 // ============================================
-// CONNECTION LAYER
+// CONNECTION LAYER - LAZY INITIALIZATION
 // ============================================
 
-// Main database connection
+// Safe database exports
 export {
   closeConnection,
-  db,
-  getConnectionInfo,
+  getConnectionInfo, // ✅ Lazy async getter
   getDatabaseConnection,
+  getDb,
   healthCheck,
   type Database,
+} from './connection';
+
+// Configuration exports
+export {
+  createDatabaseConfig,
+  detectBuildContext,
+  validateEnvironment,
+  type BuildContext,
+  type DatabaseConfig,
 } from './connection';
 
 // Connection utilities
@@ -88,10 +97,9 @@ export type {
 } from './connection';
 
 // ============================================
-// BUSINESS UTILITIES
+// PAGINATION UTILITIES
 // ============================================
 
-// Pagination utilities
 export interface PaginationOptions {
   page?: number;
   limit?: number;
@@ -178,10 +186,8 @@ export function generateSlug(text: string): string {
 }
 
 // ============================================
-// SEED UTILITIES
+// SEED UTILITIES - BUILD-TIME SAFE
 // ============================================
-
-import { runAllSeeders } from './seeders';
 
 export interface SeedOptions {
   force?: boolean; // Force reseed even if data exists
@@ -191,50 +197,57 @@ export interface SeedOptions {
 export async function seedDatabase(options: SeedOptions = {}): Promise<void> {
   const { verbose = false } = options;
 
+  // Import seeders dynamically to avoid side effects
+  const { runAllSeeders } = await import('./seeders');
+
   if (verbose) {
-    console.log('🌱 Starting database seed...');
+    console.log('Starting database seed...');
   }
 
   try {
     await runAllSeeders(options);
 
     if (verbose) {
-      console.log('✅ Database seed completed successfully');
+      console.log('Database seed completed successfully');
     }
   } catch (error) {
-    console.error('❌ Database seed failed:', error);
+    console.error('Database seed failed:', error);
     throw error;
   }
 }
 
 // ============================================
-// TRANSACTION UTILITIES - ✅ FINAL FIX
-// ============================================
-
-import { db } from './connection';
-
-export async function withTransaction<T>(
-  callback: (tx: any) => Promise<T> // ✅ FIXED: Use any for simplicity
-): Promise<T> {
-  return db.transaction(callback);
-}
-
-// ============================================
-// HEALTH CHECK UTILITIES
+// TRANSACTION UTILITIES - BUILD-TIME SAFE
 // ============================================
 
 import {
-  getConnectionInfo as dbGetConnectionInfo,
-  healthCheck as dbHealthCheck,
+  getConnectionInfo,
+  getDatabaseConnection,
+  getDb,
+  healthCheck,
 } from './connection';
+
+export async function withTransaction<T>(
+  callback: (tx: any) => Promise<T>
+): Promise<T> {
+  const db = await getDb();
+  return db.transaction(callback) as Promise<T>;
+}
+
+// ============================================
+// HEALTH CHECK UTILITIES - BUILD-TIME SAFE
+// ============================================
 
 export async function checkDatabaseHealth(): Promise<{
   healthy: boolean;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }> {
   try {
-    const isHealthy = await dbHealthCheck();
-    const connectionInfo = await dbGetConnectionInfo();
+    const connection = getDatabaseConnection();
+    await connection.initialize();
+
+    const isHealthy = await healthCheck();
+    const connectionInfo = await getConnectionInfo();
 
     return {
       healthy: isHealthy,
@@ -256,50 +269,35 @@ export async function checkDatabaseHealth(): Promise<{
 }
 
 // ============================================
-// DEVELOPMENT UTILITIES
-// ============================================
-
-import { schemaInfo } from './schemas';
-
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 Database package loaded in development mode');
-  console.log(
-    `📊 Schema info: ${schemaInfo.totalTables} tables across ${schemaInfo.domains.length} domains`
-  );
-}
-
-// ============================================
 // PACKAGE INFO
 // ============================================
 
 export const packageInfo = {
   name: '@workspace/database',
   version: '1.0.0',
-  description: 'Enterprise database layer with Clean Architecture',
+  description:
+    'Enterprise database layer with Clean Architecture and Build-Time Safety',
 
   // Architecture layers
   layers: {
-    connection: 'Database connection and configuration',
+    connection: 'Database connection with lazy initialization',
     schemas: 'Drizzle table definitions organized by domain',
     entities: 'Domain objects with business logic',
     repositories: 'Data access layer with Repository Pattern',
   },
-
-  // Domain organization
-  domains: schemaInfo.domains,
-  tables: schemaInfo.tables,
-  totalTables: schemaInfo.totalTables,
 
   // Features
   features: [
     'Clean Architecture',
     'Repository Pattern',
     'Domain-Driven Design',
-    'Single Responsibility Principle',
-    'Dependency Inversion',
+    'Build-Time Safety',
+    'Lazy Initialization',
+    'CI/CD Compatible',
     'Type Safety',
     'Performance Optimized',
     'Enterprise Scalable',
+    'Singleton Pattern',
   ],
 
   // Tech stack
@@ -307,8 +305,8 @@ export const packageInfo = {
     orm: 'Drizzle ORM',
     database: 'PostgreSQL',
     architecture: 'Clean Architecture + DDD-Lite',
-    patterns: ['Repository', 'Entity', 'Factory'],
-    principles: ['SRP', 'DIP', 'ISP'],
+    patterns: ['Repository', 'Entity', 'Factory', 'Singleton', 'Lazy Loading'],
+    principles: ['SRP', 'DIP', 'ISP', 'Build-Time Safety'],
   },
 } as const;
 

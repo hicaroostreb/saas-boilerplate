@@ -1,4 +1,6 @@
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
+import { AuthCard, AuthLayout } from '@workspace/ui';
+import Link from 'next/link';
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
@@ -11,34 +13,56 @@ export default async function ResetPasswordPage({
 }: ResetPasswordPageProps) {
   const { token } = await searchParams;
 
+  const marketingUrl =
+    process.env.NEXT_PUBLIC_MARKETING_URL ?? 'http://localhost:3000';
+
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Invalid Reset Link
-          </h2>
-          <p className="mt-2 text-gray-600">
-            This password reset link is invalid or has expired.
-          </p>
-        </div>
-      </div>
+      <AuthLayout logoHref={marketingUrl} logoText="Acme">
+        <AuthCard
+          title="Invalid Reset Link"
+          description="This password reset link is invalid or has expired."
+          footerContent={
+            <>
+              <span>Need a new reset link?</span>
+              <Link
+                className="text-foreground underline"
+                href="/auth/forgot-password"
+              >
+                Request reset
+              </Link>
+            </>
+          }
+        >
+          <div className="text-center">
+            <Link
+              href="/auth/sign-in"
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        </AuthCard>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reset your password
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your new password below.
-          </p>
-        </div>
+    <AuthLayout logoHref={marketingUrl} logoText="Acme">
+      <AuthCard
+        title="Reset your password"
+        description="Enter your new password below."
+        footerContent={
+          <>
+            <span>Remember your password?</span>
+            <Link className="text-foreground underline" href="/auth/sign-in">
+              Sign in
+            </Link>
+          </>
+        }
+      >
         <ResetPasswordForm token={token} />
-      </div>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   );
 }

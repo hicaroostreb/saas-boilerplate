@@ -43,9 +43,7 @@ export async function signUpFlow(input: SignUpInput): Promise<SignUpResult> {
     const newUser = await userRepository.create({
       email: email.toLowerCase(),
       name: name.trim(),
-      passwordHash,
-      isActive: true,
-      isSuperAdmin: false,
+      password: passwordHash,
     });
 
     if (!newUser) {

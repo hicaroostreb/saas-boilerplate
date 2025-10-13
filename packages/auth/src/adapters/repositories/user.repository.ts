@@ -1,333 +1,357 @@
-// packages/auth/src/repositories/user.repository.ts - USER DATA ACCESS
+// USER REPOSITORY - BUILD-TIME SAFE + SCHEMA CORRETO
+import {
+  and,
+  desc,
+  eq,
+  getDb,
+  gt,
+  isNull,
+  sql,
+  users,
+} from '@workspace/database';
+import bcrypt from 'bcryptjs';
+import type { UserEntity } from '../../entities/auth/user.entity';
 
-import { db, users } from '@workspace/database';
-import { randomUUID } from 'crypto';
-import { and, eq, isNull } from 'drizzle-orm';
-
-/**
- * ✅ ENTERPRISE: User Repository (Database Compatible)
- * Single Responsibility: User data access operations compatible with actual DB schema
- */
 export class UserRepository {
-  /**
-   * ✅ CREATE: New user (DB compatible)
-   */
-  async create(userData: {
-    email: string;
-    name?: string | null;
-    passwordHash?: string | null;
-    isActive?: boolean;
-    isSuperAdmin?: boolean;
-  }): Promise<{
-    id: string;
-    email: string;
-    name: string | null;
-    isActive: boolean;
-    isSuperAdmin: boolean;
-    createdAt: Date;
-  } | null> {
+  async findById(id: string): Promise<UserEntity | null> {
     try {
-      const userId = randomUUID();
-
-      // Use only fields that definitely exist in the schema
-      const newUser = {
-        id: userId,
-        email: userData.email,
-        name: userData.name ?? null,
-        passwordHash: userData.passwordHash ?? null,
-        isActive: userData.isActive ?? true,
-        isSuperAdmin: userData.isSuperAdmin ?? false,
-        createdAt: new Date(),
-      };
-
-      const [insertedUser] = await db.insert(users).values(newUser).returning({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        isActive: users.isActive,
-        isSuperAdmin: users.isSuperAdmin,
-        createdAt: users.createdAt,
-      });
-
-      return insertedUser ?? null;
-    } catch (error) {
-      console.error('❌ UserRepository create error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * ✅ GET: User by email (return raw DB result)
-   */
-  async findByEmail(email: string) {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(and(eq(users.email, email), isNull(users.deletedAt)))
-        .limit(1);
-
-      return user ?? null;
-    } catch (error) {
-      console.error('❌ UserRepository findByEmail error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * ✅ GET: User by ID (return raw DB result)
-   */
-  async findById(id: string) {
-    try {
+      const db = await getDb();
       const [user] = await db
         .select()
         .from(users)
         .where(and(eq(users.id, id), isNull(users.deletedAt)))
         .limit(1);
-
-      return user ?? null;
+      return user ? this.mapToEntity(user) : null;
     } catch (error) {
       console.error('❌ UserRepository findById error:', error);
       return null;
     }
   }
 
-  /**
-   * ✅ UPDATE: User password hash
-   */
-  async updatePassword(userId: string, passwordHash: string): Promise<boolean> {
+  async findByEmail(email: string): Promise<UserEntity | null> {
     try {
-      await db
-        .update(users)
-        .set({
-          passwordHash,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
-
-      return true;
+      const db = await getDb();
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.email, email.toLowerCase().trim()),
+            isNull(users.deletedAt)
+          )
+        )
+        .limit(1);
+      return user ? this.mapToEntity(user) : null;
     } catch (error) {
-      console.error('❌ UserRepository updatePassword error:', error);
-      return false;
+      console.error('❌ UserRepository findByEmail error:', error);
+      return null;
     }
   }
 
-  /**
-   * ✅ UPDATE: Login attempts (safe increment)
-   */
-  async incrementLoginAttempts(userId: string): Promise<boolean> {
+  async create(userData: {
+    email: string;
+    password: string;
+    name?: string;
+    emailVerified?: Date | null;
+    image?: string | null;
+  }): Promise<UserEntity> {
     try {
-      // Get current user data first
+      const db = await getDb();
+      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      const now = new Date();
+
       const [user] = await db
-        .select({ loginAttempts: users.loginAttempts })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+        .insert(users)
+        .values({
+          email: userData.email.toLowerCase().trim(),
+          passwordHash: hashedPassword, // ✅ CORRETO
+          name: userData.name ?? null,
+          emailVerified: userData.emailVerified ?? null,
+          image: userData.image ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
 
       if (!user) {
-        return false;
+        throw new Error('Failed to create user');
+      }
+      return this.mapToEntity(user);
+    } catch (error) {
+      console.error('❌ UserRepository create error:', error);
+      throw error;
+    }
+  }
+
+  async verifyPassword(
+    email: string,
+    password: string
+  ): Promise<UserEntity | null> {
+    try {
+      const db = await getDb();
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.email, email.toLowerCase().trim()),
+            isNull(users.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!user?.passwordHash) {
+        // ✅ CORRETO
+        return null;
       }
 
-      // Handle both number and string types safely
-      const currentAttempts =
-        typeof user.loginAttempts === 'number'
-          ? user.loginAttempts
-          : (parseInt(String(user.loginAttempts ?? 0), 10) ?? 0);
+      const isValid = await bcrypt.compare(password, user.passwordHash); // ✅ CORRETO
+      if (!isValid) {
+        return null;
+      }
 
-      const newAttempts = currentAttempts + 1;
+      await this.updateLastLogin(user.id);
+      return this.mapToEntity(user);
+    } catch (error) {
+      console.error('❌ UserRepository verifyPassword error:', error);
+      return null;
+    }
+  }
 
+  async isAccountLocked(userId: string): Promise<boolean> {
+    try {
+      const user = await this.findById(userId);
+      return user?.lockedUntil ? user.lockedUntil > new Date() : false;
+    } catch (error) {
+      console.error('❌ UserRepository isAccountLocked error:', error);
+      return false;
+    }
+  }
+
+  async incrementLoginAttempts(userId: string): Promise<void> {
+    try {
+      const db = await getDb();
       await db
         .update(users)
         .set({
-          loginAttempts: String(newAttempts), // Store as string to match schema
+          loginAttempts: sql`CAST(COALESCE(${users.loginAttempts}, '0') AS INTEGER) + 1`,
           updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
-
-      return true;
     } catch (error) {
       console.error('❌ UserRepository incrementLoginAttempts error:', error);
-      return false;
     }
   }
 
-  /**
-   * ✅ UPDATE: Reset login attempts
-   */
-  async resetLoginAttempts(userId: string): Promise<boolean> {
+  async resetLoginAttempts(userId: string): Promise<void> {
     try {
+      const db = await getDb();
       await db
         .update(users)
         .set({
-          loginAttempts: '0', // Store as string to match schema
+          loginAttempts: '0',
+          lockedUntil: null,
           updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
-
-      return true;
     } catch (error) {
       console.error('❌ UserRepository resetLoginAttempts error:', error);
-      return false;
     }
   }
 
-  /**
-   * ✅ UPDATE: Last login timestamp
-   */
   async updateLastLogin(userId: string): Promise<boolean> {
     try {
-      await db
+      const db = await getDb();
+      const [updated] = await db
         .update(users)
         .set({
-          lastLoginAt: new Date(),
-          loginAttempts: '0', // Reset attempts on successful login
+          lastLoginAt: new Date(), // ✅ CORRETO - existe no schema
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userId));
-
-      return true;
+        .where(eq(users.id, userId))
+        .returning();
+      return !!updated;
     } catch (error) {
       console.error('❌ UserRepository updateLastLogin error:', error);
       return false;
     }
   }
 
-  /**
-   * ✅ UPDATE: User active status
-   */
+  async updatePassword(userId: string, passwordHash: string): Promise<boolean> {
+    try {
+      const db = await getDb();
+      const [updated] = await db
+        .update(users)
+        .set({
+          passwordHash, // ✅ CORRETO
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      return !!updated;
+    } catch (error) {
+      console.error('❌ UserRepository updatePassword error:', error);
+      return false;
+    }
+  }
+
   async updateActiveStatus(
     userId: string,
     isActive: boolean
   ): Promise<boolean> {
     try {
-      await db
+      const db = await getDb();
+      const [updated] = await db
         .update(users)
         .set({
           isActive,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userId));
-
-      return true;
+        .where(eq(users.id, userId))
+        .returning();
+      return !!updated;
     } catch (error) {
       console.error('❌ UserRepository updateActiveStatus error:', error);
       return false;
     }
   }
 
-  /**
-   * ✅ UPDATE: Email verification status
-   */
-  async updateEmailVerification(
-    userId: string,
-    isVerified: boolean
-  ): Promise<boolean> {
+  async findRecentlyActive(days = 30, limit = 100): Promise<UserEntity[]> {
     try {
-      await db
-        .update(users)
-        .set({
-          isEmailVerified: isVerified,
-          emailVerified: isVerified ? new Date() : null,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
+      const db = await getDb();
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
 
-      return true;
+      const recentUsers = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            gt(users.lastLoginAt, cutoffDate), // ✅ CORRETO
+            isNull(users.deletedAt)
+          )
+        )
+        .orderBy(desc(users.lastLoginAt)) // ✅ CORRETO
+        .limit(limit);
+
+      return recentUsers.map(user => this.mapToEntity(user));
     } catch (error) {
-      console.error('❌ UserRepository updateEmailVerification error:', error);
-      return false;
+      console.error('❌ UserRepository findRecentlyActive error:', error);
+      return [];
     }
   }
 
-  /**
-   * ✅ CHECK: If user exists by email
-   */
+  async update(
+    id: string,
+    updateData: Partial<UserEntity>
+  ): Promise<UserEntity> {
+    try {
+      const db = await getDb();
+      const updateValues: Record<string, unknown> = {
+        ...updateData,
+        updatedAt: new Date(),
+      };
+
+      if (updateData.passwordHash) {
+        updateValues.passwordHash = await bcrypt.hash(
+          updateData.passwordHash,
+          12
+        );
+      }
+
+      const [user] = await db
+        .update(users)
+        .set(updateValues)
+        .where(and(eq(users.id, id), isNull(users.deletedAt)))
+        .returning();
+
+      if (!user) {
+        throw new Error('User not found or update failed');
+      }
+      return this.mapToEntity(user);
+    } catch (error) {
+      console.error('❌ UserRepository update error:', error);
+      throw error;
+    }
+  }
+
   async existsByEmail(email: string): Promise<boolean> {
     try {
-      const [user] = await db
-        .select({ id: users.id })
+      const db = await getDb();
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(and(eq(users.email, email), isNull(users.deletedAt)))
+        .where(
+          and(
+            eq(users.email, email.toLowerCase().trim()),
+            isNull(users.deletedAt)
+          )
+        )
         .limit(1);
-
-      return !!user;
+      return Number(result?.count ?? 0) > 0;
     } catch (error) {
       console.error('❌ UserRepository existsByEmail error:', error);
       return false;
     }
   }
 
-  /**
-   * ✅ CHECK: If user is locked (safe type handling)
-   */
-  async isAccountLocked(userId: string): Promise<boolean> {
+  async softDelete(id: string): Promise<void> {
     try {
-      const [user] = await db
-        .select({
-          loginAttempts: users.loginAttempts,
-          isActive: users.isActive,
+      const db = await getDb();
+      await db
+        .update(users)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
         })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-
-      if (!user?.isActive) {
-        return true; // Consider inactive users as "locked"
-      }
-
-      const maxAttempts = 5;
-      const currentAttempts =
-        typeof user.loginAttempts === 'number'
-          ? user.loginAttempts
-          : (parseInt(String(user.loginAttempts ?? 0), 10) ?? 0);
-
-      return currentAttempts >= maxAttempts;
+        .where(eq(users.id, id));
+      console.warn('✅ UserRepository: User soft deleted:', id);
     } catch (error) {
-      console.error('❌ UserRepository isAccountLocked error:', error);
-      return true; // Fail safe - consider locked on error
+      console.error('❌ UserRepository softDelete error:', error);
+      throw error;
     }
   }
 
-  /**
-   * ✅ GET: User security info (safe type conversion)
-   */
-  async getSecurityInfo(userId: string): Promise<{
-    loginAttempts: number;
-    lastLoginAt: Date | null;
-    isActive: boolean;
-    isEmailVerified: boolean;
-  } | null> {
+  async countTotal(): Promise<number> {
     try {
-      const [user] = await db
-        .select({
-          loginAttempts: users.loginAttempts,
-          lastLoginAt: users.lastLoginAt,
-          isActive: users.isActive,
-          isEmailVerified: users.isEmailVerified,
-        })
+      const db = await getDb();
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-
-      if (!user) {
-        return null;
-      }
-
-      // Safely convert loginAttempts to number
-      const loginAttempts =
-        typeof user.loginAttempts === 'number'
-          ? user.loginAttempts
-          : (parseInt(String(user.loginAttempts ?? 0), 10) ?? 0);
-
-      return {
-        loginAttempts,
-        lastLoginAt: user.lastLoginAt,
-        isActive: user.isActive,
-        isEmailVerified: user.isEmailVerified,
-      };
+        .where(isNull(users.deletedAt));
+      return Number(result?.count ?? 0);
     } catch (error) {
-      console.error('❌ UserRepository getSecurityInfo error:', error);
-      return null;
+      console.error('❌ UserRepository countTotal error:', error);
+      return 0;
     }
+  }
+
+  private mapToEntity(dbUser: Record<string, unknown>): UserEntity {
+    return {
+      id: dbUser.id as string,
+      organizationId: dbUser.organizationId as string | null,
+      name: dbUser.name as string | null,
+      email: dbUser.email as string,
+      image: dbUser.image as string | null,
+      emailVerified: dbUser.emailVerified as Date | null,
+      passwordHash: dbUser.passwordHash as string | null, // ✅ CORRETO
+      isActive: dbUser.isActive as boolean,
+      isSuperAdmin: dbUser.isSuperAdmin as boolean,
+      isEmailVerified: dbUser.isEmailVerified as boolean,
+      lastLoginAt: dbUser.lastLoginAt as Date | null, // ✅ CORRETO
+      lastLoginIp: dbUser.lastLoginIp as string | null,
+      loginAttempts: dbUser.loginAttempts as string,
+      lockedUntil: dbUser.lockedUntil as Date | null,
+      firstName: dbUser.firstName as string | null,
+      lastName: dbUser.lastName as string | null,
+      avatarUrl: dbUser.avatarUrl as string | null,
+      timezone: dbUser.timezone as string,
+      locale: dbUser.locale as string,
+      emailNotifications: dbUser.emailNotifications as boolean,
+      marketingEmails: dbUser.marketingEmails as boolean,
+      createdAt: dbUser.createdAt as Date,
+      updatedAt: dbUser.updatedAt as Date,
+      deletedAt: dbUser.deletedAt as Date | null,
+    };
   }
 }

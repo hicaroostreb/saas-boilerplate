@@ -1,4 +1,4 @@
-// packages/database/src/scripts/seed.ts
+// packages/database/src/scripts/seed.ts - BUILD-TIME SAFE SEEDER
 
 import { config } from 'dotenv';
 import path from 'path';
@@ -34,7 +34,7 @@ if (!envLoaded) {
 
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-import { closeConnection, db, healthCheck } from '../connection';
+import { closeConnection, getDb, healthCheck } from '../connection';
 import { users } from '../schemas/auth';
 import { memberships, organizations } from '../schemas/business';
 import { authAuditLogs } from '../schemas/security';
@@ -73,6 +73,8 @@ async function seed() {
       throw new Error('Database health check failed');
     }
 
+    const db = await getDb();
+
     const now = new Date();
     const tenantId = randomUUID();
     const organizationId = randomUUID();
@@ -85,27 +87,12 @@ async function seed() {
       id: userId,
       name: SEED_DATA.user.name,
       email: SEED_DATA.user.email.toLowerCase(),
-      organizationId: organizationId,
-      passwordHash,
+      password: passwordHash,
       emailVerified: now,
       image: null,
-      isActive: true,
-      isSuperAdmin: false,
-      isEmailVerified: true,
-      lastLoginAt: null,
-      lastLoginIp: null,
-      loginAttempts: '0',
-      lockedUntil: null,
-      firstName: null,
-      lastName: null,
-      avatarUrl: null,
-      timezone: 'UTC',
-      locale: 'en',
-      emailNotifications: true,
-      marketingEmails: false,
+      lastActivityAt: now,
       createdAt: now,
       updatedAt: now,
-      deletedAt: null,
     };
 
     const [testUser] = await db
@@ -122,39 +109,12 @@ async function seed() {
     console.log('Creating test organization...');
     const testOrgRecord = {
       id: organizationId,
-      tenantId: tenantId,
       name: SEED_DATA.organization.name,
       slug: SEED_DATA.organization.slug,
       description: SEED_DATA.organization.description,
       ownerId: userId,
-      logoUrl: null,
-      website: null,
-      brandColor: '#3b82f6',
-      isPublic: false,
-      allowJoinRequests: false,
-      requireApproval: true,
-      memberLimit: SEED_DATA.organization.maxMembers,
-      projectLimit: SEED_DATA.organization.maxProjects,
-      storageLimit: SEED_DATA.organization.maxStorage * 1024 * 1024,
-      contactEmail: null,
-      contactPhone: null,
-      address: null,
-      taxId: null,
-      industry: null,
-      companySize: null,
-      planType: SEED_DATA.organization.planName,
-      billingEmail: null,
-      isActive: true,
-      isVerified: true,
-      metadata: {
-        source: 'seed',
-        createdBy: 'system',
-        industry: 'technology',
-        seedVersion: '1.0.0',
-      },
       createdAt: now,
       updatedAt: now,
-      deletedAt: null,
     };
 
     const [testOrg] = await db
@@ -174,23 +134,10 @@ async function seed() {
       userId: testUser.id,
       organizationId: testOrg.id,
       role: 'owner' as const,
-      permissions: null,
       status: 'active' as const,
-      invitedBy: null,
-      invitedAt: null,
-      acceptedAt: now,
-      lastActivityAt: null,
-      title: null,
-      department: null,
-      metadata: {
-        source: 'seed',
-        joinMethod: 'creation',
-        initialRole: 'owner',
-        seedVersion: '1.0.0',
-      },
+      joinedAt: now,
       createdAt: now,
       updatedAt: now,
-      deletedAt: null,
     };
 
     const [membership] = await db
@@ -204,52 +151,34 @@ async function seed() {
 
     console.log(`Membership created: ${testUser.name} as ${membership.role}`);
 
-    console.log('Creating audit trail...');
-    const auditLogRecord = {
-      id: randomUUID(),
-      userId: testUser.id,
-      organizationId: testOrg.id,
-      eventType: 'login_success' as const,
-      riskLevel: 'low' as const,
-      ipAddress: '127.0.0.1',
-      userAgent: 'seed-script',
-      country: null,
-      region: null,
-      city: null,
-      deviceId: null,
-      deviceType: null,
-      browserName: null,
-      browserVersion: null,
-      osName: null,
-      osVersion: null,
-      sessionId: null,
-      sessionToken: null,
-      success: true,
-      errorCode: null,
-      errorMessage: null,
-      resource: 'seed-operation',
-      action: 'minimal_seed_complete',
-      requestHeaders: null,
-      responseData: {
-        userEmail: testUser.email,
-        organizationSlug: testOrg.slug,
-        tenantId: tenantId,
-        seedVersion: '1.0.0',
-      },
-      metadata: {
-        source: 'seed',
-        operation: 'minimal_seed_complete',
-        tenantId: tenantId,
-        timestamp: now.toISOString(),
-      },
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-      expiresAt: null,
-    };
+    try {
+      console.log('Creating audit trail...');
+      const auditLogRecord = {
+        id: randomUUID(),
+        userId: testUser.id,
+        organizationId: testOrg.id,
+        eventType: 'login_success' as const,
+        success: true,
+        ipAddress: '127.0.0.1',
+        userAgent: 'seed-script',
+        deviceId: null,
+        location: null,
+        errorMessage: null,
+        metadata: {
+          source: 'seed',
+          operation: 'minimal_seed_complete',
+          userEmail: testUser.email,
+          organizationSlug: testOrg.slug,
+          seedVersion: '1.0.0',
+        },
+        createdAt: now,
+      };
 
-    await db.insert(authAuditLogs).values(auditLogRecord);
-    console.log('Audit log entry created');
+      await db.insert(authAuditLogs).values(auditLogRecord);
+      console.log('Audit log entry created');
+    } catch (error) {
+      console.warn('Audit log creation failed (table may not exist):', error);
+    }
 
     console.log(
       'Achromatic Enterprise minimal seeding completed successfully!'
@@ -298,7 +227,6 @@ process.on('SIGTERM', async () => {
 
 console.log('Initializing Achromatic Enterprise minimal seed process...');
 
-// Only execute when run directly (not imported)
 if (import.meta.url === `file://${process.argv[1]}`) {
   seed().catch(async error => {
     console.error('Unexpected error during enterprise seeding:', error);

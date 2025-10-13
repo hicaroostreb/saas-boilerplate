@@ -1,36 +1,32 @@
-// packages/auth/src/server.ts - SERVER-ONLY EXPORTS
+// packages/auth/src/server.ts - SERVER-SIDE ONLY EXPORTS
 
-// ============================================
-// FLOWS (SERVER ONLY)
-// ============================================
-export * from './core/flows';
-
-// ============================================
-// NEXTAUTH SERVER INTEGRATION
-// ============================================
-export { authConfig } from './lib/nextauth/config';
+// ✅ SERVER: NextAuth handlers and functions
 export {
-  auth,
+  auth as getServerSession,
   handlers,
-  signIn,
-  signInAction,
-  signOut,
   signOutAction,
 } from './lib/nextauth/handlers';
 
-// ✅ FIX: Import direto ao invés de dinâmico
-import { auth } from './lib/nextauth/handlers';
-
-// Server-side helpers only
-export async function getServerSession() {
-  // ✅ FIX: Usar import direto - mesma instância que o login
-  return await auth();
-}
-
+// ✅ SERVER: RequireAuth wrapper
 export async function requireAuth() {
-  const session = await getServerSession();
+  const { auth } = await import('./lib/nextauth/handlers');
+  const session = await auth();
+
   if (!session?.user) {
     throw new Error('Authentication required');
   }
+
   return session;
 }
+
+// ✅ SERVER: Flow exports (with database dependencies)
+export { forgotPasswordFlow } from './core/flows/forgot-password.flow';
+export { resetPasswordFlow } from './core/flows/reset-password.flow';
+export { signInFlow } from './core/flows/sign-in.flow';
+export { signUpFlow } from './core/flows/sign-up.flow';
+
+// ✅ SERVER: Service exports
+export * from './core/services';
+
+// ✅ SERVER: Repository exports
+export * from './adapters/repositories';

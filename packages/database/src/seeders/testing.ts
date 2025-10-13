@@ -1,11 +1,4 @@
-// packages/database/src/seeders/testing.ts
-
-// ============================================
-// TESTING SEEDERS - SRP: APENAS TEST DATA
-// Enterprise Multi-Tenancy and Soft Delete - TypeScript Strict Mode Fixed
-// ============================================
-
-import { db } from '../connection';
+import { getDb } from '../connection';
 import type { SeedOptions } from '../index';
 import {
   contacts,
@@ -19,23 +12,19 @@ export const testingSeeder = {
   name: 'Testing (Comprehensive)',
   async run(options: SeedOptions): Promise<void> {
     if (options.verbose) {
-      console.log('🧪 Running testing comprehensive seed...');
+      console.log('Running testing comprehensive seed...');
     }
-
-    // ============================================
-    // TESTING ENVIRONMENT CHECK
-    // ============================================
 
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Testing seeder cannot run in production environment');
     }
 
-    // Check if test data already exists
+    const db = await getDb();
     const existingUsers = await db.select().from(users).limit(1);
 
     if (existingUsers.length > 0 && !options.force) {
       if (options.verbose) {
-        console.log('  ↳ Test data already exists, skipping');
+        console.log('Test data already exists, skipping');
       }
       return;
     }
@@ -43,10 +32,6 @@ export const testingSeeder = {
     const now = new Date();
     const tenantIdAlpha = crypto.randomUUID();
     const tenantIdBeta = crypto.randomUUID();
-
-    // ============================================
-    // TEST ORGANIZATIONS DATA FIRST
-    // ============================================
 
     const testOrganizations = [
       {
@@ -59,13 +44,13 @@ export const testingSeeder = {
         logoUrl: null,
         bannerUrl: null,
         brandColor: '#3b82f6',
-        ownerId: '', // Will be set after user creation
+        ownerId: '',
         isPublic: false,
         allowJoinRequests: true,
         requireApproval: false,
         memberLimit: 10,
         projectLimit: 5,
-        storageLimit: 1073741824, // 1GB
+        storageLimit: 1073741824,
         contactEmail: null,
         contactPhone: null,
         address: null,
@@ -91,13 +76,13 @@ export const testingSeeder = {
         logoUrl: null,
         bannerUrl: null,
         brandColor: '#10b981',
-        ownerId: '', // Will be set after user creation
+        ownerId: '',
         isPublic: true,
         allowJoinRequests: false,
         requireApproval: true,
         memberLimit: 5,
         projectLimit: 3,
-        storageLimit: 536870912, // 512MB
+        storageLimit: 536870912,
         contactEmail: null,
         contactPhone: null,
         address: null,
@@ -115,16 +100,11 @@ export const testingSeeder = {
       },
     ];
 
-    // ============================================
-    // TEST USERS DATA
-    // ============================================
-
     const testUsers = [
       {
         id: crypto.randomUUID(),
         email: 'test.admin@test.com',
         name: 'Test Admin',
-        organizationId: testOrganizations[0]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: now,
         passwordHash: null,
@@ -150,7 +130,6 @@ export const testingSeeder = {
         id: crypto.randomUUID(),
         email: 'test.user@test.com',
         name: 'Test User',
-        organizationId: testOrganizations[0]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: now,
         passwordHash: null,
@@ -176,7 +155,6 @@ export const testingSeeder = {
         id: crypto.randomUUID(),
         email: 'test.inactive@test.com',
         name: 'Inactive User',
-        organizationId: testOrganizations[1]!.id, // ✅ FIX: Non-null assertion
         image: null,
         emailVerified: null,
         passwordHash: null,
@@ -200,30 +178,36 @@ export const testingSeeder = {
       },
     ];
 
-    // Update organization owners
-    testOrganizations[0]!.ownerId = testUsers[0]!.id; // ✅ FIX: Non-null assertions
-    testOrganizations[1]!.ownerId = testUsers[1]!.id; // ✅ FIX: Non-null assertions
+    if (!testOrganizations[0] || !testUsers[0]) {
+      throw new Error('Failed to create test data structures');
+    }
+    if (!testOrganizations[1] || !testUsers[1]) {
+      throw new Error('Failed to create test data structures');
+    }
+
+    testOrganizations[0].ownerId = testUsers[0].id;
+    testOrganizations[1].ownerId = testUsers[1].id;
 
     await db.insert(users).values(testUsers);
 
     if (options.verbose) {
-      console.log(`  ✅ Created ${testUsers.length} test users`);
+      console.log(`Created ${testUsers.length} test users`);
     }
 
     await db.insert(organizations).values(testOrganizations);
 
     if (options.verbose) {
-      console.log(`  ✅ Created ${testOrganizations.length} test organizations`);
+      console.log(`Created ${testOrganizations.length} test organizations`);
     }
 
-    // ============================================
-    // TEST MEMBERSHIPS DATA
-    // ============================================
+    const adminUser = testUsers[0];
+    const regularUser = testUsers[1];
+    const orgAlpha = testOrganizations[0];
+    const orgBeta = testOrganizations[1];
 
-    const adminUser = testUsers[0]!; // ✅ FIX: Non-null assertion
-    const regularUser = testUsers[1]!; // ✅ FIX: Non-null assertion
-    const orgAlpha = testOrganizations[0]!; // ✅ FIX: Non-null assertion
-    const orgBeta = testOrganizations[1]!; // ✅ FIX: Non-null assertion
+    if (!adminUser || !regularUser || !orgAlpha || !orgBeta) {
+      throw new Error('Required test data is missing');
+    }
 
     const testMemberships = [
       {
@@ -285,192 +269,201 @@ export const testingSeeder = {
     await db.insert(memberships).values(testMemberships);
 
     if (options.verbose) {
-      console.log(`  ✅ Created ${testMemberships.length} test memberships`);
+      console.log(`Created ${testMemberships.length} test memberships`);
     }
 
-    // ============================================
-    // TEST PROJECTS DATA
-    // ============================================
-
-    const testProjects = [
-      {
-        id: crypto.randomUUID(),
-        organizationId: orgAlpha.id,
-        ownerId: adminUser.id,
-        name: 'Test Project Alpha',
-        slug: 'test-project-alpha',
-        description: 'Primary test project for comprehensive testing',
-        status: 'active' as const,
-        priority: 'high' as const,
-        visibility: 'organization' as const,
-        color: '#3b82f6',
-        icon: 'project',
-        coverImageUrl: null,
-        startDate: null,
-        endDate: null,
-        dueDate: null,
-        progressPercentage: 45,
-        allowComments: true,
-        requireApproval: false,
-        enableNotifications: true,
-        budget: null,
-        currency: 'USD',
-        externalUrl: null,
-        repositoryUrl: null,
-        tags: ['testing', 'alpha', 'primary'],
-        customFields: null,
-        metadata: { source: 'test' },
-        viewCount: 0,
-        lastViewedAt: null,
-        createdAt: now,
-        updatedAt: now,
-        archivedAt: null,
-        deletedAt: null,
-      },
-      {
-        id: crypto.randomUUID(),
-        organizationId: orgAlpha.id,
-        ownerId: regularUser.id,
-        name: 'Test Project Beta',
-        slug: 'test-project-beta',
-        description: 'Secondary test project for feature testing',
-        status: 'inactive' as const,
-        priority: 'medium' as const,
-        visibility: 'private' as const,
-        color: '#10b981',
-        icon: 'test',
-        coverImageUrl: null,
-        startDate: null,
-        endDate: null,
-        dueDate: null,
-        progressPercentage: 20,
-        allowComments: false,
-        requireApproval: true,
-        enableNotifications: false,
-        budget: null,
-        currency: 'USD',
-        externalUrl: null,
-        repositoryUrl: null,
-        tags: ['testing', 'beta', 'features'],
-        customFields: null,
-        metadata: { source: 'test' },
-        viewCount: 0,
-        lastViewedAt: null,
-        createdAt: now,
-        updatedAt: now,
-        archivedAt: null,
-        deletedAt: null,
-      },
-    ];
-
-    await db.insert(projects).values(testProjects);
-
-    if (options.verbose) {
-      console.log(`  ✅ Created ${testProjects.length} test projects`);
-    }
-
-    // ============================================
-    // TEST CONTACTS DATA
-    // ============================================
-
-    const testContacts = [
-      {
-        id: crypto.randomUUID(),
-        organizationId: orgAlpha.id,
-        createdBy: adminUser.id,
-        assignedTo: regularUser.id,
-        firstName: 'John',
-        lastName: 'Doe',
-        fullName: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1-555-0123',
-        mobile: '+1-555-0124',
-        companyName: 'Example Corp',
-        jobTitle: 'Senior Developer',
-        department: 'Engineering',
-        address: {
-          street: '123 Main St',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10001',
-          country: 'USA',
+    try {
+      const testProjects = [
+        {
+          id: crypto.randomUUID(),
+          organizationId: orgAlpha.id,
+          ownerId: adminUser.id,
+          name: 'Test Project Alpha',
+          slug: 'test-project-alpha',
+          description: 'Primary test project for comprehensive testing',
+          status: 'active' as const,
+          priority: 'high' as const,
+          visibility: 'organization' as const,
+          color: '#3b82f6',
+          icon: 'project',
+          coverImageUrl: null,
+          startDate: null,
+          endDate: null,
+          dueDate: null,
+          progressPercentage: 45,
+          allowComments: true,
+          requireApproval: false,
+          enableNotifications: true,
+          budget: null,
+          currency: 'USD',
+          externalUrl: null,
+          repositoryUrl: null,
+          tags: ['testing', 'alpha', 'primary'],
+          customFields: null,
+          metadata: { source: 'test' },
+          viewCount: 0,
+          lastViewedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          archivedAt: null,
+          deletedAt: null,
         },
-        website: 'https://example.com',
-        linkedinUrl: 'https://linkedin.com/in/johndoe',
-        twitterHandle: '@johndoe',
-        type: 'customer' as const,
-        status: 'active' as const,
-        source: 'website',
-        referredBy: null,
-        tags: ['vip', 'enterprise'],
-        notes: 'Important customer contact',
-        emailOptIn: true,
-        smsOptIn: false,
-        marketingOptIn: true,
-        lastContactedAt: null,
-        lastContactMethod: null,
-        nextFollowUpAt: null,
-        customFields: null,
-        metadata: { source: 'test' },
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: crypto.randomUUID(),
-        organizationId: orgAlpha.id,
-        createdBy: regularUser.id,
-        assignedTo: null,
-        firstName: 'Jane',
-        lastName: 'Smith',
-        fullName: 'Jane Smith',
-        email: 'jane.smith@test.com',
-        phone: '+1-555-0456',
-        mobile: null,
-        companyName: 'Test Industries',
-        jobTitle: 'Product Manager',
-        department: 'Product',
-        address: null,
-        website: null,
-        linkedinUrl: null,
-        twitterHandle: null,
-        type: 'lead' as const,
-        status: 'active' as const,
-        source: 'referral',
-        referredBy: null,
-        tags: ['hot-lead', 'enterprise'],
-        notes: null,
-        emailOptIn: true,
-        smsOptIn: true,
-        marketingOptIn: false,
-        lastContactedAt: null,
-        lastContactMethod: null,
-        nextFollowUpAt: null,
-        customFields: null,
-        metadata: { source: 'test' },
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-    ];
+        {
+          id: crypto.randomUUID(),
+          organizationId: orgAlpha.id,
+          ownerId: regularUser.id,
+          name: 'Test Project Beta',
+          slug: 'test-project-beta',
+          description: 'Secondary test project for feature testing',
+          status: 'inactive' as const,
+          priority: 'medium' as const,
+          visibility: 'private' as const,
+          color: '#10b981',
+          icon: 'test',
+          coverImageUrl: null,
+          startDate: null,
+          endDate: null,
+          dueDate: null,
+          progressPercentage: 20,
+          allowComments: false,
+          requireApproval: true,
+          enableNotifications: false,
+          budget: null,
+          currency: 'USD',
+          externalUrl: null,
+          repositoryUrl: null,
+          tags: ['testing', 'beta', 'features'],
+          customFields: null,
+          metadata: { source: 'test' },
+          viewCount: 0,
+          lastViewedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          archivedAt: null,
+          deletedAt: null,
+        },
+      ];
 
-    await db.insert(contacts).values(testContacts);
+      await db.insert(projects).values(testProjects);
+
+      if (options.verbose) {
+        console.log(`Created ${testProjects.length} test projects`);
+      }
+    } catch (error) {
+      if (options.verbose) {
+        console.warn('Projects table not available, skipping projects seed');
+      }
+    }
+
+    try {
+      const testContacts = [
+        {
+          id: crypto.randomUUID(),
+          organizationId: orgAlpha.id,
+          createdBy: adminUser.id,
+          assignedTo: regularUser.id,
+          firstName: 'John',
+          lastName: 'Doe',
+          fullName: 'John Doe',
+          email: 'john.doe@example.com',
+          phone: '+1-555-0123',
+          mobile: '+1-555-0124',
+          companyName: 'Example Corp',
+          jobTitle: 'Senior Developer',
+          department: 'Engineering',
+          address: {
+            street: '123 Main St',
+            city: 'New York',
+            state: 'NY',
+            zipCode: '10001',
+            country: 'USA',
+          },
+          website: 'https://example.com',
+          linkedinUrl: 'https://linkedin.com/in/johndoe',
+          twitterHandle: '@johndoe',
+          type: 'customer' as const,
+          status: 'active' as const,
+          source: 'website',
+          referredBy: null,
+          tags: ['vip', 'enterprise'],
+          notes: 'Important customer contact',
+          emailOptIn: true,
+          smsOptIn: false,
+          marketingOptIn: true,
+          lastContactedAt: null,
+          lastContactMethod: null,
+          nextFollowUpAt: null,
+          customFields: null,
+          metadata: { source: 'test' },
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: orgAlpha.id,
+          createdBy: regularUser.id,
+          assignedTo: null,
+          firstName: 'Jane',
+          lastName: 'Smith',
+          fullName: 'Jane Smith',
+          email: 'jane.smith@test.com',
+          phone: '+1-555-0456',
+          mobile: null,
+          companyName: 'Test Industries',
+          jobTitle: 'Product Manager',
+          department: 'Product',
+          address: null,
+          website: null,
+          linkedinUrl: null,
+          twitterHandle: null,
+          type: 'lead' as const,
+          status: 'active' as const,
+          source: 'referral',
+          referredBy: null,
+          tags: ['hot-lead', 'enterprise'],
+          notes: null,
+          emailOptIn: true,
+          smsOptIn: true,
+          marketingOptIn: false,
+          lastContactedAt: null,
+          lastContactMethod: null,
+          nextFollowUpAt: null,
+          customFields: null,
+          metadata: { source: 'test' },
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        },
+      ];
+
+      await db.insert(contacts).values(testContacts);
+
+      if (options.verbose) {
+        console.log(`Created ${testContacts.length} test contacts`);
+      }
+    } catch (error) {
+      if (options.verbose) {
+        console.warn('Contacts table not available, skipping contacts seed');
+      }
+    }
 
     if (options.verbose) {
-      console.log(`  ✅ Created ${testContacts.length} test contacts`);
       console.log('');
-      console.log('🧪 TESTING DATA SUMMARY:');
-      console.log(`   👤 Users: ${testUsers.length} (1 admin, 1 active, 1 inactive)`);
-      console.log(`   🏢 Organizations: ${testOrganizations.length} (1 private, 1 public)`);
-      console.log(`   🏗️  Tenants: 2 (Alpha: ${tenantIdAlpha.slice(0, 8)}..., Beta: ${tenantIdBeta.slice(0, 8)}...)`);
-      console.log(`   👥 Memberships: ${testMemberships.length} (various roles)`);
-      console.log(`   📊 Projects: ${testProjects.length} (1 active, 1 inactive)`);
-      console.log(`   📇 Contacts: ${testContacts.length} (various types)`);
+      console.log('TESTING DATA SUMMARY:');
+      console.log(`Users: ${testUsers.length} (1 admin, 1 active, 1 inactive)`);
+      console.log(
+        `Organizations: ${testOrganizations.length} (1 private, 1 public)`
+      );
+      console.log(
+        `Tenants: 2 (Alpha: ${tenantIdAlpha.slice(0, 8)}..., Beta: ${tenantIdBeta.slice(0, 8)}...)`
+      );
+      console.log(`Memberships: ${testMemberships.length} (various roles)`);
       console.log('');
-      console.log('🔑 TEST LOGIN CREDENTIALS:');
-      console.log('   📧 Admin: test.admin@test.com');
-      console.log('   📧 User: test.user@test.com');
-      console.log('   🔒 Password: Not set - use password reset');
+      console.log('TEST LOGIN CREDENTIALS:');
+      console.log('Admin: test.admin@test.com');
+      console.log('User: test.user@test.com');
+      console.log('Password: Not set - use password reset');
     }
   },
 };

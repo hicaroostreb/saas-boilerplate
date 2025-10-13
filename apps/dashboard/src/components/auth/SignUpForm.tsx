@@ -64,8 +64,13 @@ export function SignUpForm() {
     setIsLoading(true);
 
     try {
-      // Only schema validation on client-side
-      const data = signUpSchema.parse({ name, email, password });
+      // ✅ FIX: Schema validation com confirmPassword
+      const data = signUpSchema.parse({
+        name,
+        email,
+        password,
+        confirmPassword,
+      });
 
       const response = await fetch('/api/auth/sign-up', {
         method: 'POST',
@@ -81,7 +86,6 @@ export function SignUpForm() {
           router.push('/onboarding/organization');
         }, 1500);
       } else {
-        // ✅ ESLint fix: usar ?? ao invés de ||
         setError(result.error ?? 'Failed to create account. Please try again.');
       }
     } catch (err) {
@@ -147,7 +151,6 @@ export function SignUpForm() {
     </svg>
   );
 
-  // ✅ ESLint fix: _show para indicar parâmetro não usado
   const PasswordToggle = ({
     show: _show,
     onToggle,

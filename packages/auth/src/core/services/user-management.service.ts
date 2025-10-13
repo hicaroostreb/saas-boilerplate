@@ -42,10 +42,8 @@ export class UserManagementService {
         // ✅ FIX: Create user and cast to unknown first
         const newUser = await this.userRepository.create({
           email: params.email,
-          name: params.name ?? null,
-          passwordHash,
-          isActive: true,
-          isSuperAdmin: false,
+          name: params.name,
+          password: passwordHash ?? 'temp-password',
         });
 
         // ✅ FIX: Safe assignment with unknown cast

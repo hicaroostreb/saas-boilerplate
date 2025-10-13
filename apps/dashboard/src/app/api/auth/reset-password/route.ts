@@ -1,26 +1,27 @@
 import { resetPasswordSchema } from '@workspace/auth';
+import { resetPasswordFlow } from '@workspace/auth/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, password } = resetPasswordSchema.parse(body);
+    const validatedData = resetPasswordSchema.parse(body);
 
-    // Reset password with token
-    // TODO: Implementation with @workspace/auth
-    console.warn(
-      'Password reset for token:',
-      token,
-      'password length:',
-      password.length
-    );
+    const result = await resetPasswordFlow(validatedData);
 
-    return NextResponse.json({
-      message: 'Password reset successful',
-    });
-  } catch {
+    if (result.success) {
+      return NextResponse.json(result.data, { status: 200 });
+    } else {
+      return NextResponse.json(
+        { message: 'Failed to reset password' },
+        { status: 400 }
+      );
+    }
+  } catch (error) {
+    console.error('Reset password API error:', error);
+
     return NextResponse.json(
-      { error: 'Failed to reset password' },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

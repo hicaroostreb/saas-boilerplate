@@ -1,6 +1,6 @@
-// packages/auth/src/core/services/audit.service.ts - SIMPLIFIED AUDIT SERVICE
+// packages/auth/src/core/services/audit.service.ts - BUILD-TIME SAFE AUDIT SERVICE
 
-import { authAuditLogs, db } from '@workspace/database';
+import { authAuditLogs, getDb } from '@workspace/database';
 import { randomUUID } from 'crypto';
 import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
 import type {
@@ -14,15 +14,17 @@ import type {
 } from '../../types';
 
 /**
- * ✅ ENTERPRISE: Simplified Audit Service
+ * ✅ ENTERPRISE: Build-Time Safe Audit Service
  * Single Responsibility: Basic audit logging compatible with DB schema
  */
 export class AuditService {
   /**
-   * ✅ LOG: Single audit event (minimal compatible version)
+   * ✅ LOG: Single audit event (build-time safe)
    */
   async logAuthEvent(event: Partial<EnterpriseAuditEvent>): Promise<void> {
     try {
+      const db = await getDb();
+
       // Mapear eventType para o schema do banco
       const eventType = this.mapEventTypeToSchema(event.eventType);
 
@@ -63,6 +65,8 @@ export class AuditService {
     }
 
     try {
+      const db = await getDb();
+
       const auditLogs = events.map(event => ({
         eventType: this.mapEventTypeToSchema(event.eventType),
         success: event.eventStatus === 'success',
@@ -91,6 +95,8 @@ export class AuditService {
     filters: AuditQueryFilters = {}
   ): Promise<AuditQueryResult> {
     try {
+      const db = await getDb();
+
       const {
         userId,
         organizationId,
@@ -136,8 +142,9 @@ export class AuditService {
       const totalCount = Number(countResult[0]?.totalCount ?? 0);
 
       // Transform to enterprise format
-      const enterpriseEvents = events.map(event =>
-        this.transformDatabaseEventToEnterprise(event)
+      const enterpriseEvents = events.map(
+        (event: Awaited<typeof events>[number]) =>
+          this.transformDatabaseEventToEnterprise(event)
       );
 
       return {
@@ -236,6 +243,8 @@ export class AuditService {
       register_success: 'register_success',
       register_failed: 'register_failed',
       password_change: 'password_changed',
+      password_changed: 'password_changed',
+      password_reset: 'password_changed',
       session_expired: 'session_expired',
       email_verification_sent: 'email_verification_sent',
       email_verified: 'email_verified',
