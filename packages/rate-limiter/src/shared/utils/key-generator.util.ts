@@ -43,7 +43,7 @@ export class KeyGenerator {
     algorithm: RateLimitAlgorithm,
     additionalContext?: Record<string, string | number>
   ): string {
-    if (!identifier || identifier.trim().length === 0) {
+    if (!identifier?.trim()?.length) {
       throw new Error('Identifier cannot be empty');
     }
 
@@ -213,7 +213,7 @@ export class KeyGenerator {
         return false;
       }
 
-      if (!parsed.identifier || parsed.identifier.trim().length === 0) {
+      if (!parsed?.identifier?.trim()?.length) {
         return false;
       }
 
