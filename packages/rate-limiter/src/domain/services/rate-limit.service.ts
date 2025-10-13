@@ -32,7 +32,7 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async checkLimit(identifier: string): Promise<RateLimitResult> {
-    if (!identifier || identifier.trim().length === 0) {
+    if (!identifier?.trim()?.length) {
       throw new RateLimitValidationError(
         'Identifier cannot be empty',
         'identifier'
@@ -65,7 +65,7 @@ export class RateLimitService implements IRateLimitService {
   async checkMultipleLimit(
     identifiers: string[]
   ): Promise<Map<string, RateLimitResult>> {
-    if (!identifiers || identifiers.length === 0) {
+    if (!identifiers?.length) {
       throw new RateLimitValidationError(
         'Identifiers array cannot be empty',
         'identifiers'
@@ -96,7 +96,7 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async resetLimit(identifier: string): Promise<void> {
-    if (!identifier || identifier.trim().length === 0) {
+    if (!identifier?.trim()?.length) {
       throw new RateLimitValidationError(
         'Identifier cannot be empty',
         'identifier'
@@ -115,7 +115,7 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async resetMultipleLimits(identifiers: string[]): Promise<void> {
-    if (!identifiers || identifiers.length === 0) {
+    if (!identifiers?.length) {
       throw new RateLimitValidationError(
         'Identifiers array cannot be empty',
         'identifiers'
@@ -134,7 +134,7 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async getCurrentStatus(identifier: string): Promise<RateLimitResult | null> {
-    if (!identifier || identifier.trim().length === 0) {
+    if (!identifier?.trim()?.length) {
       throw new RateLimitValidationError(
         'Identifier cannot be empty',
         'identifier'

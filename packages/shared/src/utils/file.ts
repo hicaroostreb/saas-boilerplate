@@ -1,22 +1,25 @@
-// packages/common/src/shared/utils/file.utils.ts
+/**
+ * @fileoverview Utilitários para manipulação de arquivos
+ * Funções helpers para upload e processamento de arquivos
+ */
 
 /**
  * Informações sobre um arquivo
  */
 export interface FileInfo {
-  name: string;
-  size: number;
-  type: string;
-  extension: string;
+  readonly name: string;
+  readonly size: number;
+  readonly type: string;
+  readonly extension: string;
 }
 
 /**
  * Opções para formatação de tamanho de arquivo
  */
 export interface FileSizeOptions {
-  precision?: number;
-  separator?: string;
-  units?: 'binary' | 'decimal';
+  readonly precision?: number;
+  readonly separator?: string;
+  readonly units?: 'binary' | 'decimal';
 }
 
 /**
@@ -28,7 +31,7 @@ export const formatFileSize = (
 ): string => {
   const { precision = 2, separator = ' ', units = 'binary' } = options;
 
-  if (typeof bytes !== 'number' || isNaN(bytes) || bytes < 0) {
+  if (typeof bytes !== 'number' || Number.isNaN(bytes) || bytes < 0) {
     throw new Error('Tamanho deve ser um número não negativo');
   }
 
@@ -45,11 +48,11 @@ export const formatFileSize = (
   const i = Math.floor(Math.log(bytes) / Math.log(base));
   const size = bytes / Math.pow(base, i);
 
-  return `${size.toFixed(precision)}${separator}${sizes[i]}`;
+  return `${size.toFixed(precision)}${separator}${sizes[i] ?? 'PB'}`;
 };
 
 /**
- * Extrai extensão de um nome de arquivo
+ * Extrai extensão de um nome de arquivo usando optional chaining
  */
 export const getFileExtension = (fileName: string): string => {
   if (typeof fileName !== 'string') {
@@ -77,7 +80,7 @@ export const getFileNameWithoutExtension = (fileName: string): string => {
  */
 export const isValidFileType = (
   fileName: string,
-  allowedTypes: string[]
+  allowedTypes: readonly string[]
 ): boolean => {
   const extension = getFileExtension(fileName);
   return allowedTypes.map(type => type.toLowerCase()).includes(extension);
@@ -137,30 +140,13 @@ export const getMimeType = (fileName: string): string => {
     pdf: 'application/pdf',
     doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    xls: 'application/vnd.ms-excel',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ppt: 'application/vnd.ms-powerpoint',
-    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-
-    // Texto
     txt: 'text/plain',
     csv: 'text/csv',
     json: 'application/json',
-    xml: 'application/xml',
-
-    // Vídeo
-    mp4: 'video/mp4',
-    avi: 'video/x-msvideo',
-    mov: 'video/quicktime',
-
-    // Áudio
-    mp3: 'audio/mpeg',
-    wav: 'audio/wav',
 
     // Compactados
     zip: 'application/zip',
     rar: 'application/vnd.rar',
-    '7z': 'application/x-7z-compressed',
   };
 
   return mimeTypes[extension] ?? 'application/octet-stream';
@@ -170,25 +156,16 @@ export const getMimeType = (fileName: string): string => {
  * Verifica se o arquivo é uma imagem
  */
 export const isImageFile = (fileName: string): boolean => {
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+  const imageExtensions = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+    'svg',
+    'bmp',
+  ] as const;
   return isValidFileType(fileName, imageExtensions);
-};
-
-/**
- * Verifica se o arquivo é um documento
- */
-export const isDocumentFile = (fileName: string): boolean => {
-  const documentExtensions = [
-    'pdf',
-    'doc',
-    'docx',
-    'xls',
-    'xlsx',
-    'ppt',
-    'pptx',
-    'txt',
-  ];
-  return isValidFileType(fileName, documentExtensions);
 };
 
 /**

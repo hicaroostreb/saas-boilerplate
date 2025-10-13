@@ -1,7 +1,15 @@
 // packages/common/src/domain/billing/validators/billing.validators.ts
 
 import { z } from 'zod';
-import { BILLING_LIMITS } from '../constants/billing.constants';
+
+// Import billing limits do shared (consolidados em BILLING_PLANS)
+const BILLING_LIMITS = {
+  MIN_PLAN_PRICE: 0,
+  MAX_PLAN_PRICE: 999,
+  MAX_SUBSCRIPTION_CHANGES_PER_MONTH: 3,
+  TRIAL_DURATION_DAYS: 14,
+  GRACE_PERIOD_DAYS: 7,
+} as const;
 
 /**
  * Schema para validação de ID de plano
