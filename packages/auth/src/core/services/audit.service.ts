@@ -136,8 +136,9 @@ export class AuditService {
       const totalCount = Number(countResult[0]?.totalCount ?? 0);
 
       // Transform to enterprise format
-      const enterpriseEvents = events.map(event =>
-        this.transformDatabaseEventToEnterprise(event)
+      const enterpriseEvents = events.map(
+        (event: Awaited<typeof events>[number]) =>
+          this.transformDatabaseEventToEnterprise(event)
       );
 
       return {

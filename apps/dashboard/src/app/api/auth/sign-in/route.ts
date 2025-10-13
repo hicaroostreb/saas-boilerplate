@@ -2,7 +2,7 @@ import { signInSchema } from '@workspace/auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { ZodError } from 'zod';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
     const validatedData = signInSchema.parse(body);

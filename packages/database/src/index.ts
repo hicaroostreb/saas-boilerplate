@@ -192,31 +192,31 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<void> {
   const { verbose = false } = options;
 
   if (verbose) {
-    console.log('🌱 Starting database seed...');
+    console.log('Starting database seed...');
   }
 
   try {
     await runAllSeeders(options);
 
     if (verbose) {
-      console.log('✅ Database seed completed successfully');
+      console.log('Database seed completed successfully');
     }
   } catch (error) {
-    console.error('❌ Database seed failed:', error);
+    console.error('Database seed failed:', error);
     throw error;
   }
 }
 
 // ============================================
-// TRANSACTION UTILITIES - ✅ FINAL FIX
+// TRANSACTION UTILITIES
 // ============================================
 
 import { db } from './connection';
 
 export async function withTransaction<T>(
-  callback: (tx: any) => Promise<T> // ✅ FIXED: Use any for simplicity
+  callback: Parameters<typeof db.transaction>[0]
 ): Promise<T> {
-  return db.transaction(callback);
+  return db.transaction(callback) as Promise<T>;
 }
 
 // ============================================
@@ -230,7 +230,7 @@ import {
 
 export async function checkDatabaseHealth(): Promise<{
   healthy: boolean;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }> {
   try {
     const isHealthy = await dbHealthCheck();
@@ -256,19 +256,6 @@ export async function checkDatabaseHealth(): Promise<{
 }
 
 // ============================================
-// DEVELOPMENT UTILITIES
-// ============================================
-
-import { schemaInfo } from './schemas';
-
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 Database package loaded in development mode');
-  console.log(
-    `📊 Schema info: ${schemaInfo.totalTables} tables across ${schemaInfo.domains.length} domains`
-  );
-}
-
-// ============================================
 // PACKAGE INFO
 // ============================================
 
@@ -285,11 +272,6 @@ export const packageInfo = {
     repositories: 'Data access layer with Repository Pattern',
   },
 
-  // Domain organization
-  domains: schemaInfo.domains,
-  tables: schemaInfo.tables,
-  totalTables: schemaInfo.totalTables,
-
   // Features
   features: [
     'Clean Architecture',
@@ -300,6 +282,8 @@ export const packageInfo = {
     'Type Safety',
     'Performance Optimized',
     'Enterprise Scalable',
+    'Lazy Loading',
+    'Singleton Pattern',
   ],
 
   // Tech stack
@@ -307,7 +291,7 @@ export const packageInfo = {
     orm: 'Drizzle ORM',
     database: 'PostgreSQL',
     architecture: 'Clean Architecture + DDD-Lite',
-    patterns: ['Repository', 'Entity', 'Factory'],
+    patterns: ['Repository', 'Entity', 'Factory', 'Singleton', 'Lazy Loading'],
     principles: ['SRP', 'DIP', 'ISP'],
   },
 } as const;

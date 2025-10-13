@@ -31,7 +31,7 @@ export interface HeroSectionProps {
  */
 export const HeroSection = ({
   title = 'Your revolutionary\nNext.js SaaS',
-  subtitle = 'This is a demo application built with Achromatic. It will save you time and effort building your next SaaS.',
+  subtitle = 'This is a demo application built with Next.JS. It will save you time and effort building your next SaaS.',
   announcement = {
     text: 'Put an announcement here 🎉',
     href: '#',

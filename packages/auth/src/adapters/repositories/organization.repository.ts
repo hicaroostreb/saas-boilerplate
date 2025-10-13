@@ -89,15 +89,25 @@ export class OrganizationRepository {
         )
         .orderBy(desc(memberships.createdAt));
 
-      return userOrganizations.map(org => ({
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        logoUrl: org.logoUrl,
-        role: org.role as MemberRole,
-        joinedAt: org.joinedAt,
-        status: (org.status as 'active' | 'inactive') ?? 'active',
-      }));
+      return userOrganizations.map(
+        (org: {
+          id: string;
+          name: string;
+          slug: string;
+          logoUrl: string | null;
+          role: string;
+          joinedAt: Date;
+          status: string;
+        }) => ({
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          logoUrl: org.logoUrl,
+          role: org.role as MemberRole,
+          joinedAt: org.joinedAt,
+          status: (org.status as 'active' | 'inactive') ?? 'active',
+        })
+      );
     } catch (error) {
       console.error(
         '❌ OrganizationRepository findUserOrganizations error:',
@@ -189,16 +199,27 @@ export class OrganizationRepository {
         .where(eq(memberships.organizationId, organizationId))
         .orderBy(desc(memberships.createdAt));
 
-      return members.map(member => ({
-        id: member.id,
-        userId: member.userId,
-        email: member.email,
-        name: member.name,
-        role: member.role as MemberRole,
-        status: (member.status as 'active' | 'inactive') ?? 'active',
-        joinedAt: member.joinedAt,
-        lastActivityAt: member.lastActivityAt,
-      }));
+      return members.map(
+        (member: {
+          id: string;
+          userId: string;
+          email: string;
+          name: string | null;
+          role: string;
+          status: string;
+          joinedAt: Date;
+          lastActivityAt: Date | null;
+        }) => ({
+          id: member.id,
+          userId: member.userId,
+          email: member.email,
+          name: member.name,
+          role: member.role as MemberRole,
+          status: (member.status as 'active' | 'inactive') ?? 'active',
+          joinedAt: member.joinedAt,
+          lastActivityAt: member.lastActivityAt,
+        })
+      );
     } catch (error) {
       console.error('❌ OrganizationRepository findMembers error:', error);
       return [];

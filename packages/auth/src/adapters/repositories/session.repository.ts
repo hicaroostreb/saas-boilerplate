@@ -156,11 +156,10 @@ export class SessionRepository {
         sessionToken: session.sessionToken,
         deviceName: null, // Not in current schema
         deviceType: 'unknown' as DeviceType,
-        ipAddress: session.ipAddress,
-        location: {
-          country: null, // Not in current schema
-          city: null,
-        },
+        platform: 'unknown' as const,
+        browser: 'unknown' as const,
+        ipAddress: session.ipAddress ?? 'unknown',
+        location: { country: null, city: null },
         lastAccessedAt: session.lastAccessedAt,
         createdAt: session.createdAt,
         isCurrent: false, // Will be set by caller
@@ -182,7 +181,6 @@ export class SessionRepository {
         .update(sessions)
         .set({
           lastAccessedAt: new Date(),
-          // Don't set updatedAt - it might not exist in schema
         })
         .where(eq(sessions.sessionToken, sessionToken));
     } catch (error) {
@@ -283,11 +281,6 @@ export class SessionRepository {
 
       const expiredCount = Number(countResult[0]?.count ?? 0);
 
-      // Delete expired sessions (optional - you might want to keep for audit)
-      // await db
-      //   .delete(sessions)
-      //   .where(lt(sessions.expires, new Date()));
-
       console.warn(
         `✅ SessionRepository: Found ${expiredCount} expired sessions`
       );
@@ -319,13 +312,14 @@ export class SessionRepository {
         sessionToken: session.sessionToken,
         deviceName: null,
         deviceType: 'unknown' as DeviceType,
-        ipAddress: session.ipAddress,
-        location: {
-          country: null,
-          city: null,
-        },
+        platform: 'unknown' as const,
+        browser: 'unknown' as const,
+        ipAddress: session.ipAddress ?? 'unknown',
+        location: { country: null, city: null },
         lastAccessedAt: session.lastAccessedAt,
         createdAt: session.createdAt,
+        expiresAt: session.expires,
+        isExpired: session.expires < new Date(),
         isCurrent: false,
         riskScore: 0,
         securityLevel: 'normal' as SecurityLevel,

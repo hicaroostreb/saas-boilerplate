@@ -2,18 +2,19 @@
 
 import { forgotPasswordSchema } from '@workspace/auth';
 import { Button, FormField } from '@workspace/ui';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState } from 'react';
 
 export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const router = useRouter();
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setMessage('');
 
     try {
       const data = forgotPasswordSchema.parse({ email });
@@ -26,43 +27,86 @@ export function ForgotPasswordForm() {
 
       if (response.ok) {
         setMessage('Password reset email sent! Check your inbox.');
+        setIsSuccess(true);
       } else {
-        setMessage('Failed to send reset email. Please try again.');
+        const errorData = await response.json();
+        setMessage(
+          errorData.message ?? 'Failed to send reset email. Please try again.'
+        );
+        setIsSuccess(false);
       }
     } catch {
       setMessage('Please enter a valid email address.');
+      setIsSuccess(false);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ✅ MESMO ÍCONE DO SignInForm
+  const EmailIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="lucide lucide-mail size-4 shrink-0"
+    >
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+
   return (
-    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      {/* ✅ MESMO PADRÃO DO SignInForm */}
       <FormField
-        label="Email address"
+        label="Email"
         type="email"
         value={email}
         onChange={e => setEmail(e.target.value)}
-        placeholder="Enter your email"
-        required
+        maxLength={255}
+        autoCapitalize="off"
+        autoComplete="username"
+        icon={<EmailIcon />}
+        error={!!message && !isSuccess}
+        placeholder="Enter your email address"
       />
 
       {message && (
-        <div className="text-sm text-center text-gray-600">{message}</div>
+        <div
+          className={`text-sm ${isSuccess ? 'text-green-600' : 'text-destructive'}`}
+        >
+          {message}
+        </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Sending...' : 'Send Reset Email'}
+      {/* ✅ MESMO ESTILO DO SignInForm */}
+      <Button
+        type="submit"
+        className="w-full relative h-9 px-4 py-2"
+        disabled={isLoading || isSuccess}
+      >
+        {isLoading
+          ? 'Sending...'
+          : isSuccess
+            ? 'Email Sent!'
+            : 'Send Reset Email'}
       </Button>
 
+      {/* ✅ MESMO PADRÃO DE LINK DO SignInForm */}
       <div className="text-center">
-        <button
-          type="button"
-          onClick={() => router.push('/auth/sign-in')}
-          className="text-sm text-indigo-600 hover:text-indigo-500"
+        <Link
+          href="/auth/sign-in"
+          className="text-sm text-muted-foreground hover:text-foreground underline"
         >
           Back to sign in
-        </button>
+        </Link>
       </div>
     </form>
   );

@@ -1,32 +1,44 @@
 import { z } from 'zod';
 
-export const signUpSchema = z.object({
-  name: z
-    .string({
-      required_error: 'Name is required',
-      invalid_type_error: 'Name must be a string',
-    })
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must be less than 100 characters')
-    .trim(),
+export const signUpSchema = z
+  .object({
+    name: z
+      .string({
+        required_error: 'Name is required',
+        invalid_type_error: 'Name must be a string',
+      })
+      .min(2, 'Name must be at least 2 characters')
+      .max(100, 'Name must be less than 100 characters')
+      .trim(),
 
-  email: z
-    .string({
-      required_error: 'Email is required',
-      invalid_type_error: 'Email must be a string',
-    })
-    .email('Invalid email address')
-    .max(255, 'Email must be less than 255 characters')
-    .trim(),
+    email: z
+      .string({
+        required_error: 'Email is required',
+        invalid_type_error: 'Email must be a string',
+      })
+      .email('Invalid email address')
+      .max(255, 'Email must be less than 255 characters')
+      .trim(),
 
-  password: z
-    .string({
-      required_error: 'Password is required',
-      invalid_type_error: 'Password must be a string',
-    })
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password must be less than 72 characters'),
-});
+    password: z
+      .string({
+        required_error: 'Password is required',
+        invalid_type_error: 'Password must be a string',
+      })
+      .min(8, 'Password must be at least 8 characters')
+      .max(72, 'Password must be less than 72 characters'),
+
+    confirmPassword: z
+      .string({
+        required_error: 'Please confirm your password',
+        invalid_type_error: 'Confirm password must be a string',
+      })
+      .min(1, 'Please confirm your password'),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 // Export both for compatibility
 export type SignUpSchema = z.infer<typeof signUpSchema>;

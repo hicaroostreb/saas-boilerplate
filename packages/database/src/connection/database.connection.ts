@@ -19,16 +19,16 @@ import * as authSchemas from '../schemas/auth';
 import * as businessSchemas from '../schemas/business';
 import * as securitySchemas from '../schemas/security';
 
-// Combine all schemas for Drizzle
+// Combine all schemas
 const allSchemas = {
+  ...activitySchemas,
   ...authSchemas,
   ...businessSchemas,
   ...securitySchemas,
-  ...activitySchemas,
 };
 
 // ============================================
-// DATABASE CONNECTION CLASS
+// DATABASE CONNECTION CLASS - ENTERPRISE
 // ============================================
 
 export class DatabaseConnection {
@@ -54,10 +54,9 @@ export class DatabaseConnection {
     const types = createPostgresTypes();
 
     return postgres(this.config.connectionString, {
-      // Connection pooling
+      // Connection pool settings
       max: this.config.poolConfig.max,
       idle_timeout: this.config.poolConfig.idleTimeout,
-      max_lifetime: this.config.poolConfig.maxLifetime,
       connect_timeout: this.config.poolConfig.connectTimeout,
 
       // Performance settings
@@ -89,11 +88,11 @@ export class DatabaseConnection {
       ? {
           logQuery: (query: string, params: unknown[]) => {
             console.log(
-              '🔍 [DB Query]:',
+              '[DB Query]:',
               query.substring(0, 200) + (query.length > 200 ? '...' : '')
             );
             if (params.length > 0) {
-              console.log('📋 [DB Params]:', params.slice(0, 5));
+              console.log('[DB Params]:', params.slice(0, 5));
             }
           },
         }
@@ -116,9 +115,9 @@ export class DatabaseConnection {
         await this.runHealthCheck();
         await this.logConnectionInfo();
         this.isConnected = true;
-        console.log('🚀 Database connection initialized successfully');
+        console.log('Database connection initialized successfully');
       } catch (error) {
-        console.error('❌ Database initialization failed:', error);
+        console.error('Database initialization failed:', error);
         this.isConnected = false;
       }
     } else {
@@ -132,33 +131,33 @@ export class DatabaseConnection {
   // ============================================
 
   private async runHealthCheck(): Promise<void> {
-    const [result] = await this.client`SELECT 1 as health, NOW() as timestamp`;
+    const [result] = await this.client`SELECT 1 as health`;
 
     if (!result?.health) {
       throw new Error('Database health check failed');
     }
 
-    console.log('💚 Database health check: OK');
+    console.log('Database health check: OK');
   }
 
   private async logConnectionInfo(): Promise<void> {
     try {
       const [result] = await this.client`
-        SELECT 
+        SELECT
           current_database() as database,
           current_user as "user",
           current_setting('server_version') as server_version,
           current_setting('max_connections') as max_connections
       `;
 
-      console.log('📊 Database Info:', {
+      console.log('Database Info:', {
         database: result?.database ?? 'unknown',
         user: result?.user ?? 'unknown',
         version: result?.server_version ?? 'unknown',
         maxConnections: result?.max_connections ?? 'unknown',
       });
     } catch (error) {
-      console.warn('⚠️  Could not retrieve database info:', error);
+      console.warn('Could not retrieve database info:', error);
     }
   }
 
@@ -168,14 +167,14 @@ export class DatabaseConnection {
 
   private setupProcessHandlers(): void {
     const gracefulShutdown = async (signal: string) => {
-      console.log(`📡 Received ${signal}, closing database connection...`);
+      console.log(`Received ${signal}, closing database connection...`);
 
       try {
         await this.close();
-        console.log('✅ Database connection closed gracefully');
+        console.log('Database connection closed gracefully');
         process.exit(0);
       } catch (error) {
-        console.error('❌ Error during graceful shutdown:', error);
+        console.error('Error during graceful shutdown:', error);
         process.exit(1);
       }
     };
@@ -187,12 +186,12 @@ export class DatabaseConnection {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', error => {
-      console.error('💥 Uncaught Exception:', error);
+      console.error('Uncaught Exception:', error);
       gracefulShutdown('uncaughtException');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
       gracefulShutdown('unhandledRejection');
     });
   }
@@ -203,29 +202,16 @@ export class DatabaseConnection {
 
   // Get database instance
   get database() {
-    if (!this.isConnected) {
-      console.warn('⚠️  Database may not be connected');
-    }
     return this.drizzleDb;
   }
 
-  // Get raw postgres client
-  get connection() {
-    return this.client;
-  }
-
-  // Connection status
-  get connected() {
-    return this.isConnected;
-  }
-
-  // Health check method
+  // Health check
   async healthCheck(): Promise<boolean> {
     try {
       await this.client`SELECT 1 as health`;
       return true;
     } catch (error) {
-      console.error('💥 Health check failed:', error);
+      console.error('Health check failed:', error);
       return false;
     }
   }
@@ -234,7 +220,7 @@ export class DatabaseConnection {
   async getConnectionInfo() {
     try {
       const [result] = await this.client`
-        SELECT 
+        SELECT
           current_database() as database,
           current_user as "user",
           version() as version,
@@ -242,7 +228,7 @@ export class DatabaseConnection {
       `;
       return result;
     } catch (error) {
-      console.error('❌ Failed to get connection info:', error);
+      console.error('Failed to get connection info:', error);
       return null;
     }
   }
@@ -252,16 +238,16 @@ export class DatabaseConnection {
     try {
       await this.client.end();
       this.isConnected = false;
-      console.log('🔌 Database connection closed');
+      console.log('Database connection closed');
     } catch (error) {
-      console.error('❌ Error closing database connection:', error);
+      console.error('Error closing database connection:', error);
       throw error;
     }
   }
 }
 
 // ============================================
-// SINGLETON INSTANCE
+// SINGLETON INSTANCE - LAZY LOADING
 // ============================================
 
 let dbConnectionInstance: DatabaseConnection | null = null;
@@ -277,13 +263,9 @@ export function getDatabaseConnection(): DatabaseConnection {
 // MAIN EXPORTS
 // ============================================
 
-const dbConnection = getDatabaseConnection();
-
-// Export main database instance
-export const db = dbConnection.database;
+export const db = getDatabaseConnection().database;
+export const healthCheck = () => getDatabaseConnection().healthCheck();
+export const closeConnection = () => getDatabaseConnection().close();
+export const getConnectionInfo = () =>
+  getDatabaseConnection().getConnectionInfo();
 export type Database = typeof db;
-
-// Export utility methods
-export const healthCheck = () => dbConnection.healthCheck();
-export const closeConnection = () => dbConnection.close();
-export const getConnectionInfo = () => dbConnection.getConnectionInfo();
