@@ -44,7 +44,7 @@ jobs:
         run: |
           git config core.autocrlf false
           bun run format
-          bun run lint -- --fix
+          bun run lint:fix
         env:
           ESLINT_USE_FLAT_CONFIG: true
 
