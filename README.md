@@ -31,6 +31,12 @@ saas-boilerplate/
     └── @workspace/webhooks
 ```
 
+Comando para ver estrutura
+
+```
+find . \( -name node_modules -o -name .next -o -name dist -o -name .turbo -o -name .cache -o -name .git -o -name coverage \) -prune -o -print | sort
+```
+
 ## Quick Start
 
 ### Pré-requisitos

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    // ✅ ENTERPRISE: Language and Environment
+    // ENTERPRISE: Language and Environment
     "target": "ES2022",
     "module": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
@@ -9,13 +9,13 @@
     "incremental": true,
     "composite": true,
 
-    // ✅ ENTERPRISE: Module Resolution
+    // ENTERPRISE: Module Resolution
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowImportingTsExtensions": false,
 
-    // ✅ ENTERPRISE: JavaScript Support
+    // ENTERPRISE: JavaScript Support
     "allowJs": true,
     "checkJs": false,
     "declaration": true,
@@ -23,19 +23,19 @@
     "emitDeclarationOnly": false,
     "sourceMap": true,
 
-    // ✅ ENTERPRISE: Emit Configuration
+    // ENTERPRISE: Emit Configuration
     "outDir": "dist",
     "removeComments": false,
     "noEmit": false,
     "importHelpers": true,
     "downlevelIteration": true,
 
-    // ✅ ENTERPRISE: Interop Constraints
+    // ENTERPRISE: Interop Constraints
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
 
-    // ✅ ENTERPRISE: Type Checking (STRICT MODE)
+    // ENTERPRISE: Type Checking (STRICT MODE)
     "strict": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -46,7 +46,7 @@
     "exactOptionalPropertyTypes": false,
     "noFallthroughCasesInSwitch": true,
 
-    // ✅ ENTERPRISE: Advanced Type Checking
+    // ENTERPRISE: Advanced Type Checking
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
@@ -56,18 +56,18 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
 
-    // ✅ ENTERPRISE: Module Detection
+    // ENTERPRISE: Module Detection
     "moduleDetection": "auto",
 
-    // ✅ ENTERPRISE: Skip Library Checking (Performance)
+    // ENTERPRISE: Skip Library Checking (Performance)
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
 
-    // ✅ ENTERPRISE: Base Configuration
+    // ENTERPRISE: Base Configuration
     "baseUrl": ".",
     "types": ["node", "bun-types"],
 
-    // ✅ ENTERPRISE: Path Mapping - CORRIGIDO
+    // ENTERPRISE: Path Mapping - CORRIGIDO
     "paths": {
       // Packages
       "@workspace/database": ["packages/database/src"],
@@ -78,6 +78,8 @@
       "@workspace/billing/*": ["packages/billing/src/*"],
       "@workspace/common": ["packages/common/src"],
       "@workspace/common/*": ["packages/common/src/*"],
+      "@workspace/shared": ["packages/shared/src"],
+      "@workspace/shared/*": ["packages/shared/src/*"],
       "@workspace/routes": ["packages/routes/src"],
       "@workspace/routes/*": ["packages/routes/src/*"],
       "@workspace/ui": ["packages/ui/src"],
@@ -91,7 +93,7 @@
       "~/*": ["./src/*"]
     },
 
-    // ✅ ENTERPRISE: Plugin Configuration
+    // ENTERPRISE: Plugin Configuration
     "plugins": [
       {
         "name": "next"
@@ -99,7 +101,7 @@
     ]
   },
 
-  // ✅ ENTERPRISE: Include/Exclude Patterns
+  // ENTERPRISE: Include/Exclude Patterns
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json", "next-env.d.ts", "**/*.d.ts"],
   "exclude": [
     "node_modules",
@@ -115,13 +117,14 @@
     "**/*.config.mjs"
   ],
 
-  // ✅ ENTERPRISE: References - SUA ESTRUTURA REAL
+  // ENTERPRISE: References - SUA ESTRUTURA REAL
   "references": [
     // Packages
     { "path": "packages/database" },
     { "path": "packages/auth" },
     { "path": "packages/billing" },
     { "path": "packages/common" },
+    { "path": "packages/shared" },
     { "path": "packages/routes" },
     { "path": "packages/ui" },
     { "path": "packages/rate-limiter" },
@@ -139,7 +142,7 @@
     { "path": "apps/marketing" }
   ],
 
-  // ✅ ENTERPRISE: Watch Options (Performance)
+  // ENTERPRISE: Watch Options (Performance)
   "watchOptions": {
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",
@@ -148,7 +151,7 @@
     "excludeDirectories": ["**/node_modules", "**/.git", "**/.next", "**/dist", "**/.turbo"]
   },
 
-  // ✅ ENTERPRISE: Type Acquisition
+  // ENTERPRISE: Type Acquisition
   "typeAcquisition": {
     "enable": true,
     "include": ["node", "jest", "playwright"],

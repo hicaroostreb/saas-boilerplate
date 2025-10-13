@@ -8,12 +8,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@workspace/common/*": ["src/*"],
-      "@workspace/shared": ["../shared/src"],
-      "@workspace/shared/*": ["../shared/src/*"]
+      "@workspace/shared/*": ["src/*"]
     }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", ".turbo", "coverage", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../shared" }]
+  "references": []
 }

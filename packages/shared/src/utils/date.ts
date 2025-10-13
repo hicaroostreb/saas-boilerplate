@@ -1,14 +1,17 @@
-// packages/common/src/shared/formatters/date.formatter.ts
+/**
+ * @fileoverview Utilitários para manipulação de datas
+ * Funções helpers para formatação e cálculos de data
+ */
 
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 /**
- * Converte string ou Date para objeto Date válido
+ * Converte string ou Date para objeto Date válido usando optional chaining
  */
 const toDate = (date: Date | string): Date => {
   if (typeof date === 'string') {
-    // Tenta fazer parse ISO primeiro, depois parse normal
+    // Usa optional chaining e nullish coalescing para parsing seguro
     const isoDate = parseISO(date);
     return isValid(isoDate) ? isoDate : new Date(date);
   }
@@ -35,17 +38,6 @@ export const formatDateTime = (date: Date | string): string => {
     throw new Error('Data inválida fornecida');
   }
   return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-};
-
-/**
- * Formata data e hora com segundos
- */
-export const formatDateTimeWithSeconds = (date: Date | string): string => {
-  const dateObj = toDate(date);
-  if (!isValid(dateObj)) {
-    throw new Error('Data inválida fornecida');
-  }
-  return format(dateObj, "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR });
 };
 
 /**
