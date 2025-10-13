@@ -1,5 +1,5 @@
 // ============================================
-// DATABASE CONNECTION - SRP: APENAS CONNECTION
+// DATABASE CONNECTION - LAZY INITIALIZATION ENTERPRISE
 // ============================================
 
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -28,29 +28,109 @@ const allSchemas = {
 };
 
 // ============================================
-// DATABASE CONNECTION CLASS - ENTERPRISE
+// DATABASE CONNECTION CLASS - LAZY ENTERPRISE
 // ============================================
 
 export class DatabaseConnection {
-  private config: DatabaseConfig;
-  private client: postgres.Sql;
-  private drizzleDb: ReturnType<typeof drizzle>;
+  private config: DatabaseConfig | null = null;
+  private client: postgres.Sql | null = null;
+  private drizzleDb: ReturnType<typeof drizzle> | null = null;
+  private isInitialized: boolean = false;
   private isConnected: boolean = false;
 
+  // ✅ NO SIDE EFFECTS CONSTRUCTOR
   constructor() {
-    this.config = createDatabaseConfig();
-    this.client = this.createPostgresClient();
-    this.drizzleDb = this.createDrizzleInstance();
-
-    this.setupProcessHandlers();
-    this.initializeConnection();
+    // Defer all initialization to explicit initialize() call
   }
 
   // ============================================
-  // POSTGRES CLIENT CREATION
+  // LAZY INITIALIZATION - ENTERPRISE PATTERN
+  // ============================================
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return; // Already initialized
+    }
+
+    this.config = createDatabaseConfig();
+
+    // BUILD-TIME: Mock setup
+    if (this.isBuildTime()) {
+      this.setupMockConnection();
+    } else {
+      // RUNTIME: Real setup
+      this.client = this.createPostgresClient();
+      this.drizzleDb = this.createDrizzleInstance();
+      this.setupProcessHandlers();
+      await this.initializeConnection();
+    }
+
+    this.isInitialized = true;
+  }
+
+  private isBuildTime(): boolean {
+    return (
+      this.config?.buildContext.isBuild ||
+      this.config?.buildContext.isCI ||
+      false
+    );
+  }
+
+  // ============================================
+  // MOCK CONNECTION FOR BUILD-TIME
+  // ============================================
+
+  private setupMockConnection(): void {
+    // Create mock Drizzle instance for build-time
+    this.drizzleDb = new Proxy({} as any, {
+      get(target, prop) {
+        if (prop === 'transaction') {
+          return (callback: any) =>
+            Promise.resolve(
+              callback(
+                new Proxy(
+                  {},
+                  {
+                    get: () => () => Promise.resolve([]),
+                  }
+                )
+              )
+            );
+        }
+        if (
+          prop === 'select' ||
+          prop === 'insert' ||
+          prop === 'update' ||
+          prop === 'delete'
+        ) {
+          return () =>
+            new Proxy(
+              {},
+              {
+                get: () => () => Promise.resolve([]),
+              }
+            );
+        }
+        return () => Promise.resolve([]);
+      },
+    });
+
+    this.isConnected = true;
+
+    if (this.config?.buildContext.environment === 'ci') {
+      console.log(' Mock database connection initialized for CI');
+    }
+  }
+
+  // ============================================
+  // POSTGRES CLIENT CREATION - RUNTIME ONLY
   // ============================================
 
   private createPostgresClient(): postgres.Sql {
+    if (!this.config) {
+      throw new Error('Configuration not initialized');
+    }
+
     const types = createPostgresTypes();
 
     return postgres(this.config.connectionString, {
@@ -80,10 +160,14 @@ export class DatabaseConnection {
   }
 
   // ============================================
-  // DRIZZLE INSTANCE CREATION
+  // DRIZZLE INSTANCE CREATION - RUNTIME ONLY
   // ============================================
 
   private createDrizzleInstance() {
+    if (!this.config || !this.client) {
+      throw new Error('Configuration or client not initialized');
+    }
+
     const logger = this.config.logging
       ? {
           logQuery: (query: string, params: unknown[]) => {
@@ -106,10 +190,14 @@ export class DatabaseConnection {
   }
 
   // ============================================
-  // CONNECTION INITIALIZATION
+  // CONNECTION INITIALIZATION - RUNTIME ONLY
   // ============================================
 
   private async initializeConnection(): Promise<void> {
+    if (!this.config) {
+      throw new Error('Configuration not initialized');
+    }
+
     if (this.config.isDevelopment) {
       try {
         await this.runHealthCheck();
@@ -127,10 +215,14 @@ export class DatabaseConnection {
   }
 
   // ============================================
-  // HEALTH CHECK & MONITORING
+  // HEALTH CHECK & MONITORING - RUNTIME ONLY
   // ============================================
 
   private async runHealthCheck(): Promise<void> {
+    if (!this.client) {
+      throw new Error('Client not initialized');
+    }
+
     const [result] = await this.client`SELECT 1 as health`;
 
     if (!result?.health) {
@@ -141,6 +233,10 @@ export class DatabaseConnection {
   }
 
   private async logConnectionInfo(): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+
     try {
       const [result] = await this.client`
         SELECT
@@ -162,10 +258,17 @@ export class DatabaseConnection {
   }
 
   // ============================================
-  // PROCESS HANDLERS & CLEANUP
+  // PROCESS HANDLERS - RUNTIME ONLY
   // ============================================
 
   private setupProcessHandlers(): void {
+    if (this.isBuildTime()) {
+      return; // Skip process handlers during build
+    }
+
+    // Increase max listeners to prevent warnings
+    process.setMaxListeners(20);
+
     const gracefulShutdown = async (signal: string) => {
       console.log(`Received ${signal}, closing database connection...`);
 
@@ -197,17 +300,33 @@ export class DatabaseConnection {
   }
 
   // ============================================
-  // PUBLIC METHODS
+  // PUBLIC METHODS - INITIALIZATION SAFE
   // ============================================
 
   // Get database instance
   get database() {
-    return this.drizzleDb;
+    if (!this.isInitialized) {
+      throw new Error(
+        'Database not initialized. Call await DatabaseConnection.getInstance().initialize() first.'
+      );
+    }
+    return this.drizzleDb!;
   }
 
   // Health check
   async healthCheck(): Promise<boolean> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (this.isBuildTime()) {
+      return true; // Mock health check for build time
+    }
+
     try {
+      if (!this.client) {
+        return false;
+      }
       await this.client`SELECT 1 as health`;
       return true;
     } catch (error) {
@@ -218,7 +337,22 @@ export class DatabaseConnection {
 
   // Connection info
   async getConnectionInfo() {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (this.isBuildTime()) {
+      return {
+        build: true,
+        environment: this.config?.buildContext.environment,
+      };
+    }
+
     try {
+      if (!this.client) {
+        return null;
+      }
+
       const [result] = await this.client`
         SELECT
           current_database() as database,
@@ -235,8 +369,14 @@ export class DatabaseConnection {
 
   // Graceful shutdown
   async close(): Promise<void> {
+    if (!this.isInitialized || this.isBuildTime()) {
+      return;
+    }
+
     try {
-      await this.client.end();
+      if (this.client) {
+        await this.client.end();
+      }
       this.isConnected = false;
       console.log('Database connection closed');
     } catch (error) {
@@ -247,7 +387,7 @@ export class DatabaseConnection {
 }
 
 // ============================================
-// SINGLETON INSTANCE - LAZY LOADING
+// SINGLETON INSTANCE - LAZY INITIALIZATION
 // ============================================
 
 let dbConnectionInstance: DatabaseConnection | null = null;
@@ -260,12 +400,40 @@ export function getDatabaseConnection(): DatabaseConnection {
 }
 
 // ============================================
-// MAIN EXPORTS
+// SAFE EXPORTS - NO SIDE EFFECTS
 // ============================================
 
-export const db = getDatabaseConnection().database;
-export const healthCheck = () => getDatabaseConnection().healthCheck();
-export const closeConnection = () => getDatabaseConnection().close();
-export const getConnectionInfo = () =>
-  getDatabaseConnection().getConnectionInfo();
-export type Database = typeof db;
+// ✅ LAZY DATABASE GETTER
+export async function getDb() {
+  const connection = getDatabaseConnection();
+  await connection.initialize();
+  return connection.database;
+}
+
+// ✅ SAFE PROXY EXPORT FOR BACKWARD COMPATIBILITY
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    throw new Error(
+      `Database not initialized. Use "await getDb()" instead of direct "db.${String(prop)}" access. ` +
+        `This ensures proper lazy initialization and build-time safety.`
+    );
+  },
+});
+
+// ✅ SAFE UTILITY EXPORTS
+export const healthCheck = async () => {
+  const connection = getDatabaseConnection();
+  return connection.healthCheck();
+};
+
+export const closeConnection = async () => {
+  const connection = getDatabaseConnection();
+  return connection.close();
+};
+
+export const getConnectionInfo = async () => {
+  const connection = getDatabaseConnection();
+  return connection.getConnectionInfo();
+};
+
+export type Database = Awaited<ReturnType<typeof getDb>>;

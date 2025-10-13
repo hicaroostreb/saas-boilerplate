@@ -312,7 +312,8 @@ export class UserValidationService {
    */
   async resetLoginAttempts(userId: string): Promise<boolean> {
     try {
-      return await this.userRepository.resetLoginAttempts(userId);
+      await this.userRepository.resetLoginAttempts(userId);
+      return true;
     } catch (error) {
       console.error(
         '❌ UserValidationService resetLoginAttempts error:',

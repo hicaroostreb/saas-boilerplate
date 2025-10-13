@@ -1,45 +1,44 @@
-// packages/auth/src/repositories/organization.repository.ts - ORGANIZATION DATA ACCESS
+// ORGANIZATION REPOSITORY - BUILD-TIME SAFE + SCHEMA CORRETO
+import {
+  and,
+  desc,
+  eq,
+  getDb,
+  isNull,
+  memberships,
+  organizations,
+  sql,
+  users,
+  type CreateOrganization,
+  type Organization,
+} from '@workspace/database';
 
-import { db, memberships, organizations, users } from '@workspace/database';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import type { MemberRole } from '../../types';
-
-/**
- * ✅ ENTERPRISE: Organization Repository (Database Compatible)
- * Single Responsibility: Organization and membership data access operations
- */
 export class OrganizationRepository {
-  /**
-   * ✅ GET: Organization by slug
-   */
-  async findBySlug(slug: string): Promise<{
-    id: string;
-    name: string;
-    slug: string;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null> {
+  async findById(id: string): Promise<Organization | null> {
     try {
+      const db = await getDb();
       const [organization] = await db
-        .select({
-          id: organizations.id,
-          name: organizations.name,
-          slug: organizations.slug,
-          isActive: organizations.isActive,
-          createdAt: organizations.createdAt,
-          updatedAt: organizations.updatedAt,
-        })
+        .select()
+        .from(organizations)
+        .where(and(eq(organizations.id, id), isNull(organizations.deletedAt)))
+        .limit(1);
+      return organization ?? null;
+    } catch (error) {
+      console.error('❌ OrganizationRepository findById error:', error);
+      return null;
+    }
+  }
+
+  async findBySlug(slug: string): Promise<Organization | null> {
+    try {
+      const db = await getDb();
+      const [organization] = await db
+        .select()
         .from(organizations)
         .where(
-          and(
-            eq(organizations.slug, slug),
-            eq(organizations.isActive, true),
-            isNull(organizations.deletedAt)
-          )
+          and(eq(organizations.slug, slug), isNull(organizations.deletedAt))
         )
         .limit(1);
-
       return organization ?? null;
     } catch (error) {
       console.error('❌ OrganizationRepository findBySlug error:', error);
@@ -47,350 +46,214 @@ export class OrganizationRepository {
     }
   }
 
-  /**
-   * ✅ GET: User's organizations with membership info
-   */
-  async findUserOrganizations(userId: string): Promise<
+  async create(data: CreateOrganization): Promise<Organization> {
+    try {
+      const db = await getDb();
+      const [organization] = await db
+        .insert(organizations)
+        .values({
+          ...data,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      if (!organization) {
+        throw new Error('Failed to create organization');
+      }
+      return organization;
+    } catch (error) {
+      console.error('❌ OrganizationRepository create error:', error);
+      throw error;
+    }
+  }
+
+  async findByUserId(userId: string): Promise<
     Array<{
       id: string;
       name: string;
       slug: string;
       logoUrl: string | null;
-      role: MemberRole;
-      joinedAt: Date;
-      status: 'active' | 'inactive';
+      role: string;
+      status: string;
     }>
   > {
     try {
+      const db = await getDb();
       const userOrganizations = await db
         .select({
-          // Organization fields
           id: organizations.id,
           name: organizations.name,
           slug: organizations.slug,
           logoUrl: organizations.logoUrl,
-
-          // Membership fields
           role: memberships.role,
-          joinedAt: memberships.createdAt,
           status: memberships.status,
         })
-        .from(memberships)
+        .from(organizations)
         .innerJoin(
-          organizations,
-          eq(organizations.id, memberships.organizationId)
+          memberships,
+          eq(memberships.organizationId, organizations.id)
         )
         .where(
           and(
             eq(memberships.userId, userId),
-            eq(organizations.isActive, true),
-            isNull(organizations.deletedAt)
+            isNull(organizations.deletedAt),
+            eq(memberships.status, 'active')
           )
         )
-        .orderBy(desc(memberships.createdAt));
+        .orderBy(desc(memberships.createdAt)); // ✅ CORRETO - acceptedAt existe mas createdAt é mais universal
 
-      return userOrganizations.map(
-        (org: {
-          id: string;
-          name: string;
-          slug: string;
-          logoUrl: string | null;
-          role: string;
-          joinedAt: Date;
-          status: string;
-        }) => ({
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          logoUrl: org.logoUrl,
-          role: org.role as MemberRole,
-          joinedAt: org.joinedAt,
-          status: (org.status as 'active' | 'inactive') ?? 'active',
-        })
-      );
+      return userOrganizations.map(org => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        logoUrl: org.logoUrl,
+        role: org.role,
+        status: org.status,
+      }));
     } catch (error) {
-      console.error(
-        '❌ OrganizationRepository findUserOrganizations error:',
-        error
-      );
+      console.error('❌ OrganizationRepository findByUserId error:', error);
       return [];
     }
   }
 
-  /**
-   * ✅ GET: Organization membership for user
-   */
-  async findMembership(
-    organizationId: string,
-    userId: string
-  ): Promise<{
-    id: string;
-    role: MemberRole;
-    permissions: string[];
-    status: 'active' | 'inactive';
-    createdAt: Date;
-  } | null> {
-    try {
-      const [membership] = await db
-        .select({
-          id: memberships.id,
-          role: memberships.role,
-          permissions: memberships.permissions,
-          status: memberships.status,
-          createdAt: memberships.createdAt,
-        })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.organizationId, organizationId),
-            eq(memberships.userId, userId)
-          )
-        )
-        .limit(1);
-
-      if (!membership) {
-        return null;
-      }
-
-      return {
-        id: membership.id,
-        role: membership.role as MemberRole,
-        permissions: Array.isArray(membership.permissions)
-          ? membership.permissions
-          : [],
-        status: (membership.status as 'active' | 'inactive') ?? 'active',
-        createdAt: membership.createdAt,
-      };
-    } catch (error) {
-      console.error('❌ OrganizationRepository findMembership error:', error);
-      return null;
-    }
+  // ✅ ALIAS PARA COMPATIBILIDADE
+  async findUserOrganizations(userId: string) {
+    return this.findByUserId(userId);
   }
 
-  /**
-   * ✅ GET: Organization members with user info
-   */
   async findMembers(organizationId: string): Promise<
     Array<{
       id: string;
       userId: string;
       email: string;
       name: string | null;
-      role: MemberRole;
-      status: 'active' | 'inactive';
-      joinedAt: Date;
-      lastActivityAt: Date | null;
+      role: string;
+      status: string;
     }>
   > {
     try {
+      const db = await getDb();
       const members = await db
         .select({
           id: memberships.id,
-          userId: memberships.userId,
+          userId: users.id,
           email: users.email,
           name: users.name,
           role: memberships.role,
           status: memberships.status,
-          joinedAt: memberships.createdAt,
-          lastActivityAt: memberships.lastActivityAt,
         })
         .from(memberships)
         .innerJoin(users, eq(users.id, memberships.userId))
-        .where(eq(memberships.organizationId, organizationId))
-        .orderBy(desc(memberships.createdAt));
+        .where(
+          and(
+            eq(memberships.organizationId, organizationId),
+            isNull(users.deletedAt)
+          )
+        )
+        .orderBy(desc(memberships.createdAt)); // ✅ CORRETO
 
-      return members.map(
-        (member: {
-          id: string;
-          userId: string;
-          email: string;
-          name: string | null;
-          role: string;
-          status: string;
-          joinedAt: Date;
-          lastActivityAt: Date | null;
-        }) => ({
-          id: member.id,
-          userId: member.userId,
-          email: member.email,
-          name: member.name,
-          role: member.role as MemberRole,
-          status: (member.status as 'active' | 'inactive') ?? 'active',
-          joinedAt: member.joinedAt,
-          lastActivityAt: member.lastActivityAt,
-        })
-      );
+      return members.map(member => ({
+        id: member.id,
+        userId: member.userId,
+        email: member.email,
+        name: member.name,
+        role: member.role,
+        status: member.status,
+      }));
     } catch (error) {
       console.error('❌ OrganizationRepository findMembers error:', error);
       return [];
     }
   }
 
-  /**
-   * ✅ UPDATE: Membership role
-   */
-  async updateMemberRole(
-    membershipId: string,
-    newRole: MemberRole,
-    _updatedBy: string
-  ): Promise<boolean> {
+  async findMembership(userId: string, organizationId: string) {
     try {
-      await db
-        .update(memberships)
-        .set({
-          role: newRole,
-          updatedAt: new Date(),
-        })
-        .where(eq(memberships.id, membershipId));
-
-      console.warn(
-        `✅ OrganizationRepository: Updated member role to ${newRole}`
-      );
-      return true;
+      const db = await getDb();
+      const [membership] = await db
+        .select()
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.userId, userId),
+            eq(memberships.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+      return membership ?? null;
     } catch (error) {
-      console.error('❌ OrganizationRepository updateMemberRole error:', error);
+      console.error('❌ OrganizationRepository findMembership error:', error);
+      return null;
+    }
+  }
+
+  async existsBySlug(slug: string): Promise<boolean> {
+    try {
+      const db = await getDb();
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(organizations)
+        .where(
+          and(eq(organizations.slug, slug), isNull(organizations.deletedAt))
+        )
+        .limit(1);
+      return Number(result?.count ?? 0) > 0;
+    } catch (error) {
+      console.error('❌ OrganizationRepository existsBySlug error:', error);
       return false;
     }
   }
 
-  /**
-   * ✅ UPDATE: Membership permissions (using SQL for JSON array)
-   */
-  async updateMemberPermissions(
-    membershipId: string,
-    permissions: string[],
-    _updatedBy: string
-  ): Promise<boolean> {
+  async update(id: string, data: Partial<Organization>): Promise<Organization> {
     try {
-      // Use SQL to properly handle JSON array insertion
-      await db
-        .update(memberships)
+      const db = await getDb();
+      const [organization] = await db
+        .update(organizations)
         .set({
-          permissions: sql`${JSON.stringify(permissions)}::json`,
+          ...data,
           updatedAt: new Date(),
         })
-        .where(eq(memberships.id, membershipId));
+        .where(and(eq(organizations.id, id), isNull(organizations.deletedAt)))
+        .returning();
 
-      console.warn(`✅ OrganizationRepository: Updated member permissions`);
-      return true;
+      if (!organization) {
+        throw new Error('Organization not found or update failed');
+      }
+      return organization;
     } catch (error) {
-      console.error(
-        '❌ OrganizationRepository updateMemberPermissions error:',
-        error
-      );
-      return false;
+      console.error('❌ OrganizationRepository update error:', error);
+      throw error;
     }
   }
 
-  /**
-   * ✅ REMOVE: Member from organization
-   */
-  async removeMember(
-    organizationId: string,
-    userId: string,
-    _removedBy: string
-  ): Promise<boolean> {
+  async softDelete(id: string): Promise<void> {
     try {
+      const db = await getDb();
       await db
-        .update(memberships)
+        .update(organizations)
         .set({
-          status: 'inactive',
           deletedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(
-          and(
-            eq(memberships.organizationId, organizationId),
-            eq(memberships.userId, userId)
-          )
-        );
-
-      console.warn(
-        `✅ OrganizationRepository: Removed member from organization`
-      );
-      return true;
+        .where(eq(organizations.id, id));
+      console.warn('✅ OrganizationRepository: Organization soft deleted:', id);
     } catch (error) {
-      console.error('❌ OrganizationRepository removeMember error:', error);
-      return false;
+      console.error('❌ OrganizationRepository softDelete error:', error);
+      throw error;
     }
   }
 
-  /**
-   * ✅ COUNT: Organization members
-   */
-  async getMemberCount(organizationId: string): Promise<number> {
+  async countTotal(): Promise<number> {
     try {
-      const result = await db
-        .select({
-          count: sql<number>`count(*)`,
-        })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.organizationId, organizationId),
-            eq(memberships.status, 'active'),
-            isNull(memberships.deletedAt)
-          )
-        );
-
-      return Number(result[0]?.count ?? 0);
+      const db = await getDb();
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(organizations)
+        .where(isNull(organizations.deletedAt));
+      return Number(result?.count ?? 0);
     } catch (error) {
-      console.error('❌ OrganizationRepository getMemberCount error:', error);
+      console.error('❌ OrganizationRepository countTotal error:', error);
       return 0;
-    }
-  }
-
-  /**
-   * ✅ CHECK: If user is organization owner
-   */
-  async isOwner(organizationId: string, userId: string): Promise<boolean> {
-    try {
-      const [membership] = await db
-        .select({ role: memberships.role })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.organizationId, organizationId),
-            eq(memberships.userId, userId),
-            eq(memberships.status, 'active'),
-            isNull(memberships.deletedAt)
-          )
-        )
-        .limit(1);
-
-      return membership?.role === 'owner';
-    } catch (error) {
-      console.error('❌ OrganizationRepository isOwner error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * ✅ CHECK: If user has role in organization
-   */
-  async hasRole(
-    organizationId: string,
-    userId: string,
-    role: MemberRole
-  ): Promise<boolean> {
-    try {
-      const [membership] = await db
-        .select({ role: memberships.role })
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.organizationId, organizationId),
-            eq(memberships.userId, userId),
-            eq(memberships.status, 'active'),
-            isNull(memberships.deletedAt)
-          )
-        )
-        .limit(1);
-
-      return membership?.role === role;
-    } catch (error) {
-      console.error('❌ OrganizationRepository hasRole error:', error);
-      return false;
     }
   }
 }

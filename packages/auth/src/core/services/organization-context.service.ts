@@ -56,8 +56,8 @@ export class OrganizationContextService {
       }
 
       const membership = await this.organizationRepository.findMembership(
-        organization.id,
-        userId
+        userId,
+        organization.id
       );
 
       if (!membership) {
@@ -77,10 +77,14 @@ export class OrganizationContextService {
         },
         membership: {
           id: membership.id,
-          role: membership.role,
-          permissions: membership.permissions,
+          role: membership.role as MemberRole, // ✅ CAST
+          permissions: membership.permissions
+            ? Object.keys(membership.permissions)
+            : [], // ✅ CONVERT
           createdAt: membership.createdAt,
-          status: membership.status,
+          status: ['suspended', 'pending'].includes(membership.status)
+            ? 'inactive'
+            : (membership.status as 'active' | 'inactive'), // ✅ NORMALIZE
         },
       };
     } catch (error) {
@@ -103,7 +107,7 @@ export class OrganizationContextService {
   }
 
   /**
-   * ✅ GET: User organizations (simplified return type)
+   * ✅ GET: User organizations (simplified return type - FIX RETURN TYPE)
    */
   async getUserOrganizations(userId: string): Promise<
     Array<{
@@ -117,7 +121,19 @@ export class OrganizationContextService {
     }>
   > {
     try {
-      return await this.organizationRepository.findUserOrganizations(userId);
+      const orgs =
+        await this.organizationRepository.findUserOrganizations(userId);
+
+      // ✅ FIX: Transform to match expected interface
+      return orgs.map(org => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        logoUrl: org.logoUrl,
+        role: org.role as MemberRole, // ✅ CAST
+        joinedAt: new Date(), // ✅ ADD missing field
+        status: org.status === 'active' ? 'active' : 'inactive', // ✅ NORMALIZE
+      }));
     } catch (error) {
       console.error(
         '❌ OrganizationContextService getUserOrganizations error:',
@@ -137,12 +153,10 @@ export class OrganizationContextService {
     role: string;
   } | null> {
     try {
-      const orgs =
-        await this.organizationRepository.findUserOrganizations(userId);
+      const orgs = await this.getUserOrganizations(userId);
 
       if (orgs.length > 0) {
         const primary = orgs[0];
-        // ✅ FIX: Add null check for primary
         if (primary) {
           return {
             id: primary.id,

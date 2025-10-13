@@ -1,13 +1,13 @@
-// packages/auth/src/core/services/password-change.service.ts - PASSWORD CHANGE SERVICE (COMPLETE)
+// packages/auth/src/core/services/password-change.service.ts - BUILD-TIME SAFE PASSWORD SERVICE
 
-import { db, users } from '@workspace/database';
+import { getDb, users } from '@workspace/database';
 import { eq } from 'drizzle-orm';
 import { UserRepository } from '../../adapters/repositories/user.repository';
 import { AuditService } from './audit.service';
 import { hashPassword, verifyPassword } from './password.service';
 
 /**
- * ✅ ENTERPRISE: Password Change Service (Complete)
+ * ✅ ENTERPRISE: Build-Time Safe Password Change Service
  */
 export class PasswordChangeService {
   private userRepository: UserRepository;
@@ -19,7 +19,7 @@ export class PasswordChangeService {
   }
 
   /**
-   * ✅ CHANGE: User password (corrected signature)
+   * ✅ CHANGE: User password (build-time safe)
    */
   async changePassword(
     userId: string,
@@ -75,10 +75,17 @@ export class PasswordChangeService {
       }
 
       const newPasswordHash = await hashPassword(newPassword);
-      const updated = await this.userRepository.updatePassword(
-        userId,
-        newPasswordHash
-      );
+
+      // Update password using lazy-loaded database
+      const db = await getDb();
+      const [updated] = await db
+        .update(users)
+        .set({
+          passwordHash: newPasswordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
 
       if (!updated) {
         await this.auditService.logAuthEvent({
@@ -97,13 +104,6 @@ export class PasswordChangeService {
           error: 'Failed to update password',
         };
       }
-
-      await db
-        .update(users)
-        .set({
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
 
       await this.auditService.logAuthEvent({
         userId,
@@ -145,7 +145,7 @@ export class PasswordChangeService {
   }
 
   /**
-   * ✅ VALIDATE: Password strength (for lib/actions compatibility)
+   * ✅ VALIDATE: Password strength
    */
   validatePasswordStrength(password: string): {
     isValid: boolean;
@@ -190,7 +190,7 @@ export class PasswordChangeService {
   }
 
   /**
-   * ✅ RESET: Password (admin action)
+   * ✅ RESET: Password (admin action with build-time safety)
    */
   async resetPassword(
     userId: string,
@@ -201,10 +201,17 @@ export class PasswordChangeService {
     try {
       const newPasswordHash = await hashPassword(newPassword);
 
-      const updated = await this.userRepository.updatePassword(
-        userId,
-        newPasswordHash
-      );
+      // Update password using lazy-loaded database
+      const db = await getDb();
+      const [updated] = await db
+        .update(users)
+        .set({
+          passwordHash: newPasswordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
       if (!updated) {
         return {
           success: false,

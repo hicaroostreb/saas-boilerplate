@@ -1,33 +1,30 @@
 // ============================================
-// CONNECTION BARREL EXPORTS - SRP: APENAS EXPORTS
+// CONNECTION BARREL EXPORTS - BUILD-TIME SAFE
 // ============================================
 
-// ============================================
-// MAIN DATABASE EXPORTS
-// ============================================
-
+// Main database exports
 export {
   closeConnection,
-  db,
   getConnectionInfo,
   getDatabaseConnection,
+  getDb,
   healthCheck,
   type Database,
 } from './database.connection';
 
+// Configuration exports
 export {
   createDatabaseConfig,
   createPostgresTypes,
+  detectBuildContext,
   getConnectionInfo as getConfigInfo,
   validateEnvironment,
+  type BuildContext,
   type DatabaseConfig,
+  type PostgresTypeConfig,
 } from './config';
 
-// ============================================
-// DRIZZLE ORM RE-EXPORTS
-// ============================================
-
-// Core query builders
+// Drizzle ORM re-exports
 export {
   and,
   between,
@@ -55,10 +52,7 @@ export { avg, count, max, min, sum } from 'drizzle-orm';
 // Sorting and utilities
 export { asc, desc, placeholder, sql } from 'drizzle-orm';
 
-// ============================================
-// DRIZZLE TYPE EXPORTS
-// ============================================
-
+// Type utilities
 export type {
   InferInsertModel,
   InferSelectModel,
@@ -66,13 +60,7 @@ export type {
   SQL,
 } from 'drizzle-orm';
 
-// ============================================
-// CONNECTION UTILITIES
-// ============================================
-
-import { healthCheck as dbHealthCheck } from './database.connection';
-
-// Performance monitoring wrapper
+// Connection utilities
 export function withQueryPerformance<T>(
   queryName: string,
   query: () => Promise<T>

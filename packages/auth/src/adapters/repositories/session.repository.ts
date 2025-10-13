@@ -1,6 +1,6 @@
-// packages/auth/src/repositories/session.repository.ts - SESSION DATA ACCESS (DB COMPATIBLE)
+// packages/auth/src/repositories/session.repository.ts - SESSION DATA ACCESS (BUILD-TIME SAFE)
 
-import { db, sessions } from '@workspace/database';
+import { getDb, sessions } from '@workspace/database';
 import { randomUUID } from 'crypto';
 import { and, desc, eq, gt, lt, ne, sql } from 'drizzle-orm';
 import type { DeviceType, SecurityLevel } from '../../types';
@@ -10,7 +10,7 @@ import type {
 } from '../../types/session.types';
 
 /**
- * ✅ ENTERPRISE: Session Repository (Database Compatible)
+ * ✅ ENTERPRISE: Session Repository (Build-Time Safe)
  * Single Responsibility: Session data access operations
  */
 export class SessionRepository {
@@ -35,6 +35,7 @@ export class SessionRepository {
     sessionData?: Record<string, unknown>;
   }): Promise<EnhancedSessionData> {
     try {
+      const db = await getDb();
       const sessionToken = sessionData.sessionToken ?? randomUUID();
       const now = new Date();
 
@@ -91,6 +92,7 @@ export class SessionRepository {
    */
   async findByToken(sessionToken: string): Promise<EnhancedSessionData | null> {
     try {
+      const db = await getDb();
       const [session] = await db
         .select()
         .from(sessions)
@@ -136,6 +138,7 @@ export class SessionRepository {
    */
   async findActiveByUser(userId: string): Promise<SessionListItem[]> {
     try {
+      const db = await getDb();
       const activeSessions = await db
         .select({
           sessionToken: sessions.sessionToken,
@@ -177,6 +180,7 @@ export class SessionRepository {
    */
   async touch(sessionToken: string): Promise<void> {
     try {
+      const db = await getDb();
       await db
         .update(sessions)
         .set({
@@ -198,6 +202,7 @@ export class SessionRepository {
     _reason = 'user_request'
   ): Promise<void> {
     try {
+      const db = await getDb();
       // Since we don't have isRevoked field, we'll set expires to past date
       await db
         .update(sessions)
@@ -227,6 +232,7 @@ export class SessionRepository {
     _reason = 'revoke_all'
   ): Promise<number> {
     try {
+      const db = await getDb();
       let whereConditions = and(
         eq(sessions.userId, userId),
         gt(sessions.expires, new Date()) // Only active sessions
@@ -273,6 +279,7 @@ export class SessionRepository {
    */
   async cleanupExpired(): Promise<number> {
     try {
+      const db = await getDb();
       // Count expired sessions first
       const countResult = await db
         .select({ count: sql<number>`count(*)` })
@@ -296,6 +303,7 @@ export class SessionRepository {
    */
   async findAllByUser(userId: string): Promise<SessionListItem[]> {
     try {
+      const db = await getDb();
       const allSessions = await db
         .select({
           sessionToken: sessions.sessionToken,
@@ -335,6 +343,7 @@ export class SessionRepository {
    */
   async deleteSession(sessionToken: string): Promise<void> {
     try {
+      const db = await getDb();
       await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
 
       console.warn(
@@ -352,6 +361,7 @@ export class SessionRepository {
    */
   async countActiveForUser(userId: string): Promise<number> {
     try {
+      const db = await getDb();
       const [result] = await db
         .select({ count: sql<number>`count(*)` })
         .from(sessions)
