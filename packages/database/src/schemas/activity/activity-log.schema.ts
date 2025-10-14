@@ -1,14 +1,14 @@
 // packages/database/src/schemas/activity/activity-log.schema.ts
 // ============================================
-// ACTIVITY LOGS SCHEMA - ENTERPRISE AUDIT TRAIL
+// ACTIVITY LOGS SCHEMA - ENTERPRISE ACTIVITY TRACKING (FIXED ENUM)
 // ============================================
 
 import { boolean, index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-// Activity enums
+// Activity types
 export const activity_type_enum = pgEnum('activity_type', [
   'user_created',
-  'user_updated', 
+  'user_updated',
   'user_deleted',
   'user_login',
   'user_logout',
@@ -24,11 +24,17 @@ export const activity_type_enum = pgEnum('activity_type', [
   'contact_created',
   'contact_updated',
   'contact_deleted',
+  'invitation_sent',
+  'invitation_accepted',
+  'invitation_rejected',
+  'session_created',
+  'session_terminated',
 ]);
 
+// Resource types - MISSING ENUM ADDED
 export const activity_resource_enum = pgEnum('activity_resource', [
   'user',
-  'organization',
+  'organization', 
   'membership',
   'project',
   'contact',
@@ -36,49 +42,59 @@ export const activity_resource_enum = pgEnum('activity_resource', [
   'session',
 ]);
 
-// Activity logs table
 export const activity_logs = pgTable(
   'activity_logs',
   {
     id: text('id').primaryKey(),
-    user_id: text('user_id'), // Who performed the action
-    organization_id: text('organization_id'), // Organization context
-    activity_type: activity_type_enum('activity_type').notNull(),
+    
+    // What happened
+    type: activity_type_enum('type').notNull(),
+    action: text('action').notNull(),
+    description: text('description'),
+    
+    // Who did it
+    user_id: text('user_id'),
+    organization_id: text('organization_id'),
+    
+    // What was affected
     resource_type: activity_resource_enum('resource_type').notNull(),
-    resource_id: text('resource_id').notNull(), // ID of the affected resource
-    resource_name: text('resource_name'), // Human-readable name
-    description: text('description').notNull(),
+    resource_id: text('resource_id').notNull(),
     
-    // Change tracking
-    old_values: text('old_values'), // JSON string of previous values
-    new_values: text('new_values'), // JSON string of new values
-    
-    // Context information
+    // Context and metadata
     ip_address: text('ip_address'),
     user_agent: text('user_agent'),
     session_id: text('session_id'),
     
-    // Metadata
-    tags: text('tags'), // Comma-separated tags for filtering
-    severity: text('severity').default('info'), // info, warning, error
-    is_system_action: boolean('is_system_action').default(false),
+    // Change tracking
+    changes_before: text('changes_before'),
+    changes_after: text('changes_after'),
+    
+    // Categorization
+    category: text('category'),
+    severity: text('severity').default('info').notNull(),
+    
+    // Status and flags
+    is_sensitive: boolean('is_sensitive').default(false).notNull(),
+    is_system_action: boolean('is_system_action').default(false).notNull(),
     
     // Timestamps
     occurred_at: timestamp('occurred_at').notNull().defaultNow(),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => ({
-    // Performance indexes
+    typeIdx: index('activity_logs_type_idx').on(table.type),
     userIdx: index('activity_logs_user_idx').on(table.user_id),
     orgIdx: index('activity_logs_org_idx').on(table.organization_id),
-    typeIdx: index('activity_logs_type_idx').on(table.activity_type),
     resourceIdx: index('activity_logs_resource_idx').on(table.resource_type, table.resource_id),
     occurredIdx: index('activity_logs_occurred_idx').on(table.occurred_at),
-    
-    // Composite indexes for common queries
+    createdIdx: index('activity_logs_created_idx').on(table.created_at),
+    sensitiveIdx: index('activity_logs_sensitive_idx').on(table.is_sensitive),
+    severityIdx: index('activity_logs_severity_idx').on(table.severity),
+    categoryIdx: index('activity_logs_category_idx').on(table.category),
     userOrgIdx: index('activity_logs_user_org_idx').on(table.user_id, table.organization_id),
-    orgTypeIdx: index('activity_logs_org_type_idx').on(table.organization_id, table.activity_type),
-    resourceOrgIdx: index('activity_logs_resource_org_idx').on(table.resource_type, table.organization_id),
+    typeResourceIdx: index('activity_logs_type_resource_idx').on(table.type, table.resource_type),
+    orgTypeIdx: index('activity_logs_org_type_idx').on(table.organization_id, table.type),
+    sessionIdx: index('activity_logs_session_idx').on(table.session_id),
   })
 );
 
@@ -88,111 +104,152 @@ export type CreateActivityLog = typeof activity_logs.$inferInsert;
 export type ActivityType = typeof activity_type_enum.enumValues[number];
 export type ActivityResource = typeof activity_resource_enum.enumValues[number];
 
-// Helper types for structured data
-export interface ActivityChangeData {
-  field: string;
-  old_value: any;
-  new_value: any;
-  field_label?: string;
-}
+// Data types for activity tracking
+export type CreateActivityLogData = Omit<CreateActivityLog, 'id' | 'created_at'>;
 
-export interface ActivityMetadata {
-  changes?: ActivityChangeData[];
-  additional_info?: Record<string, any>;
-  related_resources?: Array<{
-    type: ActivityResource;
-    id: string;
-    name?: string;
-  }>;
-}
-
-export interface CreateActivityLogData {
-  user_id?: string;
-  organization_id?: string;
-  activity_type: ActivityType;
-  resource_type: ActivityResource;
-  resource_id: string;
-  resource_name?: string;
-  description: string;
-  old_values?: string;
-  new_values?: string;
-  ip_address?: string;
-  user_agent?: string;
-  session_id?: string;
-  tags?: string;
-  severity?: 'info' | 'warning' | 'error';
-  is_system_action?: boolean;
-}
-
-// Activity log builder utility
+// Builder pattern for creating activity logs
 export class ActivityLogBuilder {
   private data: Partial<CreateActivityLogData> = {};
 
-  constructor(
-    activityType: ActivityType,
-    resourceType: ActivityResource,
-    resourceId: string,
-    description: string
-  ) {
-    this.data = {
-      id: crypto.randomUUID(),
-      activity_type: activityType,
-      resource_type: resourceType,
-      resource_id: resourceId,
-      description,
-      severity: 'info',
-      is_system_action: false,
-    };
+  static create() {
+    return new ActivityLogBuilder();
   }
 
-  withUser(userId: string): ActivityLogBuilder {
+  type(type: ActivityType) {
+    this.data.type = type;
+    return this;
+  }
+
+  action(action: string) {
+    this.data.action = action;
+    return this;
+  }
+
+  description(description: string) {
+    this.data.description = description;
+    return this;
+  }
+
+  user(userId: string) {
     this.data.user_id = userId;
     return this;
   }
 
-  withOrganization(organizationId: string): ActivityLogBuilder {
+  organization(organizationId: string) {
     this.data.organization_id = organizationId;
     return this;
   }
 
-  withResourceName(name: string): ActivityLogBuilder {
-    this.data.resource_name = name;
+  resource(type: ActivityResource, id: string) {
+    this.data.resource_type = type;
+    this.data.resource_id = id;
     return this;
   }
 
-  withChanges(oldValues: any, newValues: any): ActivityLogBuilder {
-    this.data.old_values = typeof oldValues === 'string' ? oldValues : JSON.stringify(oldValues);
-    this.data.new_values = typeof newValues === 'string' ? newValues : JSON.stringify(newValues);
+  context(ipAddress?: string, userAgent?: string, sessionId?: string) {
+    if (ipAddress) this.data.ip_address = ipAddress;
+    if (userAgent) this.data.user_agent = userAgent;
+    if (sessionId) this.data.session_id = sessionId;
     return this;
   }
 
-  withContext(ipAddress?: string, userAgent?: string, sessionId?: string): ActivityLogBuilder {
-    this.data.ip_address = ipAddress;
-    this.data.user_agent = userAgent;
-    this.data.session_id = sessionId;
+  changes(before?: any, after?: any) {
+    if (before) this.data.changes_before = JSON.stringify(before);
+    if (after) this.data.changes_after = JSON.stringify(after);
     return this;
   }
 
-  withSeverity(severity: 'info' | 'warning' | 'error'): ActivityLogBuilder {
+  category(category: string) {
+    this.data.category = category;
+    return this;
+  }
+
+  severity(severity: 'info' | 'warning' | 'error' | 'critical') {
     this.data.severity = severity;
     return this;
   }
 
-  withTags(tags: string[]): ActivityLogBuilder {
-    this.data.tags = tags.join(',');
+  sensitive(isSensitive = true) {
+    this.data.is_sensitive = isSensitive;
     return this;
   }
 
-  asSystemAction(): ActivityLogBuilder {
-    this.data.is_system_action = true;
+  systemAction(isSystem = true) {
+    this.data.is_system_action = isSystem;
     return this;
   }
 
-  build(): CreateActivityLogData {
-    if (!this.data.activity_type || !this.data.resource_type || !this.data.resource_id || !this.data.description) {
-      throw new Error('Missing required fields for ActivityLog');
+  occurredAt(date: Date) {
+    this.data.occurred_at = date;
+    return this;
+  }
+
+  build(): CreateActivityLog {
+    if (!this.data.type || !this.data.action || !this.data.resource_type || !this.data.resource_id) {
+      throw new Error('ActivityLog requires type, action, resource_type, and resource_id');
     }
-    
-    return this.data as CreateActivityLogData;
+
+    return {
+      ...this.data,
+      occurred_at: this.data.occurred_at || new Date(),
+    } as CreateActivityLog;
   }
+}
+
+// Helper functions
+export function createUserActivityLog(
+  type: ActivityType,
+  action: string,
+  userId: string,
+  resourceType: ActivityResource,
+  resourceId: string,
+  organizationId?: string,
+  context?: { ip?: string; userAgent?: string; sessionId?: string }
+): CreateActivityLog {
+  return ActivityLogBuilder.create()
+    .type(type)
+    .action(action)
+    .user(userId)
+    .resource(resourceType, resourceId)
+    .organization(organizationId || '')
+    .context(context?.ip, context?.userAgent, context?.sessionId)
+    .build();
+}
+
+export function createSystemActivityLog(
+  type: ActivityType,
+  action: string,
+  resourceType: ActivityResource,
+  resourceId: string,
+  description?: string
+): CreateActivityLog {
+  return ActivityLogBuilder.create()
+    .type(type)
+    .action(action)
+    .resource(resourceType, resourceId)
+    .description(description || '')
+    .systemAction(true)
+    .build();
+}
+
+// Analytics helpers
+export function parseChanges(activityLog: ActivityLog): {
+  before: any;
+  after: any;
+} {
+  return {
+    before: activityLog.changes_before ? JSON.parse(activityLog.changes_before) : null,
+    after: activityLog.changes_after ? JSON.parse(activityLog.changes_after) : null,
+  };
+}
+
+export function isSignificantChange(activityLog: ActivityLog): boolean {
+  return ['created', 'deleted'].includes(activityLog.action.toLowerCase()) ||
+         (activityLog.severity !== 'info' && activityLog.severity !== null) ||
+         activityLog.is_sensitive === true;
+}
+
+export function getActivitySummary(activityLog: ActivityLog): string {
+  const resource = `${activityLog.resource_type}:${activityLog.resource_id}`;
+  return `${activityLog.action} ${resource}${activityLog.description ? ` - ${activityLog.description}` : ''}`;
 }

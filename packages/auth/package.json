@@ -46,7 +46,6 @@
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
-    "@auth/drizzle-adapter": "^1.7.0",
     "@workspace/common": "workspace:*",
     "@workspace/database": "workspace:*",
     "bcryptjs": "^3.0.2",

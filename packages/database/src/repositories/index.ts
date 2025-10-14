@@ -1,9 +1,9 @@
 // packages/database/src/repositories/index.ts
 // ============================================
-// REPOSITORIES BARREL EXPORTS - ENTERPRISE COMPLETE
+// REPOSITORIES BARREL EXPORTS (FIXED)
 // ============================================
 
-// Factory exports
+// Factory and registry
 export {
   createRepositoryFactory,
   createRepositories,
@@ -11,22 +11,16 @@ export {
   type RepositoryRegistry,
 } from './factory';
 
-// Contract exports
+// Contracts (only existing ones)
 export type {
   IUserRepository,
-  UserQueryOptions,
-  UserFilterOptions,
   ISessionRepository,
-  SessionData,
-  CreateSessionData,
-  SessionListItem,
   IOrganizationRepository,
   IAuditRepository,
-  SecurityMetrics,
   IRateLimitRepository,
 } from './contracts';
 
-// Implementation exports
+// Implementations
 export {
   DrizzleUserRepository,
   DrizzleSessionRepository,

@@ -1,6 +1,6 @@
 // packages/database/src/schemas/security/rate-limit.schema.ts
 // ============================================
-// RATE LIMITS SCHEMA - ENTERPRISE RATE LIMITING
+// RATE LIMITS SCHEMA - ENTERPRISE RATE LIMITING (FIXED)
 // ============================================
 
 import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
@@ -76,16 +76,6 @@ export const rate_limits = pgTable(
     windowEndIdx: index('rate_limits_window_end_idx').on(table.window_end),
     windowTypeIdx: index('rate_limits_window_type_idx').on(table.window_type),
     
-    // Composite indexes for lookups
-    typeOrgIdx: index('rate_limits_type_org_idx').on(table.type, table.organization_id),
-    typeUserIdx: index('rate_limits_type_user_idx').on(table.type, table.user_id),
-    identifierOrgIdx: index('rate_limits_identifier_org_idx')
-      .on(table.identifier, table.organization_id),
-    
-    // Cleanup indexes
-    expiredWindowsIdx: index('rate_limits_expired_windows_idx')
-      .on(table.window_end, table.updated_at),
-    
     // Timestamps
     createdIdx: index('rate_limits_created_idx').on(table.created_at),
     updatedIdx: index('rate_limits_updated_idx').on(table.updated_at),
@@ -98,16 +88,6 @@ export type CreateRateLimit = typeof rate_limits.$inferInsert;
 export type RateLimitType = typeof rate_limit_type_enum.enumValues[number];
 export type RateLimitWindow = typeof rate_limit_window_enum.enumValues[number];
 
-// Configuration types
-export interface RateLimitConfig {
-  type: RateLimitType;
-  window_type: RateLimitWindow;
-  window_size: number;
-  max_requests: number;
-  burst_allowance?: number; // Allow temporary bursts
-  global_limit?: number; // Global limit across all identifiers
-}
-
 // Result types
 export interface RateLimitResult {
   allowed: boolean;
@@ -118,71 +98,7 @@ export interface RateLimitResult {
   current_window_requests: number;
 }
 
-// Default rate limit configurations
-export const DEFAULT_RATE_LIMITS: Record<RateLimitType, RateLimitConfig> = {
-  api_request: {
-    type: 'api_request',
-    window_type: 'minute',
-    window_size: 1,
-    max_requests: 100,
-  },
-  login_attempt: {
-    type: 'login_attempt',
-    window_type: 'hour',
-    window_size: 1,
-    max_requests: 10,
-  },
-  password_reset: {
-    type: 'password_reset',
-    window_type: 'hour',
-    window_size: 1,
-    max_requests: 3,
-  },
-  email_send: {
-    type: 'email_send',
-    window_type: 'hour',
-    window_size: 1,
-    max_requests: 50,
-  },
-  file_upload: {
-    type: 'file_upload',
-    window_type: 'minute',
-    window_size: 1,
-    max_requests: 10,
-  },
-  search_query: {
-    type: 'search_query',
-    window_type: 'minute',
-    window_size: 1,
-    max_requests: 30,
-  },
-  export_data: {
-    type: 'export_data',
-    window_type: 'hour',
-    window_size: 1,
-    max_requests: 5,
-  },
-  invitation_send: {
-    type: 'invitation_send',
-    window_type: 'day',
-    window_size: 1,
-    max_requests: 20,
-  },
-  contact_create: {
-    type: 'contact_create',
-    window_type: 'hour',
-    window_size: 1,
-    max_requests: 100,
-  },
-  project_create: {
-    type: 'project_create',
-    window_type: 'day',
-    window_size: 1,
-    max_requests: 10,
-  },
-};
-
-// Helper functions
+// Helper functions (NO DUPLICATES)
 export function isRateLimitExceeded(rateLimit: RateLimit): boolean {
   return rateLimit.current_count >= rateLimit.max_requests;
 }
@@ -236,10 +152,6 @@ export function calculateWindowBounds(
   return { start, end };
 }
 
-export function shouldResetWindow(rateLimit: RateLimit): boolean {
-  return isWindowExpired(rateLimit);
-}
-
 export function createWindowReset(
   rateLimit: RateLimit,
   baseTime = new Date()
@@ -285,7 +197,7 @@ export function checkRateLimit(
   };
 }
 
-// Identifier generation
+// Identifier generation (FIXED ASYNC)
 export function createIdentifier(
   type: 'ip' | 'user' | 'api_key' | 'organization',
   value: string
@@ -305,136 +217,25 @@ export function createOrganizationIdentifier(organizationId: string): string {
   return createIdentifier('organization', organizationId);
 }
 
-export function createAPIKeyIdentifier(apiKey: string): string {
-  // Use hash for security
-  const hash = Array.from(new Uint8Array(
-    crypto.subtle ? 
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(apiKey)) :
-    Buffer.from(apiKey).subarray(0, 8) // Fallback
-  )).map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return createIdentifier('api_key', hash);
-}
-
-// Metadata helpers
-export function parseMetadata(rateLimit: RateLimit): Record<string, any> | null {
-  if (!rateLimit.metadata) return null;
-  
+// FIXED: Made async and simplified
+export async function createAPIKeyIdentifier(apiKey: string): Promise<string> {
   try {
-    return JSON.parse(rateLimit.metadata);
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(apiKey));
+      const hashArray = Array.from(new Uint8Array(hash));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return createIdentifier('api_key', hashHex.substring(0, 16));
+    }
   } catch {
-    return null;
-  }
-}
-
-export function serializeMetadata(metadata: Record<string, any>): string {
-  return JSON.stringify(metadata);
-}
-
-// Burst handling
-export function calculateBurstAllowance(
-  config: RateLimitConfig,
-  currentCount: number,
-  windowProgress: number // 0-1, how far through window we are
-): number {
-  if (!config.burst_allowance) return 0;
-  
-  // Allow burst early in window, taper off
-  const burstFactor = Math.max(0, 1 - windowProgress);
-  const availableBurst = Math.floor(config.burst_allowance * burstFactor);
-  
-  return Math.max(0, availableBurst);
-}
-
-export function getWindowProgress(rateLimit: RateLimit): number {
-  const now = Date.now();
-  const start = rateLimit.window_start.getTime();
-  const end = rateLimit.window_end.getTime();
-  
-  if (now <= start) return 0;
-  if (now >= end) return 1;
-  
-  return (now - start) / (end - start);
-}
-
-// Cleanup utilities
-export function isExpiredRateLimit(rateLimit: RateLimit, cleanupDelayHours = 24): boolean {
-  const cleanupTime = new Date();
-  cleanupTime.setHours(cleanupTime.getHours() - cleanupDelayHours);
-  
-  return rateLimit.window_end < cleanupTime;
-}
-
-export function shouldCleanupRateLimit(rateLimit: RateLimit): boolean {
-  return isExpiredRateLimit(rateLimit) && rateLimit.current_count === 0;
-}
-
-// Analytics
-export interface RateLimitStats {
-  total_limits: number;
-  active_limits: number;
-  exceeded_limits: number;
-  most_limited_type: RateLimitType;
-  most_limited_identifier: string;
-  average_usage_percentage: number;
-}
-
-export function calculateUsagePercentage(rateLimit: RateLimit): number {
-  return Math.round((rateLimit.current_count / rateLimit.max_requests) * 100);
-}
-
-export function isHighUsage(rateLimit: RateLimit, threshold = 80): boolean {
-  return calculateUsagePercentage(rateLimit) >= threshold;
-}
-
-// Configuration validation
-export function validateRateLimitConfig(config: RateLimitConfig): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-  
-  if (config.window_size <= 0) {
-    errors.push('Window size must be greater than 0');
+    // Fallback
   }
   
-  if (config.max_requests <= 0) {
-    errors.push('Max requests must be greater than 0');
+  // Simple hash fallback
+  let hash = 0;
+  for (let i = 0; i < apiKey.length; i++) {
+    const char = apiKey.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
   }
-  
-  if (config.burst_allowance && config.burst_allowance >= config.max_requests) {
-    errors.push('Burst allowance must be less than max requests');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
-// Integration helpers
-export function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
-  return {
-    'X-RateLimit-Limit': result.limit.toString(),
-    'X-RateLimit-Remaining': result.remaining.toString(),
-    'X-RateLimit-Reset': Math.ceil(result.reset_time.getTime() / 1000).toString(),
-    ...(result.retry_after ? { 'Retry-After': result.retry_after.toString() } : {}),
-  };
-}
-
-export function createRateLimitError(result: RateLimitResult): {
-  message: string;
-  code: string;
-  details: Record<string, any>;
-} {
-  return {
-    message: 'Rate limit exceeded',
-    code: 'RATE_LIMIT_EXCEEDED',
-    details: {
-      limit: result.limit,
-      remaining: result.remaining,
-      reset_time: result.reset_time,
-      retry_after: result.retry_after,
-    },
-  };
+  return createIdentifier('api_key', Math.abs(hash).toString(16));
 }

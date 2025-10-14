@@ -1,25 +1,24 @@
 // packages/database/src/seeders/development.ts
 // ============================================
-// DEVELOPMENT SEEDERS - SRP: APENAS DEV DATA
-// Enterprise Multi-Tenancy and Soft Delete
+// DEVELOPMENT SEED - SCHEMA COMPLIANT
 // ============================================
 
-import type { Database } from '../connection';
-import type { SeedOptions } from '../index';
-import { runScript } from '../scripts/seed';
+import type { Database } from '../connection/index.js';
+import { runTestingSeed } from './testing.js';
 
-export async function developmentSeeder(
-  _db: Database,
-  options: SeedOptions
-): Promise<void> {
-  if (options.verbose) {
-    console.log('Running Achromatic Enterprise development seed...');
-  }
-
-  // Execute seu seed existente
-  await runScript();
-
-  if (options.verbose) {
-    console.log('Achromatic development seed completed');
+// Development seeder uses testing data for rich development experience
+export async function developmentSeeder(db: Database): Promise<number> {
+  console.log('Development seed: Creating rich development data...');
+  
+  try {
+    // Use testing seed data for development
+    const recordsCreated = await runTestingSeed(db);
+    
+    console.log(`Development seed completed: ${recordsCreated} records created`);
+    return recordsCreated;
+    
+  } catch (error) {
+    console.error('Development seed failed:', error);
+    throw error;
   }
 }

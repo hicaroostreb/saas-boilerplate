@@ -1,6 +1,6 @@
 // packages/database/src/schemas/business/organization.schema.ts
 // ============================================
-// ORGANIZATIONS SCHEMA - ENTERPRISE MULTI-TENANT
+// ORGANIZATIONS SCHEMA - ENTERPRISE MULTI-TENANT (FIXED ENUM)
 // ============================================
 
 import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
@@ -27,6 +27,7 @@ export const organization_industry_enum = pgEnum('organization_industry', [
   'other',
 ]);
 
+// ADDED MISSING ENUM
 export const company_size_enum = pgEnum('company_size', [
   '1-10',
   '11-50',
@@ -129,125 +130,6 @@ export const organizations = pgTable(
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type CreateOrganization = typeof organizations.$inferInsert;
-export type UpdateOrganization = Partial<Omit<Organization, 'id' | 'created_at'>>;
 export type OrganizationPlan = typeof organization_plan_enum.enumValues[number];
 export type OrganizationIndustry = typeof organization_industry_enum.enumValues[number];
 export type CompanySize = typeof company_size_enum.enumValues[number];
-
-// Public organization type (safe for API responses)
-export interface PublicOrganization {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  website: string | null;
-  logo_url: string | null;
-  banner_url: string | null;
-  brand_color: string | null;
-  is_public: boolean;
-  allow_join_requests: boolean;
-  industry: OrganizationIndustry | null;
-  company_size: CompanySize | null;
-  member_count?: number;
-  project_count?: number;
-  created_at: Date;
-}
-
-// Organization with stats
-export interface OrganizationWithStats extends Organization {
-  member_count: number;
-  project_count: number;
-  active_member_count: number;
-  storage_used: number;
-  storage_remaining: number;
-}
-
-// Organization limits
-export interface OrganizationLimits {
-  members: {
-    current: number;
-    limit: number;
-    remaining: number;
-    percentage: number;
-  };
-  projects: {
-    current: number;
-    limit: number;
-    remaining: number;
-    percentage: number;
-  };
-  storage: {
-    used: number;
-    limit: number;
-    remaining: number;
-    percentage: number;
-  };
-}
-
-// Helper functions
-export function isOrganizationActive(org: Organization): boolean {
-  return org.is_active && !org.deleted_at;
-}
-
-export function canJoinOrganization(org: Organization): boolean {
-  return org.is_public && org.allow_join_requests && isOrganizationActive(org);
-}
-
-export function getOrganizationDisplayName(org: Organization): string {
-  return org.name || org.slug;
-}
-
-export function calculateStorageUsagePercentage(used: number, limit: number): number {
-  if (limit <= 0) return 0;
-  return Math.min(100, Math.round((used / limit) * 100));
-}
-
-export function isStorageLimitExceeded(used: number, limit: number): boolean {
-  return used >= limit;
-}
-
-export function getMemberLimitRemaining(current: number, limit: number): number {
-  return Math.max(0, limit - current);
-}
-
-export function getProjectLimitRemaining(current: number, limit: number): number {
-  return Math.max(0, limit - current);
-}
-
-// Plan helper functions
-export function getPlanLimits(plan: OrganizationPlan): {
-  members: number;
-  projects: number;
-  storage: number;
-} {
-  const limits = {
-    free: { members: 3, projects: 1, storage: 100 * 1024 * 1024 }, // 100MB
-    starter: { members: 10, projects: 5, storage: 1 * 1024 * 1024 * 1024 }, // 1GB
-    professional: { members: 50, projects: 25, storage: 10 * 1024 * 1024 * 1024 }, // 10GB
-    enterprise: { members: 500, projects: 100, storage: 100 * 1024 * 1024 * 1024 }, // 100GB
-    custom: { members: -1, projects: -1, storage: -1 }, // Unlimited
-  };
-  
-  return limits[plan] || limits.free;
-}
-
-export function canUpgradePlan(currentPlan: OrganizationPlan, targetPlan: OrganizationPlan): boolean {
-  const planHierarchy: OrganizationPlan[] = ['free', 'starter', 'professional', 'enterprise', 'custom'];
-  const currentIndex = planHierarchy.indexOf(currentPlan);
-  const targetIndex = planHierarchy.indexOf(targetPlan);
-  
-  return targetIndex > currentIndex;
-}
-
-export function formatStorageSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-}

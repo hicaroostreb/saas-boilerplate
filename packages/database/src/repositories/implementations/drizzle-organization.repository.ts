@@ -5,14 +5,12 @@
 
 import {
   and,
-  asc,
   count,
   desc,
   eq,
-  inArray,
   isNull,
   like,
-  sql,
+  sql
 } from 'drizzle-orm';
 import type { Database } from '../../connection';
 import { DatabaseError } from '../../connection';
@@ -229,7 +227,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         options.tenant_id ? eq(organizations.tenant_id, options.tenant_id) : undefined,
         options.is_active !== undefined ? eq(organizations.is_active, options.is_active) : undefined,
         options.is_public !== undefined ? eq(organizations.is_public, options.is_public) : undefined,
-        options.plan_type ? eq(organizations.plan_type, options.plan_type) : undefined,
+        options.plan_type ? eq(organizations.plan_type, options.plan_type as any) : undefined,
         options.search ? like(organizations.name, `%${options.search}%`) : undefined,
       ].filter(Boolean);
 
@@ -268,7 +266,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         filters?.tenant_id ? eq(organizations.tenant_id, filters.tenant_id) : undefined,
         filters?.is_active !== undefined ? eq(organizations.is_active, filters.is_active) : undefined,
         filters?.is_public !== undefined ? eq(organizations.is_public, filters.is_public) : undefined,
-        filters?.plan_type ? eq(organizations.plan_type, filters.plan_type) : undefined,
+        filters?.plan_type ? eq(organizations.plan_type, filters.plan_type as any) : undefined,
       ].filter(Boolean);
 
       const result = await this.db
@@ -332,7 +330,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       const [result] = await this.db
         .update(organizations)
         .set({ 
-          plan_type, 
+          plan_type: plan_type as any, 
           updated_at: new Date() 
         })
         .where(and(eq(organizations.id, id), isNull(organizations.deleted_at)))

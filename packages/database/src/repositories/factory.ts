@@ -1,23 +1,19 @@
 // packages/database/src/repositories/factory.ts
 // ============================================
-// REPOSITORY FACTORY - ENTERPRISE DI PATTERN COMPLETE
+// REPOSITORY FACTORY - ENTERPRISE DI PATTERN (ALIGNED)
 // ============================================
 
 import type { Database } from '../connection';
 import { DrizzleUserRepository } from './implementations/drizzle-user.repository';
 import { DrizzleSessionRepository } from './implementations/drizzle-session.repository';
 import { DrizzleOrganizationRepository } from './implementations/drizzle-organization.repository';
-import { DrizzleAuditRepository } from './implementations/drizzle-audit.repository';
-import { DrizzleRateLimitRepository } from './implementations/drizzle-rate-limit.repository';
+import { DrizzleAuditRepository, type IAuditRepository } from './implementations/drizzle-audit.repository';
+import { DrizzleRateLimitRepository, type IRateLimitRepository } from './implementations/drizzle-rate-limit.repository';
 import type { 
   IUserRepository, 
   ISessionRepository, 
   IOrganizationRepository,
 } from './contracts';
-import type { 
-  IAuditRepository, 
-  IRateLimitRepository 
-} from './implementations/drizzle-audit.repository';
 
 export interface RepositoryRegistry {
   userRepository: IUserRepository;

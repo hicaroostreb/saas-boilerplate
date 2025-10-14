@@ -1,28 +1,33 @@
 // packages/database/src/repositories/implementations/drizzle-rate-limit.repository.ts
 // ============================================
-// DRIZZLE RATE LIMIT REPOSITORY - ENTERPRISE RATE LIMITING
+// DRIZZLE RATE LIMIT REPOSITORY - ENTERPRISE RATE LIMITING (FIXED)
 // ============================================
 
 import {
   and,
-  count,
   desc,
   eq,
   lt,
+  sql,
 } from 'drizzle-orm';
 import type { Database } from '../../connection';
 import { DatabaseError } from '../../connection';
-import { 
+import {
   rate_limits,
-  type RateLimit,
   type CreateRateLimit,
-  type RateLimitType,
+  type RateLimit,
   type RateLimitResult,
+  type RateLimitType,
+  type RateLimitWindow,
+} from '../../schemas/security';
+
+// Import helper functions directly from rate-limit schema
+import {
+  calculateWindowBounds,
   checkRateLimit,
   createWindowReset,
   isWindowExpired,
-  calculateWindowBounds,
-} from '../../schemas/security';
+} from '../../schemas/security/rate-limit.schema';
 
 export interface IRateLimitRepository {
   // Core rate limiting operations
@@ -105,7 +110,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
 
         if (!existingLimit) {
           // Create new rate limit
-          const { start, end } = calculateWindowBounds(windowType, windowSize, now);
+          const { start, end } = calculateWindowBounds(windowType as RateLimitWindow, windowSize, now);
           
           const newLimit: CreateRateLimit = {
             id: crypto.randomUUID(),
@@ -113,7 +118,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
             identifier,
             organization_id: organizationId || null,
             user_id: userId || null,
-            window_type: windowType,
+            window_type: windowType as RateLimitWindow,
             window_size: windowSize,
             max_requests: maxRequests,
             current_count: 1,
@@ -158,7 +163,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
             allowed: true,
             limit: maxRequests,
             remaining: maxRequests - 1,
-            reset_time: updated.window_end,
+            reset_time: updated?.window_end || new Date(),
             current_window_requests: 1,
           };
         }
@@ -256,7 +261,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       const [result] = await this.db
         .update(rate_limits)
         .set({
-          current_count: rate_limits.current_count + 1,
+          current_count: sql`${rate_limits.current_count} + 1`,
           last_request_at: new Date(),
           updated_at: new Date(),
         })
@@ -301,7 +306,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
         .where(eq(rate_limits.id, id))
         .returning();
 
-      return result;
+      return result!;
     } catch (error) {
       throw this.handleDatabaseError(error, 'reset');
     }
@@ -315,7 +320,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       const cleanupTime = new Date();
       cleanupTime.setHours(cleanupTime.getHours() - 24);
 
-      const deletedCount = await this.db
+      await this.db
         .delete(rate_limits)
         .where(
           and(

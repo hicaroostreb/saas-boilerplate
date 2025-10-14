@@ -1,9 +1,8 @@
 // packages/database/src/entities/index.ts
 // ============================================
-// ENTITIES BARREL EXPORTS - ENTERPRISE
+// ENTITIES BARREL EXPORTS (FIXED)
 // ============================================
 
 export {
   UserEntity,
-  UserEntityBuilder,
-} from './auth/user.entity';
+} from './auth';

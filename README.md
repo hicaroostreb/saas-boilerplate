@@ -117,10 +117,10 @@ bun run clean:outputs   # .next + dist
 
 # Nível 3-4: Troubleshooting (5-30s)
 bun run clean:builds    # cache + outputs
-bun run clean:deps      # node_modules raiz (sem install)
+bun run clean:deps      # node_modules raiz
 
 # Nível 5-6: Deep Clean (30-60s)
-bun run clean:deps:all  # todos node_modules (sem install)
+bun run clean:deps:all  # todos node_modules
 bun run reset           # node_modules raiz + install
 
 # Nível 7-8: Emergency (60-120s)
