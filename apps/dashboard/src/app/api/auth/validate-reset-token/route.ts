@@ -1,18 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { AuthController } from '@workspace/auth/infrastructure/gateways/AuthController';
+
+const authController = new AuthController();
 
 export async function POST(req: NextRequest) {
-  try {
-    const { token } = await req.json();
-
-    // Validate reset token
-    // TODO: Implementation with @workspace/auth
-    console.warn('Validating token:', token);
-
-    return NextResponse.json({
-      valid: true,
-      token,
-    });
-  } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
-  }
+  return authController.validateResetToken(req);
 }
