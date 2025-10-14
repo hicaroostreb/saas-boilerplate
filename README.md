@@ -108,28 +108,41 @@ bun run db:seed         # Popula dados teste
 bun run db:studio       # Abre Drizzle Studio
 ```
 
-### Limpeza (6 Níveis - Enterprise Grade)
+### Limpeza (8 Níveis)
 
-```
+```bash
 # Nível 1-2: Diário (1-5s)
-bun run clean:cache     # Cache only (Turbo + Next.js + ESLint)
-bun run clean:outputs   # Build artifacts (.next, dist)
+bun run clean:cache     # .turbo + .eslintcache + .next/cache
+bun run clean:outputs   # .next + dist
 
-# Nível 3-4: Troubleshooting (30-60s)
-bun run clean:builds    # Cache + builds
-bun run reset           # Dependencies + install
+# Nível 3-4: Troubleshooting (5-30s)
+bun run clean:builds    # cache + outputs
+bun run clean:deps      # node_modules raiz (sem install)
 
-# Nível 5-6: Emergency (60-120s)
-bun run reset:full      # Everything + install
-bun run reset:nuclear   # ⚠️ Including lockfile
+# Nível 5-6: Deep Clean (30-60s)
+bun run clean:deps:all  # todos node_modules (sem install)
+bun run reset           # node_modules raiz + install
+
+# Nível 7-8: Emergency (60-120s)
+bun run reset:full      # tudo + todos node_modules + install
+bun run reset:nuclear   # ☢️ tudo + bun.lockb + install
 ```
 
 **Quando usar:**
 
-- **`clean:cache`** - Daily dev, hot reload issues
-- **`reset`** - After git pull, dependency problems
-- **`reset:full`** - Major issues, "nothing works"
-- **`reset:nuclear`** - Migration, corruption (⚠️ changes lockfile)
+- `clean:cache` → hot reload travado
+- `clean:builds` → rebuild limpo
+- `clean:deps` → limpar deps sem reinstalar
+- `clean:deps:all` → limpar tudo sem reinstalar
+- `reset` → após git pull, deps quebradas
+- `reset:full` → "nada funciona"
+- `reset:nuclear` → corrupção, migração (⚠️ muda lockfile)
+
+**Utilitários:**
+```bash
+bun run clean:check     # ver tamanhos
+bun run reset:cache     # rebuild com --force
+```
 
 ## Workflow Git
 
