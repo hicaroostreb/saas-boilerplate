@@ -1,164 +1,253 @@
 // packages/database/src/schemas/business/organization.schema.ts
-
 // ============================================
-// ORGANIZATION SCHEMA - SRP: APENAS ORGANIZATION TABLE
-// Enterprise Multi-Tenancy and Soft Delete
+// ORGANIZATIONS SCHEMA - ENTERPRISE MULTI-TENANT
 // ============================================
 
-import {
-  boolean,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  varchar,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+
+// Organization enums
+export const organization_plan_enum = pgEnum('organization_plan', [
+  'free',
+  'starter', 
+  'professional',
+  'enterprise',
+  'custom',
+]);
+
+export const organization_industry_enum = pgEnum('organization_industry', [
+  'technology',
+  'healthcare',
+  'finance',
+  'education',
+  'manufacturing',
+  'retail',
+  'consulting',
+  'nonprofit',
+  'government',
+  'other',
+]);
+
+export const company_size_enum = pgEnum('company_size', [
+  '1-10',
+  '11-50',
+  '51-200',
+  '201-1000',
+  '1000+',
+]);
 
 export const organizations = pgTable(
   'organizations',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Multi-tenancy
-    tenantId: text('tenant_id')
-      .notNull()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Basic info
-    name: varchar('name', { length: 100 }).notNull(),
-    slug: varchar('slug', { length: 100 }).notNull().unique(),
+    id: text('id').primaryKey(),
+    tenant_id: text('tenant_id').notNull(), // Multi-tenancy key
+    
+    // Basic information
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(),
     description: text('description'),
-    website: varchar('website', { length: 255 }),
-
+    
     // Branding
-    logoUrl: text('logo_url'),
-    bannerUrl: text('banner_url'),
-    brandColor: varchar('brand_color', { length: 7 }), // #FFFFFF format
-
+    website: text('website'),
+    logo_url: text('logo_url'),
+    banner_url: text('banner_url'),
+    brand_color: text('brand_color'),
+    
     // Settings
-    isPublic: boolean('is_public').default(false).notNull(),
-    allowJoinRequests: boolean('allow_join_requests').default(false).notNull(),
-    requireApproval: boolean('require_approval').default(true).notNull(),
-
-    // Limits & quotas
-    memberLimit: integer('member_limit').default(50).notNull(),
-    projectLimit: integer('project_limit').default(10).notNull(),
-    storageLimit: integer('storage_limit').default(1073741824).notNull(), // 1GB in bytes
-
-    // Contact info
-    contactEmail: varchar('contact_email', { length: 255 }),
-    contactPhone: varchar('contact_phone', { length: 20 }),
-
+    is_public: boolean('is_public').notNull().default(false),
+    allow_join_requests: boolean('allow_join_requests').notNull().default(false),
+    require_approval: boolean('require_approval').notNull().default(true),
+    
+    // Limits
+    member_limit: integer('member_limit').notNull().default(10),
+    project_limit: integer('project_limit').notNull().default(5),
+    storage_limit: integer('storage_limit').notNull().default(1073741824), // 1GB in bytes
+    
+    // Contact information
+    contact_email: text('contact_email'),
+    contact_phone: text('contact_phone'),
+    
     // Address
-    address: jsonb('address').$type<{
-      street?: string;
-      city?: string;
-      state?: string;
-      zipCode?: string;
-      country?: string;
-    }>(),
-
-    // Business info
-    taxId: varchar('tax_id', { length: 50 }),
-    industry: varchar('industry', { length: 100 }),
-    companySize: varchar('company_size', { length: 50 }), // '1-10', '11-50', etc.
-
-    // Subscription & billing
-    planType: varchar('plan_type', { length: 50 }).default('free').notNull(),
-    billingEmail: varchar('billing_email', { length: 255 }),
-
-    // Metadata
-    metadata: jsonb('metadata').$type<Record<string, any>>(),
-
-    // Ownership - ✅ REMOVED REFERENCE to avoid circular dependency
-    ownerId: text('owner_id').notNull(),
-
+    address_street: text('address_street'),
+    address_city: text('address_city'),
+    address_state: text('address_state'),
+    address_zip_code: text('address_zip_code'),
+    address_country: text('address_country'),
+    
+    // Business details
+    tax_id: text('tax_id'),
+    industry: organization_industry_enum('industry'),
+    company_size: company_size_enum('company_size'),
+    
+    // Subscription
+    plan_type: organization_plan_enum('plan_type').notNull().default('free'),
+    billing_email: text('billing_email'),
+    
+    // Ownership
+    owner_id: text('owner_id').notNull(),
+    
     // Status
-    isActive: boolean('is_active').default(true).notNull(),
-    isVerified: boolean('is_verified').default(false).notNull(),
-
+    is_active: boolean('is_active').notNull().default(true),
+    is_verified: boolean('is_verified').notNull().default(false),
+    
     // Timestamps
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at', { mode: 'date' }),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+    deleted_at: timestamp('deleted_at'), // Soft delete
   },
-  table => ({
-    // Indexes for performance
-    slugIdx: uniqueIndex('org_slug_idx').on(table.slug),
-    tenantIdx: index('org_tenant_idx').on(table.tenantId),
-    ownerIdx: index('org_owner_idx').on(table.ownerId),
-    nameIdx: index('org_name_idx').on(table.name),
-    publicIdx: index('org_public_idx').on(table.isPublic),
-    activeIdx: index('org_active_idx').on(table.isActive),
-    createdAtIdx: index('org_created_at_idx').on(table.createdAt),
-    planTypeIdx: index('org_plan_type_idx').on(table.planType),
+  (table) => ({
+    // Multi-tenancy indexes
+    tenantIdx: index('organizations_tenant_idx').on(table.tenant_id),
+    tenantActiveIdx: index('organizations_tenant_active_idx').on(table.tenant_id, table.is_active),
+    
+    // Performance indexes  
+    slugIdx: index('organizations_slug_idx').on(table.slug),
+    ownerIdx: index('organizations_owner_idx').on(table.owner_id),
+    nameIdx: index('organizations_name_idx').on(table.name),
+    
+    // Status indexes
+    activeIdx: index('organizations_active_idx').on(table.is_active),
+    verifiedIdx: index('organizations_verified_idx').on(table.is_verified),
+    publicIdx: index('organizations_public_idx').on(table.is_public),
+    deletedIdx: index('organizations_deleted_idx').on(table.deleted_at),
+    
+    // Business indexes
+    industryIdx: index('organizations_industry_idx').on(table.industry),
+    planIdx: index('organizations_plan_idx').on(table.plan_type),
+    sizeIdx: index('organizations_size_idx').on(table.company_size),
+    
+    // Composite indexes for common queries
+    tenantPlanIdx: index('organizations_tenant_plan_idx').on(table.tenant_id, table.plan_type),
+    ownerActiveIdx: index('organizations_owner_active_idx').on(table.owner_id, table.is_active),
+    publicActiveIdx: index('organizations_public_active_idx').on(table.is_public, table.is_active),
+    
+    // Timestamps
+    createdIdx: index('organizations_created_idx').on(table.created_at),
+    updatedIdx: index('organizations_updated_idx').on(table.updated_at),
   })
 );
 
+// Types
 export type Organization = typeof organizations.$inferSelect;
 export type CreateOrganization = typeof organizations.$inferInsert;
+export type UpdateOrganization = Partial<Omit<Organization, 'id' | 'created_at'>>;
+export type OrganizationPlan = typeof organization_plan_enum.enumValues[number];
+export type OrganizationIndustry = typeof organization_industry_enum.enumValues[number];
+export type CompanySize = typeof company_size_enum.enumValues[number];
 
-// Specific organization types
-export type PublicOrganization = Pick<
-  Organization,
-  | 'id'
-  | 'tenantId'
-  | 'name'
-  | 'slug'
-  | 'description'
-  | 'logoUrl'
-  | 'website'
-  | 'isPublic'
-  | 'createdAt'
->;
-export type OrganizationProfile = Pick<
-  Organization,
-  | 'id'
-  | 'tenantId'
-  | 'name'
-  | 'slug'
-  | 'description'
-  | 'logoUrl'
-  | 'bannerUrl'
-  | 'website'
-  | 'brandColor'
->;
-export type OrganizationSettings = Pick<
-  Organization,
-  | 'id'
-  | 'tenantId'
-  | 'isPublic'
-  | 'allowJoinRequests'
-  | 'requireApproval'
-  | 'memberLimit'
-  | 'projectLimit'
->;
-export type OrganizationBilling = Pick<
-  Organization,
-  | 'id'
-  | 'tenantId'
-  | 'planType'
-  | 'billingEmail'
-  | 'memberLimit'
-  | 'projectLimit'
-  | 'storageLimit'
->;
+// Public organization type (safe for API responses)
+export interface PublicOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  website: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  brand_color: string | null;
+  is_public: boolean;
+  allow_join_requests: boolean;
+  industry: OrganizationIndustry | null;
+  company_size: CompanySize | null;
+  member_count?: number;
+  project_count?: number;
+  created_at: Date;
+}
 
-// Organization with owner info
-export type OrganizationWithOwner = Organization & {
-  owner: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
+// Organization with stats
+export interface OrganizationWithStats extends Organization {
+  member_count: number;
+  project_count: number;
+  active_member_count: number;
+  storage_used: number;
+  storage_remaining: number;
+}
+
+// Organization limits
+export interface OrganizationLimits {
+  members: {
+    current: number;
+    limit: number;
+    remaining: number;
+    percentage: number;
   };
-};
+  projects: {
+    current: number;
+    limit: number;
+    remaining: number;
+    percentage: number;
+  };
+  storage: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentage: number;
+  };
+}
 
-// Plan types enum
-export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
-export type CompanySize = '1-10' | '11-50' | '51-200' | '201-500' | '500+';
+// Helper functions
+export function isOrganizationActive(org: Organization): boolean {
+  return org.is_active && !org.deleted_at;
+}
+
+export function canJoinOrganization(org: Organization): boolean {
+  return org.is_public && org.allow_join_requests && isOrganizationActive(org);
+}
+
+export function getOrganizationDisplayName(org: Organization): string {
+  return org.name || org.slug;
+}
+
+export function calculateStorageUsagePercentage(used: number, limit: number): number {
+  if (limit <= 0) return 0;
+  return Math.min(100, Math.round((used / limit) * 100));
+}
+
+export function isStorageLimitExceeded(used: number, limit: number): boolean {
+  return used >= limit;
+}
+
+export function getMemberLimitRemaining(current: number, limit: number): number {
+  return Math.max(0, limit - current);
+}
+
+export function getProjectLimitRemaining(current: number, limit: number): number {
+  return Math.max(0, limit - current);
+}
+
+// Plan helper functions
+export function getPlanLimits(plan: OrganizationPlan): {
+  members: number;
+  projects: number;
+  storage: number;
+} {
+  const limits = {
+    free: { members: 3, projects: 1, storage: 100 * 1024 * 1024 }, // 100MB
+    starter: { members: 10, projects: 5, storage: 1 * 1024 * 1024 * 1024 }, // 1GB
+    professional: { members: 50, projects: 25, storage: 10 * 1024 * 1024 * 1024 }, // 10GB
+    enterprise: { members: 500, projects: 100, storage: 100 * 1024 * 1024 * 1024 }, // 100GB
+    custom: { members: -1, projects: -1, storage: -1 }, // Unlimited
+  };
+  
+  return limits[plan] || limits.free;
+}
+
+export function canUpgradePlan(currentPlan: OrganizationPlan, targetPlan: OrganizationPlan): boolean {
+  const planHierarchy: OrganizationPlan[] = ['free', 'starter', 'professional', 'enterprise', 'custom'];
+  const currentIndex = planHierarchy.indexOf(currentPlan);
+  const targetIndex = planHierarchy.indexOf(targetPlan);
+  
+  return targetIndex > currentIndex;
+}
+
+export function formatStorageSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  return `${size.toFixed(1)} ${units[unitIndex]}`;
+}

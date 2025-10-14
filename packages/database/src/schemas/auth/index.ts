@@ -1,35 +1,87 @@
 // packages/database/src/schemas/auth/index.ts
-
 // ============================================
-// AUTH SCHEMAS BARREL EXPORTS
+// AUTH SCHEMAS BARREL EXPORTS - ENTERPRISE
 // ============================================
 
-// Table exports
-export { accounts } from './account.schema';
-export { sessions } from './session.schema';
-export { users } from './user.schema';
-export { verificationTokens } from './verification-token.schema';
-
-// Type exports
-export type {
-  CreateUser,
-  PublicUser,
-  User,
-  UserPreferences,
-  UserProfile,
+// User schema exports
+export {
+  users,
+  user_status_enum,
+  user_role_enum,
 } from './user.schema';
+
+export type {
+  User,
+  CreateUser,
+  UpdateUser,
+  PublicUser,
+  UserProfile,
+  UserStatus,
+  UserRole,
+  UserSecurityInfo,
+  UserPreferences,
+} from './user.schema';
+
+// Session schema exports
+export {
+  sessions,
+} from './session.schema';
+
+export type {
+  Session,
+  CreateSession,
+  SessionWithUser,
+  SessionSummary,
+} from './session.schema';
+
+export {
+  isSessionExpired,
+  isSessionActive,
+  getSessionTimeRemaining,
+} from './session.schema';
+
+// Account schema exports
+export {
+  accounts,
+} from './account.schema';
 
 export type {
   Account,
   CreateAccount,
-  CredentialsAccount,
-  GitHubAccount,
-  GoogleAccount,
+  OAuthTokens,
+  ProviderProfile,
+  AccountWithTokens,
 } from './account.schema';
 
-export type { CreateSession, Session, SessionWithUser } from './session.schema';
+export {
+  isTokenExpired,
+  getTokenExpiresIn,
+  shouldRefreshToken,
+  parseProviderData,
+  serializeProviderData,
+} from './account.schema';
+
+// Verification token schema exports
+export {
+  verification_tokens,
+  verification_token_type_enum,
+} from './verification-token.schema';
 
 export type {
-  CreateVerificationToken,
   VerificationToken,
+  CreateVerificationToken,
+  VerificationTokenType,
+  TokenMetadata,
+  TokenValidationResult,
+} from './verification-token.schema';
+
+export {
+  isTokenExpired as isVerificationTokenExpired,
+  isTokenUsed,
+  hasExceededAttempts,
+  validateToken,
+  generateSecureToken,
+  createTokenExpiry,
+  parseTokenMetadata,
+  serializeTokenMetadata,
 } from './verification-token.schema';

@@ -1,6 +1,6 @@
+// packages/database/src/entities/auth/user.entity.ts
 // ============================================
-// USER ENTITY - SRP: APENAS USER DOMAIN LOGIC
-// Enterprise Multi-Tenancy Support
+// USER ENTITY - ENTERPRISE DOMAIN MODEL
 // ============================================
 
 import type { User } from '../../schemas/auth';
@@ -8,316 +8,182 @@ import type { User } from '../../schemas/auth';
 export class UserEntity {
   constructor(
     public readonly id: string,
-    public readonly email: string,
+    public readonly organization_id: string | null,
     public readonly name: string | null,
-    public readonly organizationId: string | null, // ✅ ADD: Multi-tenancy
+    public readonly email: string,
     public readonly image: string | null,
-    public readonly emailVerified: Date | null,
-    public readonly passwordHash: string | null,
-    public readonly isActive: boolean,
-    public readonly isSuperAdmin: boolean,
-    public readonly isEmailVerified: boolean,
-    public readonly lastLoginAt: Date | null,
-    public readonly lastLoginIp: string | null,
-    public readonly loginAttempts: string,
-    public readonly lockedUntil: Date | null,
-    public readonly firstName: string | null,
-    public readonly lastName: string | null,
-    public readonly avatarUrl: string | null,
+    public readonly email_verified: Date | null,
+    public readonly password_hash: string | null,
+    public readonly is_active: boolean,
+    public readonly is_super_admin: boolean,
+    public readonly is_email_verified: boolean,
+    public readonly last_login_at: Date | null,
+    public readonly last_login_ip: string | null,
+    public readonly login_attempts: number,
+    public readonly locked_until: Date | null,
+    public readonly first_name: string | null,
+    public readonly last_name: string | null,
+    public readonly avatar_url: string | null,
     public readonly timezone: string,
     public readonly locale: string,
-    public readonly emailNotifications: boolean,
-    public readonly marketingEmails: boolean,
-    public readonly createdAt: Date,
-    public readonly updatedAt: Date,
-    public readonly deletedAt: Date | null
+    public readonly email_notifications: boolean,
+    public readonly marketing_emails: boolean,
+    public readonly created_at: Date,
+    public readonly updated_at: Date,
+    public readonly deleted_at: Date | null
   ) {}
-
-  // ============================================
-  // FACTORY METHODS
-  // ============================================
 
   static fromDatabase(data: User): UserEntity {
     return new UserEntity(
       data.id,
-      data.email,
+      data.organization_id,
       data.name,
-      data.organizationId, // ✅ ADD: Multi-tenancy
-      data.image,
-      data.emailVerified,
-      data.passwordHash,
-      data.isActive,
-      data.isSuperAdmin,
-      data.isEmailVerified,
-      data.lastLoginAt,
-      data.lastLoginIp,
-      data.loginAttempts || '0',
-      data.lockedUntil,
-      data.firstName,
-      data.lastName,
-      data.avatarUrl,
-      data.timezone || 'UTC',
-      data.locale || 'en',
-      data.emailNotifications,
-      data.marketingEmails,
-      data.createdAt,
-      data.updatedAt,
-      data.deletedAt
-    );
-  }
-
-  static create(data: {
-    email: string;
-    name?: string | null;
-    organizationId?: string | null; // ✅ ADD: Multi-tenancy
-    image?: string | null;
-    passwordHash?: string | null;
-    firstName?: string | null;
-    lastName?: string | null;
-    timezone?: string;
-    locale?: string;
-  }): UserEntity {
-    const now = new Date();
-
-    return new UserEntity(
-      crypto.randomUUID(),
       data.email,
-      data.name || null,
-      data.organizationId || null, // ✅ ADD: Multi-tenancy
-      data.image || null,
-      null, // emailVerified
-      data.passwordHash || null,
-      true, // isActive
-      false, // isSuperAdmin
-      false, // isEmailVerified
-      null, // lastLoginAt
-      null, // lastLoginIp
-      '0', // loginAttempts
-      null, // lockedUntil
-      data.firstName || null,
-      data.lastName || null,
-      null, // avatarUrl
-      data.timezone || 'UTC',
-      data.locale || 'en',
-      true, // emailNotifications
-      false, // marketingEmails
-      now, // createdAt
-      now, // updatedAt
-      null // deletedAt
+      data.image,
+      data.email_verified,
+      data.password_hash,
+      data.is_active,
+      data.is_super_admin,
+      data.is_email_verified,
+      data.last_login_at,
+      data.last_login_ip,
+      data.login_attempts,
+      data.locked_until,
+      data.first_name,
+      data.last_name,
+      data.avatar_url,
+      data.timezone,
+      data.locale,
+      data.email_notifications,
+      data.marketing_emails,
+      data.created_at,
+      data.updated_at,
+      data.deleted_at
     );
   }
 
-  // ============================================
-  // BUSINESS METHODS
-  // ============================================
-
-  getDisplayName(): string {
-    if (this.firstName && this.lastName) {
-      return `${this.firstName} ${this.lastName}`;
-    }
-    const fallbackName = this.name || this.email.split('@')[0] || 'User';
-    return fallbackName;
-  }
-
-  getInitials(): string {
-    if (this.firstName && this.lastName) {
-      return `${this.firstName[0]}${this.lastName[0]}`.toUpperCase();
-    }
-    if (this.name) {
-      const parts = this.name.split(' ');
-      if (parts.length > 1 && parts[0] && parts[1]) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-      }
-      return (
-        parts[0]?.[0]?.toUpperCase() ?? this.email[0]?.toUpperCase() ?? 'U'
-      );
-    }
-    return this.email[0]?.toUpperCase() ?? 'U';
-  }
-
-  isLocked(): boolean {
-    return this.lockedUntil !== null && this.lockedUntil > new Date();
-  }
-
-  canLogin(): boolean {
-    return this.isActive && !this.isLocked() && this.passwordHash !== null;
-  }
-
-  needsPasswordReset(): boolean {
-    return this.passwordHash === null;
-  }
-
-  shouldReceiveEmails(): boolean {
-    return this.isActive && this.emailNotifications;
-  }
-
-  shouldReceiveMarketing(): boolean {
-    return this.isActive && this.marketingEmails && this.emailNotifications;
-  }
-
-  // ✅ ADD: Multi-tenancy helper
-  belongsToOrganization(organizationId: string): boolean {
-    return this.organizationId === organizationId;
-  }
-
-  // ============================================
-  // SERIALIZATION
-  // ============================================
-
-  toDatabase(): User {
+  toDatabase(): Omit<User, never> {
     return {
       id: this.id,
-      email: this.email,
+      organization_id: this.organization_id,
       name: this.name,
-      organizationId: this.organizationId, // ✅ FIX: Add missing field
+      email: this.email,
       image: this.image,
-      emailVerified: this.emailVerified,
-      passwordHash: this.passwordHash,
-      isActive: this.isActive,
-      isSuperAdmin: this.isSuperAdmin,
-      isEmailVerified: this.isEmailVerified,
-      lastLoginAt: this.lastLoginAt,
-      lastLoginIp: this.lastLoginIp,
-      loginAttempts: this.loginAttempts,
-      lockedUntil: this.lockedUntil,
-      firstName: this.firstName,
-      lastName: this.lastName,
-      avatarUrl: this.avatarUrl,
+      email_verified: this.email_verified,
+      password_hash: this.password_hash,
+      is_active: this.is_active,
+      is_super_admin: this.is_super_admin,
+      is_email_verified: this.is_email_verified,
+      last_login_at: this.last_login_at,
+      last_login_ip: this.last_login_ip,
+      login_attempts: this.login_attempts,
+      locked_until: this.locked_until,
+      first_name: this.first_name,
+      last_name: this.last_name,
+      avatar_url: this.avatar_url,
       timezone: this.timezone,
       locale: this.locale,
-      emailNotifications: this.emailNotifications,
-      marketingEmails: this.marketingEmails,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      deletedAt: this.deletedAt,
+      email_notifications: this.email_notifications,
+      marketing_emails: this.marketing_emails,
+      created_at: this.created_at,
+      updated_at: this.updated_at,
+      deleted_at: this.deleted_at,
     };
   }
 
-  toPublic() {
-    return {
-      id: this.id,
-      name: this.getDisplayName(),
-      email: this.email,
-      image: this.image || this.avatarUrl,
-      initials: this.getInitials(),
-      createdAt: this.createdAt,
+  get fullName(): string {
+    if (this.first_name && this.last_name) {
+      return `${this.first_name} ${this.last_name}`;
+    }
+    return this.name || this.email;
+  }
+
+  get isLocked(): boolean {
+    return this.locked_until ? new Date() < this.locked_until : false;
+  }
+
+  get canLogin(): boolean {
+    return this.is_active && this.is_email_verified && !this.isLocked && !this.deleted_at;
+  }
+
+  isOwnerOf(organizationId: string): boolean {
+    return this.organization_id === organizationId && this.is_super_admin;
+  }
+}
+
+export class UserEntityBuilder {
+  private data: Partial<User> = {};
+
+  constructor(email: string) {
+    this.data = {
+      id: crypto.randomUUID(),
+      email,
+      is_active: true,
+      is_super_admin: false,
+      is_email_verified: false,
+      login_attempts: 0,
+      timezone: 'UTC',
+      locale: 'en',
+      email_notifications: true,
+      marketing_emails: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+      deleted_at: null,
     };
   }
 
-  toProfile() {
-    return {
-      id: this.id,
-      email: this.email,
-      name: this.name,
-      organizationId: this.organizationId, // ✅ ADD: Multi-tenancy
-      firstName: this.firstName,
-      lastName: this.lastName,
-      displayName: this.getDisplayName(),
-      image: this.image,
-      avatarUrl: this.avatarUrl,
-      timezone: this.timezone,
-      locale: this.locale,
-      emailVerified: this.emailVerified,
-      isEmailVerified: this.isEmailVerified,
-      emailNotifications: this.emailNotifications,
-      marketingEmails: this.marketingEmails,
-      lastLoginAt: this.lastLoginAt,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
+  withId(id: string): UserEntityBuilder {
+    this.data.id = id;
+    return this;
   }
 
-  // Update methods
-  updateProfile(data: {
-    name?: string | null;
-    firstName?: string | null;
-    lastName?: string | null;
-    timezone?: string;
-    locale?: string;
-  }): UserEntity {
-    return new UserEntity(
-      this.id,
-      this.email,
-      data.name !== undefined ? data.name : this.name,
-      this.organizationId, // ✅ ADD: Multi-tenancy
-      this.image,
-      this.emailVerified,
-      this.passwordHash,
-      this.isActive,
-      this.isSuperAdmin,
-      this.isEmailVerified,
-      this.lastLoginAt,
-      this.lastLoginIp,
-      this.loginAttempts,
-      this.lockedUntil,
-      data.firstName !== undefined ? data.firstName : this.firstName,
-      data.lastName !== undefined ? data.lastName : this.lastName,
-      this.avatarUrl,
-      data.timezone || this.timezone,
-      data.locale || this.locale,
-      this.emailNotifications,
-      this.marketingEmails,
-      this.createdAt,
-      new Date(),
-      this.deletedAt
-    );
+  withOrganization(organizationId: string): UserEntityBuilder {
+    this.data.organization_id = organizationId;
+    return this;
   }
 
-  recordLogin(ipAddress?: string): UserEntity {
-    return new UserEntity(
-      this.id,
-      this.email,
-      this.name,
-      this.organizationId, // ✅ ADD: Multi-tenancy
-      this.image,
-      this.emailVerified,
-      this.passwordHash,
-      this.isActive,
-      this.isSuperAdmin,
-      this.isEmailVerified,
-      new Date(),
-      ipAddress || this.lastLoginIp,
-      '0',
-      null,
-      this.firstName,
-      this.lastName,
-      this.avatarUrl,
-      this.timezone,
-      this.locale,
-      this.emailNotifications,
-      this.marketingEmails,
-      this.createdAt,
-      new Date(),
-      this.deletedAt
-    );
+  withName(name: string): UserEntityBuilder {
+    this.data.name = name;
+    return this;
   }
 
-  verifyEmail(): UserEntity {
-    return new UserEntity(
-      this.id,
-      this.email,
-      this.name,
-      this.organizationId, // ✅ ADD: Multi-tenancy
-      this.image,
-      new Date(),
-      this.passwordHash,
-      this.isActive,
-      this.isSuperAdmin,
-      true,
-      this.lastLoginAt,
-      this.lastLoginIp,
-      this.loginAttempts,
-      this.lockedUntil,
-      this.firstName,
-      this.lastName,
-      this.avatarUrl,
-      this.timezone,
-      this.locale,
-      this.emailNotifications,
-      this.marketingEmails,
-      this.createdAt,
-      new Date(),
-      this.deletedAt
-    );
+  withPassword(passwordHash: string): UserEntityBuilder {
+    this.data.password_hash = passwordHash;
+    return this;
+  }
+
+  withEmailVerified(verified: boolean = true): UserEntityBuilder {
+    this.data.is_email_verified = verified;
+    this.data.email_verified = verified ? new Date() : null;
+    return this;
+  }
+
+  withSuperAdmin(isSuperAdmin: boolean = true): UserEntityBuilder {
+    this.data.is_super_admin = isSuperAdmin;
+    return this;
+  }
+
+  withProfile(firstName: string, lastName: string): UserEntityBuilder {
+    this.data.first_name = firstName;
+    this.data.last_name = lastName;
+    return this;
+  }
+
+  withTimezone(timezone: string): UserEntityBuilder {
+    this.data.timezone = timezone;
+    return this;
+  }
+
+  withLocale(locale: string): UserEntityBuilder {
+    this.data.locale = locale;
+    return this;
+  }
+
+  build(): UserEntity {
+    if (!this.data.email) {
+      throw new Error('Email is required to build UserEntity');
+    }
+
+    return UserEntity.fromDatabase(this.data as User);
   }
 }

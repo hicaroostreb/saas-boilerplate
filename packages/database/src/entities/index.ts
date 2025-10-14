@@ -1,15 +1,9 @@
+// packages/database/src/entities/index.ts
 // ============================================
-// ENTITIES MASTER BARREL EXPORTS
+// ENTITIES BARREL EXPORTS - ENTERPRISE
 // ============================================
 
-// Auth entities
-export * from './auth';
-
-// Business entities (placeholder for future)
-// export * from './business'
-
-// Security entities (placeholder for future)
-// export * from './security'
-
-// Activity entities (placeholder for future)
-// export * from './activity'
+export {
+  UserEntity,
+  UserEntityBuilder,
+} from './auth/user.entity';

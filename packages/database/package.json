@@ -33,40 +33,18 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "echo '⚠️ Tests not configured yet'",
-    "lint": "echo '✅ Database lint disabled - contains generated code and scripts'",
-    "format": "echo '✅ Database format disabled - contains generated code and scripts'",
-    "format:check": "echo '✅ Database format:check disabled - contains generated code and scripts'",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:pull": "drizzle-kit pull",
-    "db:studio": "drizzle-kit studio",
-    "db:drop": "drizzle-kit drop",
-    "db:seed": "tsx src/scripts/seed.ts",
-    "db:seed:framework": "tsx src/seeders/index.ts",
-    "db:seed:dev": "NODE_ENV=development tsx src/seeders/index.ts",
-    "db:seed:prod": "NODE_ENV=production tsx src/seeders/index.ts",
-    "db:seed:test": "NODE_ENV=test tsx src/seeders/index.ts",
-    "db:reset": "bun run db:drop && bun run db:push && bun run db:seed",
-    "db:health": "tsx -e \"import('./dist/index.js').then(m => m.checkDatabaseHealth().then(console.log))\""
+    "db:studio": "drizzle-kit studio --host 0.0.0.0 --port 3001",
+    "db:seed": "bun run src/scripts/seed.ts"
   },
   "dependencies": {
-    "@types/pg": "^8.11.0",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^17.2.2",
-    "drizzle-orm": "^0.44.5",
-    "postgres": "^3.4.7"
+    "dotenv": "^16.4.7",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/bun": "^1.2.23",
-    "@types/node": "^20.14.0",
-    "drizzle-kit": "^0.31.5",
-    "tsx": "^4.19.0",
     "typescript": "^5.9.2"
   }
 }

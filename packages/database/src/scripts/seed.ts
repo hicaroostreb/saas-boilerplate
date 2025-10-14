@@ -1,4 +1,8 @@
-// packages/database/src/scripts/seed.ts - BUILD-TIME SAFE SEEDER
+// packages/database/src/scripts/seed.ts
+// ============================================
+// BUILD-TIME SAFE SEEDER - ENTERPRISE MINIMAL DATA
+// Snake_case fields, auth_audit_logs corrected
+// ============================================
 
 import { config } from 'dotenv';
 import path from 'path';
@@ -8,9 +12,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const envPaths = [
-  path.resolve(__dirname, '../../../../.env.local'),
-  path.resolve(process.cwd(), '.env.local'),
-  path.resolve(__dirname, '../../../.env.local'),
+  '../../.env.local',
+  '../../../.env.local', 
+  '.env.local',
 ];
 
 let envLoaded = false;
@@ -37,7 +41,7 @@ import { randomUUID } from 'crypto';
 import { closeConnection, getDb, healthCheck } from '../connection';
 import { users } from '../schemas/auth';
 import { memberships, organizations } from '../schemas/business';
-import { authAuditLogs } from '../schemas/security';
+import { auth_audit_logs } from '../schemas/security';
 
 const SEED_DATA = {
   user: {
@@ -76,23 +80,38 @@ async function seed() {
     const db = await getDb();
 
     const now = new Date();
-    const tenantId = randomUUID();
-    const organizationId = randomUUID();
-    const userId = randomUUID();
+    const tenant_id = randomUUID();
+    const organization_id = randomUUID();
+    const user_id = randomUUID();
 
     console.log('Creating test user...');
-    const passwordHash = await hashPassword(SEED_DATA.user.password);
+    const password_hash = await hashPassword(SEED_DATA.user.password);
 
     const testUserRecord = {
-      id: userId,
+      id: user_id,
+      organization_id,
       name: SEED_DATA.user.name,
       email: SEED_DATA.user.email.toLowerCase(),
-      password: passwordHash,
-      emailVerified: now,
       image: null,
-      lastActivityAt: now,
-      createdAt: now,
-      updatedAt: now,
+      email_verified: now,
+      password_hash,
+      is_active: true,
+      is_super_admin: false,
+      is_email_verified: true,
+      last_login_at: null,
+      last_login_ip: null,
+      login_attempts: 0,
+      locked_until: null,
+      first_name: 'Test',
+      last_name: 'User',
+      avatar_url: null,
+      timezone: 'UTC',
+      locale: 'en',
+      email_notifications: true,
+      marketing_emails: false,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
 
     const [testUser] = await db
@@ -107,14 +126,41 @@ async function seed() {
     console.log(`User created: ${testUser.email}`);
 
     console.log('Creating test organization...');
+    
     const testOrgRecord = {
-      id: organizationId,
+      id: organization_id,
+      tenant_id,
       name: SEED_DATA.organization.name,
       slug: SEED_DATA.organization.slug,
       description: SEED_DATA.organization.description,
-      ownerId: userId,
-      createdAt: now,
-      updatedAt: now,
+      website: null,
+      logo_url: null,
+      banner_url: null,
+      brand_color: null,
+      is_public: false,
+      allow_join_requests: false,
+      require_approval: true,
+      member_limit: SEED_DATA.organization.maxMembers,
+      project_limit: SEED_DATA.organization.maxProjects,
+      storage_limit: SEED_DATA.organization.maxStorage * 1024 * 1024,
+      contact_email: null,
+      contact_phone: null,
+      address_street: null,
+      address_city: null,
+      address_state: null,
+      address_zip_code: null,
+      address_country: null,
+      tax_id: null,
+      industry: null,
+      company_size: null,
+      plan_type: 'free',
+      billing_email: null,
+      owner_id: user_id,
+      is_active: true,
+      is_verified: true,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
 
     const [testOrg] = await db
@@ -129,15 +175,27 @@ async function seed() {
     console.log(`Organization created: ${testOrg.name}`);
 
     console.log('Creating owner membership...');
+    
     const membershipRecord = {
-      id: randomUUID(),
-      userId: testUser.id,
-      organizationId: testOrg.id,
+      user_id: testUser.id,
+      organization_id: testOrg.id,
       role: 'owner' as const,
+      can_invite: true,
+      can_manage_projects: true,
+      can_manage_members: true,
+      can_manage_billing: true,
+      can_manage_settings: true,
+      can_delete_organization: true,
       status: 'active' as const,
-      joinedAt: now,
-      createdAt: now,
-      updatedAt: now,
+      invited_by: null,
+      invited_at: null,
+      accepted_at: now,
+      last_activity_at: now,
+      title: 'Owner',
+      department: null,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
 
     const [membership] = await db
@@ -153,36 +211,33 @@ async function seed() {
 
     try {
       console.log('Creating audit trail...');
+      
       const auditLogRecord = {
         id: randomUUID(),
-        userId: testUser.id,
-        organizationId: testOrg.id,
-        eventType: 'login_success' as const,
+        user_id: testUser.id,
+        organization_id: testOrg.id,
+        event_type: 'login_success' as const,
         success: true,
-        ipAddress: '127.0.0.1',
-        userAgent: 'seed-script',
-        deviceId: null,
-        location: null,
-        errorMessage: null,
-        metadata: {
-          source: 'seed',
-          operation: 'minimal_seed_complete',
-          userEmail: testUser.email,
-          organizationSlug: testOrg.slug,
-          seedVersion: '1.0.0',
-        },
-        createdAt: now,
+        ip_address: '127.0.0.1',
+        user_agent: 'seed-script',
+        device_id: null,
+        device_fingerprint: null,
+        location_country: null,
+        location_city: null,
+        risk_score: 0,
+        risk_level: 'low' as const,
+        error_message: null,
+        session_id: null,
+        created_at: now,
       };
 
-      await db.insert(authAuditLogs).values(auditLogRecord);
+      await db.insert(auth_audit_logs).values(auditLogRecord);
       console.log('Audit log entry created');
     } catch (error) {
       console.warn('Audit log creation failed (table may not exist):', error);
     }
 
-    console.log(
-      'Achromatic Enterprise minimal seeding completed successfully!'
-    );
+    console.log('Achromatic Enterprise minimal seeding completed successfully!');
     console.log('LOGIN CREDENTIALS:');
     console.log(`   Email: ${SEED_DATA.user.email}`);
     console.log(`   Password: ${SEED_DATA.user.password}`);

@@ -1,104 +1,81 @@
+// packages/database/src/seeders/index.ts
 // ============================================
-// SEEDERS MASTER INDEX - ENTERPRISE FRAMEWORK
+// SEEDERS ORCHESTRATOR - ENTERPRISE
 // ============================================
 
+import type { Database } from '../connection';
+import { getDb } from '../connection';
 import type { SeedOptions } from '../index';
-import { seed as developmentSeed } from '../scripts/seed';
+
+// Seeder imports
+import { developmentSeeder } from './development';
 import { productionSeeder } from './production';
 import { testingSeeder } from './testing';
 
-// ============================================
-// DEVELOPMENT SEEDER (Your existing seed)
-// ============================================
-
-const developmentSeeder = {
-  name: 'Development (Achromatic)',
-  async run(options: SeedOptions): Promise<void> {
-    if (options.verbose) {
-      console.log('🚀 Running Achromatic Enterprise development seed...');
-    }
-
-    // Execute your existing seed
-    await developmentSeed();
-
-    if (options.verbose) {
-      console.log('✅ Achromatic development seed completed');
-    }
-  },
-};
-
-// ============================================
-// ENVIRONMENT-SPECIFIC SEEDERS
-// ============================================
-
-const seedersByEnvironment = {
-  development: [developmentSeeder],
-  production: [productionSeeder],
-  test: [testingSeeder],
+// ENTERPRISE: Seeder registry
+const SEEDERS = {
+  development: developmentSeeder,
+  testing: testingSeeder,
+  production: productionSeeder,
 } as const;
 
-// ============================================
-// MAIN SEEDER FUNCTION
-// ============================================
+export async function runSeeder(
+  environment: keyof typeof SEEDERS,
+  options: Omit<SeedOptions, 'environment'> = {}
+): Promise<void> {
+  const db = await getDb();
+  const seeder = SEEDERS[environment];
 
-export async function runAllSeeders(options: SeedOptions = {}): Promise<void> {
-  const env = (process.env.NODE_ENV ||
-    'development') as keyof typeof seedersByEnvironment;
-  const seeders = seedersByEnvironment[env] ?? seedersByEnvironment.development;
-
-  if (options.verbose) {
-    console.log(`🌱 Running ${env} seeders...`);
-    console.log(`   Environment: ${env}`);
-    console.log(`   Force mode: ${options.force ? 'ON' : 'OFF'}`);
-    console.log(`   Verbose mode: ${options.verbose ? 'ON' : 'OFF'}`);
-    console.log('---');
+  if (!seeder) {
+    throw new Error(`Seeder not found for environment: ${environment}`);
   }
 
-  for (const seeder of seeders) {
-    try {
-      if (options.verbose) {
-        console.log(`🔄 Running seeder: ${seeder.name}`);
-      }
-      await seeder.run(options);
-    } catch (error) {
-      console.error(`❌ Seeder "${seeder.name}" failed:`, error);
-      throw error;
-    }
+  const fullOptions: SeedOptions = {
+    environment,
+    ...options,
+  };
+
+  if (fullOptions.verbose) {
+    console.log(`Running ${environment} seeder...`);
   }
 
-  if (options.verbose) {
-    console.log('---');
-    console.log(`✅ All ${seeders.length} seeders completed successfully`);
+  await seeder(db, fullOptions);
+
+  if (fullOptions.verbose) {
+    console.log(`${environment} seeder completed`);
   }
 }
 
-// ============================================
-// INDIVIDUAL SEEDER EXPORTS
-// ============================================
+export async function runAllSeeders(
+  options: SeedOptions
+): Promise<void> {
+  await runSeeder(options.environment, options);
+}
 
-export { productionSeeder } from './production';
-export { testingSeeder } from './testing';
-export { developmentSeeder };
-
-// ============================================
-// CLI RUNNER (FOR STANDALONE EXECUTION)
-// ============================================
-
+// CLI interface
 if (import.meta.url === `file://${process.argv[1]}`) {
-  // This file is being run directly
-  const forceFlag = process.argv.includes('--force');
-  const verboseFlag = process.argv.includes('--verbose');
+  const args = process.argv.slice(2);
+  const environment = (args[0] || 'development') as keyof typeof SEEDERS;
+  const forceFlag = args.includes('--force');
+  const verboseFlag = args.includes('--verbose');
+
+  if (!SEEDERS[environment]) {
+    console.error(`Invalid environment: ${environment}`);
+    console.error('Available environments:', Object.keys(SEEDERS).join(', '));
+    process.exit(1);
+  }
 
   runAllSeeders({
+    environment,
     force: forceFlag,
     verbose: verboseFlag || true,
   })
     .then(() => {
-      console.log('🎉 Seeding completed successfully!');
+      console.log('All seeders completed successfully');
       process.exit(0);
     })
     .catch(error => {
-      console.error('💥 Seeding failed:', error);
+      console.error('Seeder failed:', error);
       process.exit(1);
     });
 }

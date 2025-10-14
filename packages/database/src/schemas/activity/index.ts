@@ -1,28 +1,27 @@
 // packages/database/src/schemas/activity/index.ts
-
 // ============================================
-// ACTIVITY SCHEMAS BARREL EXPORTS
+// ACTIVITY SCHEMAS BARREL EXPORTS - ENTERPRISE
 // ============================================
 
 // Table exports
 export {
-  activityCategoryEnum,
-  activityLogs,
-  activityTypeEnum,
+  activity_logs,
+  activity_type_enum,
+  activity_resource_enum,
 } from './activity-log.schema';
 
 // Type exports
 export type {
-  ActivityCategory,
-  ActivityChange,
-  ActivityFeedItem,
   ActivityLog,
-  ActivityLogWithOrganization,
-  ActivityLogWithProject,
-  ActivityLogWithUser,
-  ActivitySummary,
-  ActivityType,
   CreateActivityLog,
-  FullActivityLog,
-  TimelineItem,
+  ActivityType,
+  ActivityResource,
+  ActivityChangeData,
+  ActivityMetadata,
+  CreateActivityLogData,
+} from './activity-log.schema';
+
+// Builder export
+export {
+  ActivityLogBuilder,
 } from './activity-log.schema';

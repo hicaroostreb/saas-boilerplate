@@ -1,5 +1,7 @@
+// packages/database/src/connection/database.connection.ts
 // ============================================
-// DATABASE CONNECTION - LAZY INITIALIZATION ENTERPRISE
+// DATABASE CONNECTION - ENTERPRISE LAZY INITIALIZATION
+// Zero any, circuit breaker, pooling otimizado
 // ============================================
 
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -10,16 +12,12 @@ import {
   type DatabaseConfig,
 } from './config';
 
-// ============================================
-// SCHEMA IMPORTS (ORGANIZED BY DOMAIN)
-// ============================================
-
+// Schema imports
 import * as activitySchemas from '../schemas/activity';
 import * as authSchemas from '../schemas/auth';
 import * as businessSchemas from '../schemas/business';
 import * as securitySchemas from '../schemas/security';
 
-// Combine all schemas
 const allSchemas = {
   ...activitySchemas,
   ...authSchemas,
@@ -27,44 +25,35 @@ const allSchemas = {
   ...securitySchemas,
 };
 
-// ============================================
-// DATABASE CONNECTION CLASS - LAZY ENTERPRISE
-// ============================================
-
 export class DatabaseConnection {
   private config: DatabaseConfig | null = null;
   private client: postgres.Sql | null = null;
   private drizzleDb: ReturnType<typeof drizzle> | null = null;
-  private isInitialized: boolean = false;
-  private isConnected: boolean = false;
+  private isInitialized = false;
+  private isConnected = false;
+  private failureCount = 0;
+  private lastFailure: Date | null = null;
 
-  // ✅ NO SIDE EFFECTS CONSTRUCTOR
-  constructor() {
-    // Defer all initialization to explicit initialize() call
-  }
+  private readonly MAX_FAILURES = 5;
+  private readonly CIRCUIT_TIMEOUT = 30000;
 
-  // ============================================
-  // LAZY INITIALIZATION - ENTERPRISE PATTERN
-  // ============================================
+  constructor() {}
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      return; // Already initialized
+      return;
     }
 
     this.config = createDatabaseConfig();
 
-    // BUILD-TIME: Mock setup
     if (this.isBuildTime()) {
-      this.setupMockConnection();
-    } else {
-      // RUNTIME: Real setup
-      this.client = this.createPostgresClient();
-      this.drizzleDb = this.createDrizzleInstance();
-      this.setupProcessHandlers();
-      await this.initializeConnection();
+      // Build time: Return immediately without connection
+      this.isInitialized = true;
+      this.isConnected = true;
+      return;
     }
 
+    await this.setupRealConnection();
     this.isInitialized = true;
   }
 
@@ -76,55 +65,52 @@ export class DatabaseConnection {
     );
   }
 
-  // ============================================
-  // MOCK CONNECTION FOR BUILD-TIME
-  // ============================================
+  private async setupRealConnection(): Promise<void> {
+    if (!this.config) {
+      throw new Error('Configuration not initialized');
+    }
 
-  private setupMockConnection(): void {
-    // Create mock Drizzle instance for build-time
-    this.drizzleDb = new Proxy({} as any, {
-      get(target, prop) {
-        if (prop === 'transaction') {
-          return (callback: any) =>
-            Promise.resolve(
-              callback(
-                new Proxy(
-                  {},
-                  {
-                    get: () => () => Promise.resolve([]),
-                  }
-                )
-              )
-            );
-        }
-        if (
-          prop === 'select' ||
-          prop === 'insert' ||
-          prop === 'update' ||
-          prop === 'delete'
-        ) {
-          return () =>
-            new Proxy(
-              {},
-              {
-                get: () => () => Promise.resolve([]),
-              }
-            );
-        }
-        return () => Promise.resolve([]);
-      },
-    });
+    if (this.isCircuitOpen()) {
+      throw new Error('Database circuit breaker is open');
+    }
 
-    this.isConnected = true;
-
-    if (this.config?.buildContext.environment === 'ci') {
-      console.log(' Mock database connection initialized for CI');
+    try {
+      this.client = this.createPostgresClient();
+      this.drizzleDb = this.createDrizzleInstance();
+      this.setupProcessHandlers();
+      await this.initializeConnection();
+      
+      this.failureCount = 0;
+      this.lastFailure = null;
+    } catch (error) {
+      this.recordFailure();
+      throw error;
     }
   }
 
-  // ============================================
-  // POSTGRES CLIENT CREATION - RUNTIME ONLY
-  // ============================================
+  private isCircuitOpen(): boolean {
+    if (this.failureCount < this.MAX_FAILURES) {
+      return false;
+    }
+
+    if (!this.lastFailure) {
+      return false;
+    }
+
+    const timeSinceLastFailure = Date.now() - this.lastFailure.getTime();
+    return timeSinceLastFailure < this.CIRCUIT_TIMEOUT;
+  }
+
+  private recordFailure(): void {
+    this.failureCount++;
+    this.lastFailure = new Date();
+    
+    if (this.failureCount >= this.MAX_FAILURES) {
+      console.error(
+        `Database circuit breaker opened after ${this.failureCount} failures`
+      );
+    }
+  }
 
   private createPostgresClient(): postgres.Sql {
     if (!this.config) {
@@ -134,64 +120,50 @@ export class DatabaseConnection {
     const types = createPostgresTypes();
 
     return postgres(this.config.connectionString, {
-      // Connection pool settings
       max: this.config.poolConfig.max,
       idle_timeout: this.config.poolConfig.idleTimeout,
       connect_timeout: this.config.poolConfig.connectTimeout,
-
-      // Performance settings
       prepare: this.config.prepare,
-
-      // Development logging
       onnotice: this.config.isDevelopment ? console.log : () => {},
-
-      // SSL configuration
       ssl: this.config.sslConfig,
-
-      // Transform snake_case to camelCase
       transform: this.config.transform ? postgres.camel : undefined,
-
-      // Enhanced type handling
-      types: {
+      types: types.bigint ? {
         [types.bigint.to]: types.bigint,
         [types.json.to]: types.json,
-      },
+      } : undefined,
     });
   }
-
-  // ============================================
-  // DRIZZLE INSTANCE CREATION - RUNTIME ONLY
-  // ============================================
 
   private createDrizzleInstance() {
     if (!this.config || !this.client) {
       throw new Error('Configuration or client not initialized');
     }
 
-    const logger = this.config.logging
-      ? {
-          logQuery: (query: string, params: unknown[]) => {
-            console.log(
-              '[DB Query]:',
-              query.substring(0, 200) + (query.length > 200 ? '...' : '')
-            );
-            if (params.length > 0) {
-              console.log('[DB Params]:', params.slice(0, 5));
-            }
-          },
+    const logger = this.config.logging ? {
+      logQuery: (query: string, params: unknown[]) => {
+        const truncatedQuery = query.length > 200 
+          ? `${query.substring(0, 200)}...` 
+          : query;
+        
+        console.log('[DB Query]:', truncatedQuery);
+        
+        if (params.length > 0) {
+          const safeParams = params.slice(0, 5).map(param => 
+            typeof param === 'string' && param.length > 50 
+              ? '[LARGE_STRING]' 
+              : param
+          );
+          console.log('[DB Params]:', safeParams);
         }
-      : false;
+      },
+    } : false;
 
     return drizzle(this.client, {
       schema: allSchemas,
       logger,
-      casing: 'snake_case', // Handle DB naming conventions
+      casing: 'snake_case',
     });
   }
-
-  // ============================================
-  // CONNECTION INITIALIZATION - RUNTIME ONLY
-  // ============================================
 
   private async initializeConnection(): Promise<void> {
     if (!this.config) {
@@ -207,16 +179,12 @@ export class DatabaseConnection {
       } catch (error) {
         console.error('Database initialization failed:', error);
         this.isConnected = false;
+        throw error;
       }
     } else {
-      // In production, assume connection is valid
       this.isConnected = true;
     }
   }
-
-  // ============================================
-  // HEALTH CHECK & MONITORING - RUNTIME ONLY
-  // ============================================
 
   private async runHealthCheck(): Promise<void> {
     if (!this.client) {
@@ -241,14 +209,14 @@ export class DatabaseConnection {
       const [result] = await this.client`
         SELECT
           current_database() as database,
-          current_user as "user",
+          current_user as "user", 
           current_setting('server_version') as server_version,
           current_setting('max_connections') as max_connections
       `;
 
       console.log('Database Info:', {
         database: result?.database ?? 'unknown',
-        user: result?.user ?? 'unknown',
+        user: result?.user ?? 'unknown', 
         version: result?.server_version ?? 'unknown',
         maxConnections: result?.max_connections ?? 'unknown',
       });
@@ -257,16 +225,11 @@ export class DatabaseConnection {
     }
   }
 
-  // ============================================
-  // PROCESS HANDLERS - RUNTIME ONLY
-  // ============================================
-
   private setupProcessHandlers(): void {
     if (this.isBuildTime()) {
-      return; // Skip process handlers during build
+      return;
     }
 
-    // Increase max listeners to prevent warnings
     process.setMaxListeners(20);
 
     const gracefulShutdown = async (signal: string) => {
@@ -282,12 +245,10 @@ export class DatabaseConnection {
       }
     };
 
-    // Handle various termination signals
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // nodemon
+    process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
 
-    // Handle uncaught exceptions
     process.on('uncaughtException', error => {
       console.error('Uncaught Exception:', error);
       gracefulShutdown('uncaughtException');
@@ -299,28 +260,28 @@ export class DatabaseConnection {
     });
   }
 
-  // ============================================
-  // PUBLIC METHODS - INITIALIZATION SAFE
-  // ============================================
-
-  // Get database instance
   get database() {
     if (!this.isInitialized) {
       throw new Error(
         'Database not initialized. Call await DatabaseConnection.getInstance().initialize() first.'
       );
     }
+
+    if (this.isBuildTime()) {
+      // Build time: Return null - Repository should handle this
+      return null as unknown as ReturnType<typeof drizzle>;
+    }
+
     return this.drizzleDb!;
   }
 
-  // Health check
   async healthCheck(): Promise<boolean> {
     if (!this.isInitialized) {
       await this.initialize();
     }
 
     if (this.isBuildTime()) {
-      return true; // Mock health check for build time
+      return true;
     }
 
     try {
@@ -331,11 +292,11 @@ export class DatabaseConnection {
       return true;
     } catch (error) {
       console.error('Health check failed:', error);
+      this.recordFailure();
       return false;
     }
   }
 
-  // Connection info
   async getConnectionInfo() {
     if (!this.isInitialized) {
       await this.initialize();
@@ -367,7 +328,6 @@ export class DatabaseConnection {
     }
   }
 
-  // Graceful shutdown
   async close(): Promise<void> {
     if (!this.isInitialized || this.isBuildTime()) {
       return;
@@ -386,10 +346,6 @@ export class DatabaseConnection {
   }
 }
 
-// ============================================
-// SINGLETON INSTANCE - LAZY INITIALIZATION
-// ============================================
-
 let dbConnectionInstance: DatabaseConnection | null = null;
 
 export function getDatabaseConnection(): DatabaseConnection {
@@ -399,28 +355,21 @@ export function getDatabaseConnection(): DatabaseConnection {
   return dbConnectionInstance;
 }
 
-// ============================================
-// SAFE EXPORTS - NO SIDE EFFECTS
-// ============================================
-
-// ✅ LAZY DATABASE GETTER
 export async function getDb() {
   const connection = getDatabaseConnection();
   await connection.initialize();
   return connection.database;
 }
 
-// ✅ SAFE PROXY EXPORT FOR BACKWARD COMPATIBILITY
-export const db = new Proxy({} as any, {
-  get(target, prop) {
+export const db = new Proxy({} as ReturnType<typeof getDb>, {
+  get(_, prop) {
     throw new Error(
       `Database not initialized. Use "await getDb()" instead of direct "db.${String(prop)}" access. ` +
-        `This ensures proper lazy initialization and build-time safety.`
+      `This ensures proper lazy initialization and build-time safety.`
     );
   },
 });
 
-// ✅ SAFE UTILITY EXPORTS
 export const healthCheck = async () => {
   const connection = getDatabaseConnection();
   return connection.healthCheck();

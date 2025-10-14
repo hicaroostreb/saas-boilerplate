@@ -1,232 +1,427 @@
+// packages/database/src/schemas/business/contact.schema.ts
 // ============================================
-// CONTACT SCHEMA - SRP: APENAS CONTACT TABLE
+// CONTACTS SCHEMA - ENTERPRISE CRM
 // ============================================
 
-import {
-  boolean,
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
+import { boolean, index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { organizations } from './organization.schema';
 
-// ============================================
-// ENUMS
-// ============================================
-
-export const contactTypeEnum = pgEnum('contact_type', [
+// Contact enums
+export const contact_type_enum = pgEnum('contact_type', [
   'lead',
+  'prospect',
   'customer',
   'partner',
   'vendor',
-  'employee',
   'other',
 ]);
 
-export const contactStatusEnum = pgEnum('contact_status', [
+export const contact_status_enum = pgEnum('contact_status', [
   'active',
   'inactive',
   'archived',
-  'blocked',
+  'deleted',
 ]);
 
-// ============================================
-// CONTACT TABLE DEFINITION
-// ============================================
+export const contact_source_enum = pgEnum('contact_source', [
+  'website',
+  'referral',
+  'social_media',
+  'email_campaign',
+  'cold_outreach',
+  'event',
+  'import',
+  'api',
+  'manual',
+]);
+
+export const contact_method_enum = pgEnum('contact_method', [
+  'email',
+  'phone',
+  'meeting',
+  'social_media',
+  'mail',
+  'other',
+]);
 
 export const contacts = pgTable(
   'contacts',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Relations
-    organizationId: text('organization_id')
+    id: text('id').primaryKey(),
+    organization_id: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    createdBy: text('created_by')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    assignedTo: text('assigned_to').references(() => users.id),
-
-    // Basic info
-    firstName: varchar('first_name', { length: 100 }),
-    lastName: varchar('last_name', { length: 100 }),
-    fullName: varchar('full_name', { length: 200 }).notNull(), // Computed or manual
-
-    // Contact details
-    email: varchar('email', { length: 255 }),
-    phone: varchar('phone', { length: 20 }),
-    mobile: varchar('mobile', { length: 20 }),
-
-    // Company info
-    companyName: varchar('company_name', { length: 200 }),
-    jobTitle: varchar('job_title', { length: 100 }),
-    department: varchar('department', { length: 100 }),
-
-    // Address
-    address: jsonb('address').$type<{
-      street?: string;
-      city?: string;
-      state?: string;
-      zipCode?: string;
-      country?: string;
-    }>(),
-
-    // Social & web
-    website: varchar('website', { length: 255 }),
-    linkedinUrl: varchar('linkedin_url', { length: 255 }),
-    twitterHandle: varchar('twitter_handle', { length: 50 }),
-
+    
+    // Ownership
+    created_by: text('created_by').notNull(), // User who created the contact
+    assigned_to: text('assigned_to'), // User responsible for this contact
+    
+    // Personal information
+    first_name: text('first_name'),
+    last_name: text('last_name'),
+    full_name: text('full_name').notNull(), // Computed or manually set
+    email: text('email'),
+    phone: text('phone'),
+    mobile: text('mobile'),
+    
+    // Professional information
+    company_name: text('company_name'),
+    job_title: text('job_title'),
+    department: text('department'),
+    
+    // Address information
+    address_street: text('address_street'),
+    address_city: text('address_city'),
+    address_state: text('address_state'),
+    address_zip_code: text('address_zip_code'),
+    address_country: text('address_country'),
+    
+    // Social and web presence
+    website: text('website'),
+    linkedin_url: text('linkedin_url'),
+    twitter_handle: text('twitter_handle'),
+    
     // Classification
-    type: contactTypeEnum('type').default('lead').notNull(),
-    status: contactStatusEnum('status').default('active').notNull(),
-
-    // Relationship
-    source: varchar('source', { length: 100 }), // How we got this contact
-    // ✅ FIXED: Self-reference with proper typing
-    referredBy: text('referred_by'),
-
-    // Business details
-    tags: jsonb('tags').$type<string[]>(),
-    notes: text('notes'),
-
-    // Preferences
-    emailOptIn: boolean('email_opt_in').default(true).notNull(),
-    smsOptIn: boolean('sms_opt_in').default(false).notNull(),
-    marketingOptIn: boolean('marketing_opt_in').default(false).notNull(),
-
-    // Activity tracking
-    lastContactedAt: timestamp('last_contacted_at', { mode: 'date' }),
-    lastContactMethod: varchar('last_contact_method', { length: 50 }),
-    nextFollowUpAt: timestamp('next_follow_up_at', { mode: 'date' }),
-
-    // Custom fields
-    customFields: jsonb('custom_fields').$type<Record<string, any>>(),
-
+    type: contact_type_enum('type').notNull().default('lead'),
+    status: contact_status_enum('status').notNull().default('active'),
+    source: contact_source_enum('source').default('manual'),
+    referred_by: text('referred_by'), // Contact ID who referred this contact
+    
     // Metadata
-    metadata: jsonb('metadata').$type<Record<string, any>>(),
-
+    tags: text('tags'), // Comma-separated tags
+    notes: text('notes'), // Internal notes
+    
+    // Communication preferences
+    email_opt_in: boolean('email_opt_in').notNull().default(true),
+    sms_opt_in: boolean('sms_opt_in').notNull().default(false),
+    marketing_opt_in: boolean('marketing_opt_in').notNull().default(false),
+    
+    // Activity tracking
+    last_contacted_at: timestamp('last_contacted_at'),
+    last_contact_method: contact_method_enum('last_contact_method'),
+    next_follow_up_at: timestamp('next_follow_up_at'),
+    
     // Timestamps
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at', { mode: 'date' }),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+    deleted_at: timestamp('deleted_at'), // Soft delete
   },
-  table => ({
-    // Indexes for performance
-    orgIdx: index('contact_org_idx').on(table.organizationId),
-    createdByIdx: index('contact_created_by_idx').on(table.createdBy),
-    assignedToIdx: index('contact_assigned_to_idx').on(table.assignedTo),
-    emailIdx: index('contact_email_idx').on(table.email),
-    fullNameIdx: index('contact_full_name_idx').on(table.fullName),
-    companyIdx: index('contact_company_idx').on(table.companyName),
-    typeIdx: index('contact_type_idx').on(table.type),
-    statusIdx: index('contact_status_idx').on(table.status),
-    createdAtIdx: index('contact_created_at_idx').on(table.createdAt),
-    lastContactedIdx: index('contact_last_contacted_idx').on(
-      table.lastContactedAt
-    ),
-    nextFollowUpIdx: index('contact_next_follow_up_idx').on(
-      table.nextFollowUpAt
-    ),
-    referredByIdx: index('contact_referred_by_idx').on(table.referredBy),
-
-    // Composite indexes
-    orgTypeIdx: index('contact_org_type_idx').on(
-      table.organizationId,
-      table.type
-    ),
-    orgStatusIdx: index('contact_org_status_idx').on(
-      table.organizationId,
-      table.status
-    ),
-    nameEmailIdx: index('contact_name_email_idx').on(
-      table.fullName,
-      table.email
-    ),
+  (table) => ({
+    // Performance indexes
+    orgIdx: index('contacts_org_idx').on(table.organization_id),
+    createdByIdx: index('contacts_created_by_idx').on(table.created_by),
+    assignedToIdx: index('contacts_assigned_to_idx').on(table.assigned_to),
+    
+    // Search indexes
+    nameIdx: index('contacts_name_idx').on(table.full_name),
+    emailIdx: index('contacts_email_idx').on(table.email),
+    phoneIdx: index('contacts_phone_idx').on(table.phone),
+    companyIdx: index('contacts_company_idx').on(table.company_name),
+    
+    // Classification indexes
+    typeIdx: index('contacts_type_idx').on(table.type),
+    statusIdx: index('contacts_status_idx').on(table.status),
+    sourceIdx: index('contacts_source_idx').on(table.source),
+    
+    // Activity indexes
+    lastContactedIdx: index('contacts_last_contacted_idx').on(table.last_contacted_at),
+    nextFollowUpIdx: index('contacts_next_follow_up_idx').on(table.next_follow_up_at),
+    
+    // Communication preferences
+    emailOptInIdx: index('contacts_email_opt_in_idx').on(table.email_opt_in),
+    marketingOptInIdx: index('contacts_marketing_opt_in_idx').on(table.marketing_opt_in),
+    
+    // Soft delete
+    deletedIdx: index('contacts_deleted_idx').on(table.deleted_at),
+    
+    // Composite indexes for common queries
+    orgTypeIdx: index('contacts_org_type_idx').on(table.organization_id, table.type),
+    orgStatusIdx: index('contacts_org_status_idx').on(table.organization_id, table.status),
+    assignedStatusIdx: index('contacts_assigned_status_idx').on(table.assigned_to, table.status),
+    orgActiveIdx: index('contacts_org_active_idx').on(table.organization_id, table.status, table.deleted_at),
+    
+    // Follow-up queries
+    dueTasks: index('contacts_due_follow_up_idx').on(table.next_follow_up_at, table.status),
+    assignedFollowUp: index('contacts_assigned_follow_up_idx').on(table.assigned_to, table.next_follow_up_at),
+    
+    // Timestamps
+    createdIdx: index('contacts_created_idx').on(table.created_at),
+    updatedIdx: index('contacts_updated_idx').on(table.updated_at),
   })
 );
 
-// ============================================
-// CONTACT TYPES
-// ============================================
-
+// Types
 export type Contact = typeof contacts.$inferSelect;
 export type CreateContact = typeof contacts.$inferInsert;
+export type UpdateContact = Partial<Omit<Contact, 'id' | 'organization_id' | 'created_at'>>;
+export type ContactType = typeof contact_type_enum.enumValues[number];
+export type ContactStatus = typeof contact_status_enum.enumValues[number];
+export type ContactSource = typeof contact_source_enum.enumValues[number];
+export type ContactMethod = typeof contact_method_enum.enumValues[number];
 
-// Enum types
-export type ContactType = (typeof contactTypeEnum.enumValues)[number];
-export type ContactStatus = (typeof contactStatusEnum.enumValues)[number];
-
-// Contact with organization info
-export type ContactWithOrganization = Contact & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-};
-
-// Contact with creator info
-export type ContactWithCreator = Contact & {
-  creator: {
+// Extended contact types
+export interface ContactWithOwner extends Contact {
+  created_by_user: {
     id: string;
     name: string | null;
     email: string;
   };
-};
-
-// Contact with assigned user
-export type ContactWithAssignee = Contact & {
-  assignee?: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
-
-// Full contact info
-export type FullContact = Contact & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  creator: {
+  assigned_to_user?: {
     id: string;
     name: string | null;
     email: string;
   };
-  assignee?: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-  referrer?: {
-    id: string;
-    fullName: string;
-  };
-};
+}
 
-// Contact summary for lists
-export type ContactSummary = Pick<
-  Contact,
-  | 'id'
-  | 'fullName'
-  | 'email'
-  | 'phone'
-  | 'companyName'
-  | 'jobTitle'
-  | 'type'
-  | 'status'
-  | 'lastContactedAt'
-  | 'createdAt'
->;
+export interface ContactWithStats extends Contact {
+  interaction_count: number;
+  last_interaction_at: Date | null;
+  conversion_probability: number; // 0-100
+  days_since_created: number;
+  days_since_last_contact: number | null;
+}
+
+export interface ContactSummary {
+  total_contacts: number;
+  active_contacts: number;
+  leads: number;
+  prospects: number;
+  customers: number;
+  partners: number;
+  overdue_follow_ups: number;
+  recent_contacts: number; // Last 30 days
+}
+
+// Contact filtering
+export interface ContactFilters {
+  type?: ContactType[];
+  status?: ContactStatus[];
+  source?: ContactSource[];
+  assigned_to?: string;
+  created_by?: string;
+  has_email?: boolean;
+  has_phone?: boolean;
+  email_opt_in?: boolean;
+  marketing_opt_in?: boolean;
+  has_follow_up?: boolean;
+  is_overdue?: boolean;
+  created_after?: Date;
+  created_before?: Date;
+  last_contacted_after?: Date;
+  last_contacted_before?: Date;
+  tags?: string[];
+  search?: string;
+}
+
+// Helper functions
+export function isContactActive(contact: Contact): boolean {
+  return contact.status === 'active' && !contact.deleted_at;
+}
+
+export function getContactDisplayName(contact: Contact): string {
+  if (contact.full_name) return contact.full_name;
+  if (contact.first_name && contact.last_name) {
+    return `${contact.first_name} ${contact.last_name}`;
+  }
+  if (contact.first_name) return contact.first_name;
+  if (contact.email) return contact.email;
+  return 'Unnamed Contact';
+}
+
+export function getContactInitials(contact: Contact): string {
+  const name = getContactDisplayName(contact);
+  const parts = name.split(' ').filter(Boolean);
+  
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  } else if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  
+  return 'C';
+}
+
+export function getFullAddress(contact: Contact): string | null {
+  const parts = [
+    contact.address_street,
+    contact.address_city,
+    contact.address_state,
+    contact.address_zip_code,
+    contact.address_country,
+  ].filter(Boolean);
+  
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
+// Communication helpers
+export function canSendEmail(contact: Contact): boolean {
+  return Boolean(contact.email && contact.email_opt_in);
+}
+
+export function canSendSMS(contact: Contact): boolean {
+  return Boolean((contact.phone || contact.mobile) && contact.sms_opt_in);
+}
+
+export function canSendMarketing(contact: Contact): boolean {
+  return Boolean(contact.marketing_opt_in && canSendEmail(contact));
+}
+
+// Follow-up helpers
+export function isFollowUpOverdue(contact: Contact): boolean {
+  if (!contact.next_follow_up_at) return false;
+  return new Date() > contact.next_follow_up_at;
+}
+
+export function getDaysUntilFollowUp(contact: Contact): number | null {
+  if (!contact.next_follow_up_at) return null;
+  const now = Date.now();
+  const followUpTime = contact.next_follow_up_at.getTime();
+  return Math.ceil((followUpTime - now) / (1000 * 60 * 60 * 24));
+}
+
+export function getDaysSinceLastContact(contact: Contact): number | null {
+  if (!contact.last_contacted_at) return null;
+  const now = Date.now();
+  const lastContactTime = contact.last_contacted_at.getTime();
+  return Math.floor((now - lastContactTime) / (1000 * 60 * 60 * 24));
+}
+
+export function getDaysSinceCreated(contact: Contact): number {
+  const now = Date.now();
+  const createdTime = contact.created_at.getTime();
+  return Math.floor((now - createdTime) / (1000 * 60 * 60 * 24));
+}
+
+// Tag helpers
+export function parseContactTags(contact: Contact): string[] {
+  if (!contact.tags) return [];
+  return contact.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+}
+
+export function serializeContactTags(tags: string[]): string {
+  return tags.filter(Boolean).map(tag => tag.trim()).join(',');
+}
+
+export function hasTag(contact: Contact, tag: string): boolean {
+  const tags = parseContactTags(contact);
+  return tags.some(t => t.toLowerCase() === tag.toLowerCase());
+}
+
+export function addTag(contact: Contact, newTag: string): string {
+  const currentTags = parseContactTags(contact);
+  if (!hasTag(contact, newTag)) {
+    currentTags.push(newTag.trim());
+  }
+  return serializeContactTags(currentTags);
+}
+
+export function removeTag(contact: Contact, tagToRemove: string): string {
+  const currentTags = parseContactTags(contact);
+  const filteredTags = currentTags.filter(
+    tag => tag.toLowerCase() !== tagToRemove.toLowerCase()
+  );
+  return serializeContactTags(filteredTags);
+}
+
+// Contact validation
+export function validateContactData(contact: Partial<CreateContact>): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  // Require at least name or email
+  if (!contact.full_name && !contact.email) {
+    errors.push('Contact must have either a name or email address');
+  }
+
+  // Validate email format if provided
+  if (contact.email && !isValidEmail(contact.email)) {
+    errors.push('Invalid email address format');
+  }
+
+  // Validate phone format if provided
+  if (contact.phone && !isValidPhone(contact.phone)) {
+    errors.push('Invalid phone number format');
+  }
+
+  // Validate URLs if provided
+  if (contact.website && !isValidUrl(contact.website)) {
+    errors.push('Invalid website URL format');
+  }
+
+  if (contact.linkedin_url && !isValidUrl(contact.linkedin_url)) {
+    errors.push('Invalid LinkedIn URL format');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+// Utility validation functions
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function isValidPhone(phone: string): boolean {
+  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+  return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+}
+
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Contact conversion helpers
+export function getConversionPath(contact: Contact): ContactType[] {
+  // Define typical conversion paths
+  const paths: Record<ContactType, ContactType[]> = {
+    lead: ['prospect', 'customer'],
+    prospect: ['customer', 'partner'],
+    customer: ['partner'],
+    partner: [],
+    vendor: [],
+    other: ['lead', 'prospect', 'customer'],
+  };
+  
+  return paths[contact.type] || [];
+}
+
+export function canConvertTo(currentType: ContactType, targetType: ContactType): boolean {
+  const allowedConversions = getConversionPath({ type: currentType } as Contact);
+  return allowedConversions.includes(targetType);
+}
+
+// Search helpers
+export function getSearchableText(contact: Contact): string {
+  return [
+    contact.full_name,
+    contact.first_name,
+    contact.last_name,
+    contact.email,
+    contact.phone,
+    contact.mobile,
+    contact.company_name,
+    contact.job_title,
+    contact.department,
+    contact.notes,
+    parseContactTags(contact).join(' '),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+export function matchesSearchTerm(contact: Contact, searchTerm: string): boolean {
+  const searchableText = getSearchableText(contact);
+  const normalizedTerm = searchTerm.toLowerCase().trim();
+  return searchableText.includes(normalizedTerm);
+}

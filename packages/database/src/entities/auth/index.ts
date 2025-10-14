@@ -1,6 +1,9 @@
+// packages/database/src/entities/auth/index.ts
 // ============================================
-// AUTH ENTITIES BARREL EXPORTS
+// AUTH ENTITIES BARREL EXPORTS - ENTERPRISE
 // ============================================
 
-export { UserEntity } from './user.entity';
-// Add more auth entities as needed
+export {
+  UserEntity,
+  UserEntityBuilder,
+} from './user.entity';

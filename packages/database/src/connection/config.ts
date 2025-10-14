@@ -1,217 +1,113 @@
-import { config } from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// packages/database/src/connection/config.ts
+// ============================================
+// DATABASE CONFIGURATION - ENTERPRISE
+// ============================================
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+export interface PoolConfig {
+  max: number;
+  idleTimeout: number;
+  connectTimeout: number;
+}
 
-const envPaths = [
-  path.resolve(__dirname, '../../../../.env.local'),
-  path.resolve(process.cwd(), '.env.local'),
-  path.resolve(__dirname, '../../../.env.local'),
-];
-
-let envLoaded = false;
-for (const envPath of envPaths) {
-  try {
-    config({ path: envPath, override: false });
-    if (process.env.DATABASE_URL) {
-      envLoaded = true;
-      break;
-    }
-  } catch (error) {
-    continue;
-  }
+export interface SSLConfig {
+  rejectUnauthorized: boolean;
+  ca?: string;
+  key?: string;
+  cert?: string;
 }
 
 export interface BuildContext {
   isBuild: boolean;
   isCI: boolean;
-  isStatic: boolean;
-  isRuntime: boolean;
-  environment: 'build' | 'ci' | 'development' | 'production' | 'test';
+  environment: string;
 }
 
 export interface DatabaseConfig {
   connectionString: string;
-  isProduction: boolean;
-  isDevelopment: boolean;
-  poolConfig: {
-    max: number;
-    idleTimeout: number;
-    maxLifetime: number;
-    connectTimeout: number;
-  };
-  sslConfig:
-    | {
-        rejectUnauthorized: boolean;
-      }
-    | false;
+  poolConfig: PoolConfig;
+  sslConfig: SSLConfig | false;
   logging: boolean;
   prepare: boolean;
   transform: boolean;
+  isDevelopment: boolean;
   buildContext: BuildContext;
 }
 
-export interface PostgresTypeConfig {
-  bigint: {
-    to: number;
-    from: number[];
-    serialize: (x: any) => string;
-    parse: (x: string) => number;
-  };
-  json: {
-    to: number;
-    from: number[];
-    serialize: (x: any) => string;
-    parse: (x: string) => any;
-  };
-}
-
-export function detectBuildContext(): BuildContext {
-  const isBuild =
-    process.env.NODE_ENV === 'production' &&
-    !process.env.VERCEL_ENV &&
-    !process.env.RAILWAY_ENVIRONMENT &&
-    !process.env.RUNTIME_ENV;
-
-  const isCI =
-    process.env.CI === 'true' ||
-    !!process.env.GITHUB_ACTIONS ||
-    !!process.env.GITLAB_CI ||
-    !!process.env.JENKINS_URL;
-
-  const isStatic = process.env.__NEXT_ROUTER_BASEPATH !== undefined;
-
-  const isRuntime = !!(
-    process.env.VERCEL_ENV ||
-    process.env.RAILWAY_ENVIRONMENT ||
-    process.env.RUNTIME_ENV ||
-    process.env.DOCKER_ENV
-  );
-
-  let environment: BuildContext['environment'] = 'development';
-
-  if (isBuild || isCI) {
-    environment = isCI ? 'ci' : 'build';
-  } else if (process.env.NODE_ENV === 'production') {
-    environment = 'production';
-  } else if (process.env.NODE_ENV === 'test') {
-    environment = 'test';
-  }
-
-  return { isBuild, isCI, isStatic, isRuntime, environment };
-}
-
-function validateDatabaseUrl(): string {
-  const context = detectBuildContext();
-
-  if (context.isBuild || context.isCI) {
-    if (context.environment === 'ci') {
-      console.log('CI Environment: Using mock database URL');
-    }
-    return 'postgresql://mock:mock@localhost:5432/mock';
-  }
-
+export function createDatabaseConfig(): DatabaseConfig {
   const connectionString = process.env.DATABASE_URL;
-
+  
   if (!connectionString) {
-    console.error('DATABASE_URL not found');
     throw new Error('DATABASE_URL environment variable is required');
   }
 
-  return connectionString;
-}
-
-export function createDatabaseConfig(): DatabaseConfig {
-  const context = detectBuildContext();
-
-  if (!context.isBuild && !context.isCI) {
-    // Load environment only for runtime
-  }
-
-  const connectionString = validateDatabaseUrl();
-  const isProduction =
-    process.env.NODE_ENV === 'production' && context.isRuntime;
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isTest = process.env.NODE_ENV === 'test';
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const isCI = process.env.CI === 'true';
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
 
   return {
     connectionString,
-    isProduction,
-    isDevelopment,
     poolConfig: {
-      max:
-        context.isBuild || context.isCI
-          ? 1
-          : isProduction
-            ? 20
-            : isTest
-              ? 2
-              : 5,
-      idleTimeout: context.isBuild || context.isCI ? 1 : isProduction ? 20 : 10,
-      maxLifetime:
-        context.isBuild || context.isCI ? 1 : isProduction ? 60 * 60 : 60 * 30,
-      connectTimeout: context.isBuild || context.isCI ? 1 : 30,
+      max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '10', 10),
+      idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '30', 10),
+      connectTimeout: parseInt(process.env.DATABASE_CONNECT_TIMEOUT || '10', 10),
     },
-    sslConfig:
-      isProduction && context.isRuntime ? { rejectUnauthorized: false } : false,
-    logging: isDevelopment && !context.isBuild && !context.isCI,
-    prepare: false,
-    transform: !context.isBuild && !context.isCI,
-    buildContext: context,
+    sslConfig: createSSLConfig(),
+    logging: isDevelopment && process.env.DATABASE_LOGGING !== 'false',
+    prepare: process.env.DATABASE_PREPARE !== 'false',
+    transform: process.env.DATABASE_TRANSFORM_KEYS === 'true',
+    isDevelopment,
+    buildContext: {
+      isBuild,
+      isCI,
+      environment: process.env.NODE_ENV || 'development',
+    },
   };
 }
 
-export function createPostgresTypes(): PostgresTypeConfig {
+function createSSLConfig(): SSLConfig | false {
+  if (process.env.DATABASE_SSL === 'false') {
+    return false;
+  }
+
+  // Production defaults to SSL
+  if (process.env.NODE_ENV === 'production') {
+    return {
+      rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+      ca: process.env.DATABASE_SSL_CA,
+      key: process.env.DATABASE_SSL_KEY,
+      cert: process.env.DATABASE_SSL_CERT,
+    };
+  }
+
+  // Development SSL optional
+  if (process.env.DATABASE_SSL === 'true') {
+    return {
+      rejectUnauthorized: false,
+    };
+  }
+
+  return false;
+}
+
+export function createPostgresTypes() {
   return {
-    bigint: {
+    bigint: process.env.DATABASE_BIGINT_AS_NUMBER === 'true' ? {
       to: 20,
       from: [20],
-      serialize: (x: any) => x.toString(),
-      parse: (x: string) => parseInt(x, 10),
-    },
+      parse: (value: string) => parseInt(value, 10),
+      serialize: (value: number) => value.toString(),
+    } : null,
     json: {
       to: 114,
       from: [114, 3802],
-      serialize: (x: any) => JSON.stringify(x),
-      parse: (x: string) => {
+      parse: (value: string) => {
         try {
-          return JSON.parse(x);
+          return JSON.parse(value);
         } catch {
-          return x;
+          return value;
         }
       },
+      serialize: JSON.stringify,
     },
-  };
-}
-
-export function validateEnvironment(): void {
-  const context = detectBuildContext();
-
-  if (context.isBuild || context.isCI) {
-    return;
-  }
-
-  const required = ['DATABASE_URL'];
-  const missing = required.filter(key => !process.env[key]);
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`
-    );
-  }
-}
-
-export function getConnectionInfo() {
-  const config = createDatabaseConfig();
-
-  return {
-    isProduction: config.isProduction,
-    isDevelopment: config.isDevelopment,
-    poolSize: config.poolConfig.max,
-    sslEnabled: !!config.sslConfig,
-    loggingEnabled: config.logging,
-    buildContext: config.buildContext,
   };
 }

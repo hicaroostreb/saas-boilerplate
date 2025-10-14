@@ -1,39 +1,36 @@
 // packages/database/src/schemas/security/index.ts
-
 // ============================================
-// SECURITY SCHEMAS BARREL EXPORTS
+// SECURITY SCHEMAS BARREL EXPORTS - ENTERPRISE
 // ============================================
 
 // Table exports
 export {
-  authAuditLogs,
-  authEventTypeEnum,
-  authRiskLevelEnum,
+  auth_audit_logs,
+  auth_event_type_enum,
+  auth_risk_level_enum,
 } from './auth-audit-log.schema';
 
 export {
-  rateLimitTypeEnum,
-  rateLimitWindowEnum,
-  rateLimits,
+  rate_limit_type_enum,
+  rate_limit_window_enum,
+  rate_limits,
 } from './rate-limit.schema';
 
 export {
-  passwordResetTokens,
-  requestSourceEnum,
-  tokenStatusEnum,
+  password_reset_tokens,
+  request_source_enum,
+  token_status_enum,
 } from './password-reset-token.schema';
 
 // Type exports - Auth Audit Logs
 export type {
   AuthAuditLog,
-  AuthAuditLogWithUser,
   AuthEventType,
   AuthRiskLevel,
   CreateAuthAuditLog,
   DeviceInfo,
   LocationInfo,
   RiskAssessment,
-  SecurityEventSummary,
 } from './auth-audit-log.schema';
 
 // Type exports - Rate Limits
@@ -42,21 +39,16 @@ export type {
   RateLimit,
   RateLimitConfig,
   RateLimitResult,
-  RateLimitSummary,
   RateLimitType,
   RateLimitWindow,
-  RateLimitWithUser,
 } from './rate-limit.schema';
 
-// Type exports - Password Reset Tokens
+// Type exports - Password Reset Tokens  
 export type {
   CreatePasswordResetToken,
   PasswordResetToken,
-  PasswordResetTokenWithUser,
   RequestSource,
-  SecurityAlert,
   TokenCreationRequest,
   TokenStatus,
-  TokenUsageSummary,
   TokenValidationResult,
 } from './password-reset-token.schema';

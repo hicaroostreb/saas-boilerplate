@@ -1,30 +1,36 @@
 // packages/database/src/repositories/index.ts
-
 // ============================================
-// REPOSITORIES MASTER BARREL EXPORTS
+// REPOSITORIES BARREL EXPORTS - ENTERPRISE COMPLETE
 // ============================================
 
-// Contracts (interfaces)
-export * from './contracts';
+// Factory exports
+export {
+  createRepositoryFactory,
+  createRepositories,
+  type RepositoryFactory,
+  type RepositoryRegistry,
+} from './factory';
 
-// Implementations
-export * from './implementations';
+// Contract exports
+export type {
+  IUserRepository,
+  UserQueryOptions,
+  UserFilterOptions,
+  ISessionRepository,
+  SessionData,
+  CreateSessionData,
+  SessionListItem,
+  IOrganizationRepository,
+  IAuditRepository,
+  SecurityMetrics,
+  IRateLimitRepository,
+} from './contracts';
 
-// Repository factory
-import type { Database } from '../connection';
-import { DrizzleUserRepository } from './implementations';
-
-export class RepositoryFactory {
-  constructor(private db: Database) {}
-
-  createUserRepository() {
-    return new DrizzleUserRepository(this.db);
-  }
-
-  // Add more repository factories as we implement them
-}
-
-// Convenience function
-export function createRepositories(db: Database) {
-  return new RepositoryFactory(db);
-}
+// Implementation exports
+export {
+  DrizzleUserRepository,
+  DrizzleSessionRepository,
+  DrizzleOrganizationRepository,
+  DrizzleAuditRepository,
+  DrizzleRateLimitRepository,
+} from './implementations';
