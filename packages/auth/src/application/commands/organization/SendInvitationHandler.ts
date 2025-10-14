@@ -1,7 +1,10 @@
-import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
-import type { InvitationRepositoryPort } from '../../../domain/ports/InvitationRepositoryPort';
 import { Invitation } from '../../../domain/entities/Invitation';
-import type { SendInvitationDTO, SendInvitationResult } from '../../dto/organization/SendInvitationDTO';
+import type { InvitationRepositoryPort } from '../../../domain/ports/InvitationRepositoryPort';
+import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
+import type {
+  SendInvitationDTO,
+  SendInvitationResult,
+} from '../../dto/organization/SendInvitationDTO';
 
 export class SendInvitationHandler {
   constructor(
@@ -9,7 +12,10 @@ export class SendInvitationHandler {
     private inviteRepo: InvitationRepositoryPort
   ) {}
 
-  public async execute(data: SendInvitationDTO, invitedBy: string): Promise<SendInvitationResult> {
+  public async execute(
+    data: SendInvitationDTO,
+    invitedBy: string
+  ): Promise<SendInvitationResult> {
     // ✅ Verificar se organização existe
     const organization = await this.orgRepo.findById(data.organizationId);
     if (!organization) {

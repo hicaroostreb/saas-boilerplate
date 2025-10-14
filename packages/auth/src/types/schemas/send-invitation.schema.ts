@@ -16,11 +16,11 @@ export const sendInvitationSchema = z.object({
     .email('Please enter a valid email address')
     .trim(),
 
-  role: z
-    .enum(['owner', 'admin', 'manager', 'member', 'viewer'], {
-      required_error: 'Role is required',
-      invalid_type_error: 'Role must be one of: owner, admin, manager, member, viewer',
-    }),
+  role: z.enum(['owner', 'admin', 'manager', 'member', 'viewer'], {
+    required_error: 'Role is required',
+    invalid_type_error:
+      'Role must be one of: owner, admin, manager, member, viewer',
+  }),
 
   message: z
     .string()

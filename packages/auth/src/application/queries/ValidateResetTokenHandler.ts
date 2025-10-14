@@ -12,7 +12,9 @@ export interface ValidateResetTokenResult {
 export class ValidateResetTokenHandler {
   constructor(private sessionRepo: SessionRepositoryPort) {}
 
-  public async execute(data: ValidateResetTokenDTO): Promise<ValidateResetTokenResult> {
+  public async execute(
+    data: ValidateResetTokenDTO
+  ): Promise<ValidateResetTokenResult> {
     try {
       // ✅ Buscar token no repositório
       const resetSession = await this.sessionRepo.findByToken(data.token);

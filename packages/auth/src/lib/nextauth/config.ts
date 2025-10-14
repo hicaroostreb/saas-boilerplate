@@ -41,29 +41,35 @@ export const authConfig: NextAuthConfig = {
         }
 
         try {
-          // Usar SignInHandler da Clean Architecture ao invés do flow
-          const { SignInHandler } = await import('../../application/commands/SignInHandler');
-          const { DrizzleUserRepository } = await import('../../infrastructure/repositories/DrizzleUserRepository');
-          const { BcryptPasswordHasher } = await import('../../infrastructure/services/BcryptPasswordHasher');
+          // Usar SignInHandler da Clean Architecture
+          const { SignInHandler } = await import(
+            '../../application/commands/SignInHandler'
+          );
+          const { DrizzleUserRepository } = await import(
+            '../../infrastructure/repositories/DrizzleUserRepository'
+          );
+          const { BcryptPasswordHasher } = await import(
+            '../../infrastructure/services/BcryptPasswordHasher'
+          );
 
           const userRepository = new DrizzleUserRepository();
           const passwordHasher = new BcryptPasswordHasher();
-          const signInHandler = new SignInHandler(userRepository, passwordHasher);
+          const signInHandler = new SignInHandler(
+            userRepository,
+            passwordHasher
+          );
 
-          const result = await signInHandler.handle({
+          // ✅ Método correto: execute (não handle)
+          // ✅ Retorna UserProfileDTO diretamente (não { success, data })
+          const userProfile = await signInHandler.execute({
             email: credentials.email as string,
             password: credentials.password as string,
           });
 
-          if (!result.success || !result.data) {
-            console.warn('NextAuth: Sign-in failed:', result.error);
-            return null;
-          }
-
           return {
-            id: result.data.id,
-            email: result.data.email,
-            name: result.data.name,
+            id: userProfile.id,
+            email: userProfile.email,
+            name: userProfile.name,
           };
         } catch (error) {
           console.error('NextAuth: Sign-in error:', error);

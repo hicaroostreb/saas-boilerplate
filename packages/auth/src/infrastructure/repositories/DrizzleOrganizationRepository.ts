@@ -1,17 +1,19 @@
-import { and, eq, isNull, sql, desc } from 'drizzle-orm';
-import type { OrganizationRepositoryPort } from '../../domain/ports/OrganizationRepositoryPort';
-import { Organization } from '../../domain/entities/Organization';
 import {
   getDb,
-  organizations,
   memberships,
+  organizations,
   type CreateOrganization,
 } from '@workspace/database';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { Organization } from '../../domain/entities/Organization';
+import type { OrganizationRepositoryPort } from '../../domain/ports/OrganizationRepositoryPort';
 
 /**
  * Implementação concreta do OrganizationRepositoryPort usando Drizzle
  */
-export class DrizzleOrganizationRepository implements OrganizationRepositoryPort {
+export class DrizzleOrganizationRepository
+  implements OrganizationRepositoryPort
+{
   async findById(id: string): Promise<Organization | null> {
     try {
       const db = await getDb();
@@ -34,12 +36,17 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
       const [dbOrg] = await db
         .select()
         .from(organizations)
-        .where(and(eq(organizations.slug, slug), isNull(organizations.deleted_at)))
+        .where(
+          and(eq(organizations.slug, slug), isNull(organizations.deleted_at))
+        )
         .limit(1);
 
       return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
     } catch (error) {
-      console.error('❌ DrizzleOrganizationRepository findBySlug error:', error);
+      console.error(
+        '❌ DrizzleOrganizationRepository findBySlug error:',
+        error
+      );
       return null;
     }
   }
@@ -47,7 +54,7 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
   async create(organization: Organization): Promise<Organization> {
     try {
       const db = await getDb();
-      
+
       const createData: CreateOrganization = {
         id: organization.id,
         tenant_id: organization.tenantId,
@@ -55,7 +62,10 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
         slug: organization.slug,
         description: organization.description,
         owner_id: organization.ownerId,
-        plan_type: organization.planType as any,
+        plan_type: organization.planType as
+          | 'free'
+          | 'professional'
+          | 'enterprise', // ✅ Tipo específico
         member_limit: organization.memberLimit,
         is_active: organization.isActive,
         is_verified: organization.isVerified,
@@ -85,24 +95,31 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
       const [result] = await db
         .select({ count: sql<number>`count(*)` })
         .from(organizations)
-        .where(and(eq(organizations.slug, slug), isNull(organizations.deleted_at)))
+        .where(
+          and(eq(organizations.slug, slug), isNull(organizations.deleted_at))
+        )
         .limit(1);
 
       return Number(result?.count ?? 0) > 0;
     } catch (error) {
-      console.error('❌ DrizzleOrganizationRepository existsBySlug error:', error);
+      console.error(
+        '❌ DrizzleOrganizationRepository existsBySlug error:',
+        error
+      );
       return false;
     }
   }
 
-  async findByUserId(userId: string): Promise<Array<{
-    organization: Organization;
-    role: string;
-    status: string;
-  }>> {
+  async findByUserId(userId: string): Promise<
+    Array<{
+      organization: Organization;
+      role: string;
+      status: string;
+    }>
+  > {
     try {
       const db = await getDb();
-      
+
       const userOrgs = await db
         .select({
           organization: organizations,
@@ -110,7 +127,10 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
           status: memberships.status,
         })
         .from(organizations)
-        .innerJoin(memberships, eq(memberships.organization_id, organizations.id))
+        .innerJoin(
+          memberships,
+          eq(memberships.organization_id, organizations.id)
+        )
         .where(
           and(
             eq(memberships.user_id, userId),
@@ -126,12 +146,18 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
         status: userOrg.status,
       }));
     } catch (error) {
-      console.error('❌ DrizzleOrganizationRepository findByUserId error:', error);
+      console.error(
+        '❌ DrizzleOrganizationRepository findByUserId error:',
+        error
+      );
       return [];
     }
   }
 
-  private mapToDomainEntity(dbOrg: any): Organization {
+  // ✅ Tipo específico do Drizzle
+  private mapToDomainEntity(
+    dbOrg: typeof organizations.$inferSelect
+  ): Organization {
     return Organization.reconstitute({
       id: dbOrg.id,
       tenantId: dbOrg.tenant_id,

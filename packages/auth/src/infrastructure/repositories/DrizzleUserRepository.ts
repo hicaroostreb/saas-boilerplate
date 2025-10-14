@@ -1,12 +1,7 @@
+import { getDb, users, type CreateUser } from '@workspace/database';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 import { User } from '../../domain/entities/User';
-import { Email } from '../../domain/value-objects/Email';
-import {
-  getDb,
-  users,
-  type CreateUser,
-} from '@workspace/database';
+import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 
 /**
  * Implementação concreta do UserRepositoryPort usando Drizzle
@@ -53,7 +48,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async create(user: User, passwordHash: string): Promise<User> {
     try {
       const db = await getDb();
-      
+
       const createData: CreateUser = {
         id: user.id,
         email: user.email.value,
@@ -64,10 +59,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
         updated_at: user.updatedAt,
       };
 
-      const [dbUser] = await db
-        .insert(users)
-        .values(createData)
-        .returning();
+      const [dbUser] = await db.insert(users).values(createData).returning();
 
       if (!dbUser) {
         throw new Error('Failed to create user');
@@ -106,11 +98,15 @@ export class DrizzleUserRepository implements UserRepositoryPort {
         })
         .where(eq(users.id, userId));
     } catch (error) {
-      console.error('❌ DrizzleUserRepository incrementLoginAttempts error:', error);
+      console.error(
+        '❌ DrizzleUserRepository incrementLoginAttempts error:',
+        error
+      );
     }
   }
 
-  private mapToDomainEntity(dbUser: any): User {
+  // ✅ Tipo específico do Drizzle
+  private mapToDomainEntity(dbUser: typeof users.$inferSelect): User {
     return User.reconstitute({
       id: dbUser.id,
       email: dbUser.email, // ✅ STRING (não Email object)

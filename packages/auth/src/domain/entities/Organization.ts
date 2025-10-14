@@ -29,7 +29,7 @@ export class Organization {
     description?: string;
   }): Organization {
     const now = new Date();
-    
+
     return new Organization({
       id: generateSecureId(),
       tenantId: data.tenantId ?? generateSecureId(8),
@@ -51,18 +51,42 @@ export class Organization {
   }
 
   // Getters
-  public get id(): string { return this.props.id; }
-  public get tenantId(): string { return this.props.tenantId; }
-  public get name(): string { return this.props.name; }
-  public get slug(): string { return this.props.slug; }
-  public get description(): string | null { return this.props.description; }
-  public get ownerId(): string { return this.props.ownerId; }
-  public get isActive(): boolean { return this.props.isActive; }
-  public get isVerified(): boolean { return this.props.isVerified; }
-  public get planType(): string { return this.props.planType; }
-  public get memberLimit(): number { return this.props.memberLimit; }
-  public get createdAt(): Date { return this.props.createdAt; }
-  public get updatedAt(): Date { return this.props.updatedAt; }
+  public get id(): string {
+    return this.props.id;
+  }
+  public get tenantId(): string {
+    return this.props.tenantId;
+  }
+  public get name(): string {
+    return this.props.name;
+  }
+  public get slug(): string {
+    return this.props.slug;
+  }
+  public get description(): string | null {
+    return this.props.description ?? null;
+  }
+  public get ownerId(): string {
+    return this.props.ownerId;
+  }
+  public get isActive(): boolean {
+    return this.props.isActive;
+  }
+  public get isVerified(): boolean {
+    return this.props.isVerified;
+  }
+  public get planType(): string {
+    return this.props.planType;
+  }
+  public get memberLimit(): number {
+    return this.props.memberLimit;
+  }
+  public get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  public get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
 
   // Business methods
   public canAddMember(currentMemberCount: number): boolean {
@@ -81,9 +105,9 @@ export class Organization {
     });
   }
 
-  public updateDetails(data: { 
-    name?: string; 
-    description?: string; 
+  public updateDetails(data: {
+    name?: string;
+    description?: string;
   }): Organization {
     return new Organization({
       ...this.props,

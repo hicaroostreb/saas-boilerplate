@@ -1,15 +1,15 @@
-import { SignInHandler } from '../../application/commands/SignInHandler';
-import { RegisterUserHandler } from '../../application/commands/RegisterUserHandler';
 import { ForgotPasswordHandler } from '../../application/commands/ForgotPasswordHandler';
+import { RegisterUserHandler } from '../../application/commands/RegisterUserHandler';
 import { ResetPasswordHandler } from '../../application/commands/ResetPasswordHandler';
+import { SignInHandler } from '../../application/commands/SignInHandler';
 import { CreateOrganizationHandler } from '../../application/commands/organization/CreateOrganizationHandler';
 import { SendInvitationHandler } from '../../application/commands/organization/SendInvitationHandler';
 import { GetUserProfileHandler } from '../../application/queries/GetUserProfileHandler';
 import { ValidateResetTokenHandler } from '../../application/queries/ValidateResetTokenHandler';
-import { DrizzleUserRepository } from '../repositories/DrizzleUserRepository';
-import { DrizzleSessionRepository } from '../repositories/DrizzleSessionRepository';
-import { DrizzleOrganizationRepository } from '../repositories/DrizzleOrganizationRepository';
 import { DrizzleInvitationRepository } from '../repositories/DrizzleInvitationRepository';
+import { DrizzleOrganizationRepository } from '../repositories/DrizzleOrganizationRepository';
+import { DrizzleSessionRepository } from '../repositories/DrizzleSessionRepository';
+import { DrizzleUserRepository } from '../repositories/DrizzleUserRepository';
 import { BcryptPasswordHasher } from '../services/BcryptPasswordHasher';
 
 /**
@@ -30,7 +30,8 @@ export class AuthServiceFactory {
 
   static createForgotPasswordHandler(): ForgotPasswordHandler {
     const userRepo = new DrizzleUserRepository();
-    return new ForgotPasswordHandler(userRepo);
+    const sessionRepo = new DrizzleSessionRepository(); // ✅ ADICIONADO
+    return new ForgotPasswordHandler(userRepo, sessionRepo); // ✅ INJETADO
   }
 
   static createResetPasswordHandler(): ResetPasswordHandler {

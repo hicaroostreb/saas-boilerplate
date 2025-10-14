@@ -1,4 +1,4 @@
-import { hash, compare } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import type { PasswordHasherPort } from '../../domain/ports/PasswordHasherPort';
 
 /**

@@ -1,11 +1,17 @@
-import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
 import { Organization } from '../../../domain/entities/Organization';
-import type { CreateOrganizationDTO, CreateOrganizationResult } from '../../dto/organization/CreateOrganizationDTO';
+import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
+import type {
+  CreateOrganizationDTO,
+  CreateOrganizationResult,
+} from '../../dto/organization/CreateOrganizationDTO';
 
 export class CreateOrganizationHandler {
   constructor(private orgRepo: OrganizationRepositoryPort) {}
 
-  public async execute(data: CreateOrganizationDTO, ownerId: string): Promise<CreateOrganizationResult> {
+  public async execute(
+    data: CreateOrganizationDTO,
+    ownerId: string
+  ): Promise<CreateOrganizationResult> {
     // ✅ Verificar se slug já existe
     const slugExists = await this.orgRepo.existsBySlug(data.slug);
     if (slugExists) {

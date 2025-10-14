@@ -1,12 +1,7 @@
-import type { InvitationRepositoryPort } from '../../domain/ports/InvitationRepositoryPort';
+import { getDb, invitations, type CreateInvitation } from '@workspace/database';
+import { eq } from 'drizzle-orm';
 import { Invitation } from '../../domain/entities/Invitation';
-import {
-  and,
-  eq,
-  getDb,
-  invitations,
-  type CreateInvitation,
-} from '@workspace/database';
+import type { InvitationRepositoryPort } from '../../domain/ports/InvitationRepositoryPort';
 
 /**
  * Implementação concreta do InvitationRepositoryPort usando Drizzle
@@ -15,7 +10,7 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async create(invitation: Invitation): Promise<Invitation> {
     try {
       const db = await getDb();
-      
+
       const createData: CreateInvitation = {
         id: invitation.id,
         organization_id: invitation.organizationId,
@@ -24,7 +19,12 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
         role: invitation.role,
         message: invitation.message,
         token: invitation.token,
-        status: invitation.status as any,
+        status: invitation.status as
+          | 'pending'
+          | 'accepted'
+          | 'rejected'
+          | 'expired'
+          | 'cancelled', // ✅ Schema exato
         expires_at: invitation.expiresAt,
         created_at: invitation.createdAt,
         updated_at: invitation.updatedAt,
@@ -73,7 +73,10 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
 
       return dbInvitations.map(invite => this.mapToDomainEntity(invite));
     } catch (error) {
-      console.error('❌ DrizzleInvitationRepository findByOrganization error:', error);
+      console.error(
+        '❌ DrizzleInvitationRepository findByOrganization error:',
+        error
+      );
       return [];
     }
   }
@@ -81,11 +84,16 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async update(invitation: Invitation): Promise<Invitation> {
     try {
       const db = await getDb();
-      
+
       const [updated] = await db
         .update(invitations)
         .set({
-          status: invitation.status as any,
+          status: invitation.status as
+            | 'pending'
+            | 'accepted'
+            | 'rejected'
+            | 'expired'
+            | 'cancelled', // ✅ Schema exato
           updated_at: invitation.updatedAt,
         })
         .where(eq(invitations.id, invitation.id))
@@ -102,7 +110,9 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
     }
   }
 
-  private mapToDomainEntity(dbInvitation: any): Invitation {
+  private mapToDomainEntity(
+    dbInvitation: typeof invitations.$inferSelect
+  ): Invitation {
     return Invitation.reconstitute({
       id: dbInvitation.id,
       organizationId: dbInvitation.organization_id,
@@ -113,8 +123,8 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
       token: dbInvitation.token,
       status: dbInvitation.status,
       expiresAt: dbInvitation.expires_at,
-      createdAt: dbInvitation.created_at,
       updatedAt: dbInvitation.updated_at,
+      createdAt: dbInvitation.created_at,
     });
   }
 }

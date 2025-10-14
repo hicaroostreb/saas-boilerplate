@@ -1,15 +1,37 @@
+import { getDb, sessions } from '@workspace/database';
 import { and, eq, ne } from 'drizzle-orm';
+import type { Session } from '../../domain/entities/Session';
 import type { SessionRepositoryPort } from '../../domain/ports/SessionRepositoryPort';
 import type { EnhancedSessionData } from '../../types/session.types';
-import {
-  getDb,
-  sessions,
-} from '@workspace/database';
 
 /**
  * Implementação concreta do SessionRepositoryPort usando Drizzle
  */
 export class DrizzleSessionRepository implements SessionRepositoryPort {
+  async create(session: Session): Promise<void> {
+    try {
+      const db = await getDb();
+
+      // Usar APENAS campos que existem na tabela sessions
+      await db.insert(sessions).values({
+        session_token: session.sessionToken,
+        user_id: session.userId,
+        expires: session.expires,
+        created_at: new Date(),
+        last_accessed_at: new Date(),
+        ip_address: null, // Pode ser definido posteriormente
+        user_agent: null, // Pode ser definido posteriormente
+      });
+
+      console.warn(
+        `✅ Session created: ${session.sessionToken} for user ${session.userId}`
+      );
+    } catch (error) {
+      console.error('❌ DrizzleSessionRepository create error:', error);
+      throw error;
+    }
+  }
+
   async findByToken(token: string): Promise<EnhancedSessionData | null> {
     try {
       const db = await getDb();
@@ -35,16 +57,17 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
     }
   }
 
-  async revoke(token: string, revokedBy: string, reason = 'user_request'): Promise<void> {
+  async revoke(
+    token: string,
+    revokedBy: string,
+    reason = 'user_request'
+  ): Promise<void> {
     try {
       const db = await getDb();
-      
-      // Como não temos revoked_at na tabela, vamos deletar a sessão
-      await db
-        .delete(sessions)
-        .where(eq(sessions.session_token, token));
-      
-      console.log(`✅ Session deleted: ${token} by ${revokedBy} (${reason})`);
+
+      await db.delete(sessions).where(eq(sessions.session_token, token));
+
+      console.error(`✅ Session deleted: ${token} by ${revokedBy} (${reason})`);
     } catch (error) {
       console.error('❌ DrizzleSessionRepository revoke error:', error);
       throw error;
@@ -59,7 +82,7 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
   ): Promise<number> {
     try {
       const db = await getDb();
-      
+
       const conditions = [eq(sessions.user_id, userId)];
 
       if (exceptToken) {
@@ -72,15 +95,22 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
         .returning({ count: sessions.session_token });
 
       const affectedRows = deletedSessions.length;
-      console.log(`✅ ${affectedRows} sessions deleted for user ${userId} by ${revokedBy} (${reason})`);
+      console.error(
+        `✅ ${affectedRows} sessions deleted for user ${userId} by ${revokedBy} (${reason})`
+      );
       return affectedRows;
     } catch (error) {
-      console.error('❌ DrizzleSessionRepository revokeAllForUser error:', error);
+      console.error(
+        '❌ DrizzleSessionRepository revokeAllForUser error:',
+        error
+      );
       return 0;
     }
   }
 
-  private mapToEnhancedSessionData(session: any): EnhancedSessionData {
+  private mapToEnhancedSessionData(
+    session: typeof sessions.$inferSelect
+  ): EnhancedSessionData {
     return {
       sessionToken: session.session_token,
       userId: session.user_id,
@@ -97,7 +127,7 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
       deviceName: null,
       deviceType: 'desktop' as const,
       organizationId: null,
-      securityLevel: 'normal' as const, // Usar valor válido do enum
+      securityLevel: 'normal' as const,
       riskScore: 0,
       country: null,
       city: null,

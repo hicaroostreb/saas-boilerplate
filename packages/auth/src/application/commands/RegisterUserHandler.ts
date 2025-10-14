@@ -1,9 +1,9 @@
-import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
-import type { PasswordHasherPort } from '../../domain/ports/PasswordHasherPort';
-import type { UserProfileDTO } from '../dto/UserProfileDTO';
 import { User } from '../../domain/entities/User';
+import type { PasswordHasherPort } from '../../domain/ports/PasswordHasherPort';
+import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 import { Email } from '../../domain/value-objects/Email';
 import { generateSecureId } from '../../utils/validation.utils';
+import type { UserProfileDTO } from '../dto/UserProfileDTO';
 
 export interface RegisterUserDTO {
   name: string;
@@ -20,7 +20,7 @@ export class RegisterUserHandler {
   public async execute(data: RegisterUserDTO): Promise<UserProfileDTO> {
     // ✅ Validar email via Value Object
     const emailVO = Email.create(data.email);
-    
+
     // ✅ Verificar se usuário já existe
     const existingUser = await this.userRepo.findByEmail(emailVO.value);
     if (existingUser) {

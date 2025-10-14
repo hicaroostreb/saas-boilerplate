@@ -48,7 +48,9 @@ export class Invitation {
     });
   }
 
-  public static reconstitute(props: Omit<InvitationProps, 'email'> & { email: string }): Invitation {
+  public static reconstitute(
+    props: Omit<InvitationProps, 'email'> & { email: string }
+  ): Invitation {
     return new Invitation({
       ...props,
       email: Email.create(props.email),
@@ -56,17 +58,39 @@ export class Invitation {
   }
 
   // Getters
-  public get id(): string { return this.props.id; }
-  public get organizationId(): string { return this.props.organizationId; }
-  public get invitedBy(): string { return this.props.invitedBy; }
-  public get email(): Email { return this.props.email; }
-  public get role(): string { return this.props.role; }
-  public get message(): string | null { return this.props.message; }
-  public get token(): string { return this.props.token; }
-  public get status(): string { return this.props.status; }
-  public get expiresAt(): Date { return this.props.expiresAt; }
-  public get createdAt(): Date { return this.props.createdAt; }
-  public get updatedAt(): Date { return this.props.updatedAt; }
+  public get id(): string {
+    return this.props.id;
+  }
+  public get organizationId(): string {
+    return this.props.organizationId;
+  }
+  public get invitedBy(): string {
+    return this.props.invitedBy;
+  }
+  public get email(): Email {
+    return this.props.email;
+  }
+  public get role(): string {
+    return this.props.role;
+  }
+  public get message(): string | null {
+    return this.props.message ?? null;
+  }
+  public get token(): string {
+    return this.props.token;
+  }
+  public get status(): string {
+    return this.props.status;
+  }
+  public get expiresAt(): Date {
+    return this.props.expiresAt;
+  }
+  public get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  public get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
 
   // Business methods
   public isExpired(): boolean {
@@ -81,7 +105,7 @@ export class Invitation {
     return this.props.status === 'pending' && !this.isExpired();
   }
 
-  public accept(acceptedBy: string): Invitation {
+  public accept(_acceptedBy: string): Invitation {
     if (!this.canBeAccepted()) {
       throw new Error('Invitation cannot be accepted');
     }

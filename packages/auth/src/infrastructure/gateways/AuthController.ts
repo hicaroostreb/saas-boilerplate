@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthServiceFactory } from '../factories/AuthServiceFactory';
-import { 
-  signInSchema, 
-  signUpSchema, 
-  forgotPasswordSchema, 
-  resetPasswordSchema,
+import {
   createOrganizationSchema,
-  sendInvitationSchema
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  sendInvitationSchema,
+  signInSchema,
+  signUpSchema,
 } from '../../types/schemas';
+import { AuthServiceFactory } from '../factories/AuthServiceFactory';
 
 /**
  * AuthController - Gateway para APIs Next.js
@@ -31,7 +31,7 @@ export class AuthController {
       });
     } catch (error) {
       console.error('❌ AuthController signIn error:', error);
-      
+
       if (error instanceof Error && error.message === 'Invalid credentials') {
         return NextResponse.json(
           { error: 'Invalid credentials', success: false },
@@ -63,12 +63,12 @@ export class AuthController {
       });
     } catch (error) {
       console.error('❌ AuthController signUp error:', error);
-      
-      if (error instanceof Error && error.message === 'User already exists with this email') {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 409 }
-        );
+
+      if (
+        error instanceof Error &&
+        error.message === 'User already exists with this email'
+      ) {
+        return NextResponse.json({ error: error.message }, { status: 409 });
       }
 
       return NextResponse.json(
@@ -92,7 +92,7 @@ export class AuthController {
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
       console.error('❌ AuthController forgotPassword error:', error);
-      
+
       return NextResponse.json(
         { message: 'Internal server error' },
         { status: 500 }
@@ -118,13 +118,12 @@ export class AuthController {
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
       console.error('❌ AuthController resetPassword error:', error);
-      
-      if (error instanceof Error && 
-          (error.message.includes('Invalid') || error.message.includes('expired'))) {
-        return NextResponse.json(
-          { message: error.message },
-          { status: 400 }
-        );
+
+      if (
+        error instanceof Error &&
+        (error.message.includes('Invalid') || error.message.includes('expired'))
+      ) {
+        return NextResponse.json({ message: error.message }, { status: 400 });
       }
 
       return NextResponse.json(
@@ -155,17 +154,14 @@ export class AuthController {
       return NextResponse.json(result);
     } catch (error) {
       console.error('❌ AuthController validateResetToken error:', error);
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
     }
   }
 
   /**
    * GET /api/auth/check-user (mantém compatibilidade com sessão)
    */
-  async checkUser(request: NextRequest): Promise<NextResponse> {
+  async checkUser(_request: NextRequest): Promise<NextResponse> {
     try {
       const { getServerSession } = await import('@workspace/auth/server');
       const session = await getServerSession();
@@ -210,7 +206,10 @@ export class AuthController {
       const validatedData = createOrganizationSchema.parse(body);
 
       const handler = AuthServiceFactory.createCreateOrganizationHandler();
-      const organization = await handler.execute(validatedData, session.user.id);
+      const organization = await handler.execute(
+        validatedData,
+        session.user.id
+      );
 
       return NextResponse.json({
         success: true,
@@ -218,12 +217,12 @@ export class AuthController {
       });
     } catch (error) {
       console.error('❌ AuthController createOrganization error:', error);
-      
-      if (error instanceof Error && error.message === 'Organization slug already exists') {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 409 }
-        );
+
+      if (
+        error instanceof Error &&
+        error.message === 'Organization slug already exists'
+      ) {
+        return NextResponse.json({ error: error.message }, { status: 409 });
       }
 
       return NextResponse.json(
@@ -260,9 +259,12 @@ export class AuthController {
       });
     } catch (error) {
       console.error('❌ AuthController sendInvitation error:', error);
-      
-      if (error instanceof Error && 
-          (error.message.includes('not found') || error.message.includes('permission'))) {
+
+      if (
+        error instanceof Error &&
+        (error.message.includes('not found') ||
+          error.message.includes('permission'))
+      ) {
         return NextResponse.json(
           { error: error.message },
           { status: error.message.includes('not found') ? 404 : 403 }

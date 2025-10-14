@@ -1,3 +1,9 @@
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
+
+// Carregar .env.local da raiz do monorepo
+loadEnv({ path: resolve(process.cwd(), '../../.env.local') });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

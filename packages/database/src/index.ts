@@ -1,14 +1,14 @@
-// packages/database/src/index.ts
+// packages/database/src/index.ts - CLIENT-SAFE EXPORTS ONLY
 // ============================================
 // DATABASE PACKAGE MAIN EXPORTS - ENTERPRISE
 // ============================================
 
 // Connection and database
 export {
-  getDb,
-  getDatabaseConnection,
-  type Database,
   DatabaseError,
+  getDatabaseConnection,
+  getDb,
+  type Database,
 } from './connection';
 
 // Schemas
@@ -19,37 +19,26 @@ export * from './entities';
 
 // Repositories
 export {
-  createRepositoryFactory,
+  DrizzleAuditRepository,
+  DrizzleOrganizationRepository,
+  DrizzleRateLimitRepository,
+  DrizzleSessionRepository,
+  DrizzleUserRepository,
   createRepositories,
+  createRepositoryFactory,
+  type IAuditRepository,
+  type IOrganizationRepository,
+  type IRateLimitRepository,
+  type ISessionRepository,
+  type IUserRepository,
   type RepositoryFactory,
   type RepositoryRegistry,
-  type IUserRepository,
-  type ISessionRepository,
-  type IOrganizationRepository,
-  type IAuditRepository,
-  type IRateLimitRepository,
-  DrizzleUserRepository,
-  DrizzleSessionRepository,
-  DrizzleOrganizationRepository,
-  DrizzleAuditRepository,
-  DrizzleRateLimitRepository,
 } from './repositories';
 
-// Seeders
-export {
-  developmentSeeder,
-  productionSeeder,
-  runTestingSeed,
-  runSeeder,
-  type SeedResult,
-} from './seeders';
+// ❌ REMOVED: Seeders and Scripts (server-only, causing Next.js build issues)
+// Use direct imports for seeding:
+// import { runSeed } from '@workspace/database/src/scripts/seed';
+// import { developmentSeeder } from '@workspace/database/src/seeders';
 
-// Scripts
-export {
-  runSeed,
-} from './scripts/seed';
-
-// Types and utilities
-export type {
-  SeedOptions,
-} from './types';
+// Types and utilities (keeping only client-safe types)
+export type { SeedOptions } from './types';

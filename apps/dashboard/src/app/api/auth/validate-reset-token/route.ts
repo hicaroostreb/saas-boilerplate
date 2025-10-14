@@ -1,5 +1,5 @@
+import { AuthController } from '@workspace/auth/server';
 import { NextRequest } from 'next/server';
-import { AuthController } from '@workspace/auth/infrastructure/gateways/AuthController';
 
 const authController = new AuthController();
 

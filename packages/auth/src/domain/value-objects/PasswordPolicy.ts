@@ -19,7 +19,11 @@ export class PasswordPolicy {
 
   public static create(password: string): PasswordPolicy {
     // Validar novo password frente a política mínima
-    this.validate({ currentPassword: '', newPassword: password, confirmPassword: password });
+    this.validate({
+      currentPassword: '',
+      newPassword: password,
+      confirmPassword: password,
+    });
     return new PasswordPolicy(password);
   }
 }

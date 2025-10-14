@@ -11,7 +11,7 @@ export class User {
     public readonly passwordHash: string | null,
     public readonly isActive: boolean,
     public readonly createdAt: Date,
-    public readonly updatedAt: Date,
+    public readonly updatedAt: Date
   ) {}
 
   public static create(props: {
@@ -27,7 +27,7 @@ export class User {
       null,
       true,
       new Date(),
-      new Date(),
+      new Date()
     );
   }
 
@@ -48,7 +48,7 @@ export class User {
       props.passwordHash,
       props.isActive,
       props.createdAt,
-      props.updatedAt,
+      props.updatedAt
     );
   }
 
@@ -60,7 +60,7 @@ export class User {
       newHash,
       this.isActive,
       this.createdAt,
-      new Date(),
+      new Date()
     );
   }
 
@@ -72,7 +72,7 @@ export class User {
       this.passwordHash,
       false,
       this.createdAt,
-      new Date(),
+      new Date()
     );
   }
 

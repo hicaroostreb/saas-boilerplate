@@ -1,6 +1,6 @@
-// packages/auth/src/utils/context.utils.ts - CONTEXT UTILITIES (FINAL FIX)
+// packages/auth/src/utils/context.utils.ts - CONTEXT UTILITIES (FIXED IMPORTS)
 
-import type { EnhancedAuthContext } from '../core/services/auth-context.service';
+import type { EnhancedAuthContext } from '../types';
 
 /**
  * ✅ EXTRACT: Auth context (proper property access)
@@ -8,7 +8,6 @@ import type { EnhancedAuthContext } from '../core/services/auth-context.service'
 export function extractAuthContext(
   context: EnhancedAuthContext
 ): Record<string, unknown> {
-  // ✅ FIX: Direct property access instead of destructuring
   return {
     userId: context.user?.id ?? null,
     email: context.user?.email ?? null,

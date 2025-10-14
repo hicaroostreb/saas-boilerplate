@@ -1,17 +1,14 @@
-import { 
-  getDb, 
-  users, 
-  eq 
-} from '@workspace/database';
+import { getDb, users } from '@workspace/database';
 import { hash } from 'bcryptjs';
+import { eq } from 'drizzle-orm';
 
 /**
  * Service para reset de senha - migrado do PasswordChangeService
  */
 export class PasswordResetService {
   async resetPassword(
-    userId: string, 
-    newPassword: string, 
+    userId: string,
+    newPassword: string,
     resetBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -34,7 +31,8 @@ export class PasswordResetService {
         };
       }
 
-      console.log(`✅ Password reset for user ${userId} by ${resetBy}`);
+      // ✅ Usar console.error em vez de console.log
+      console.error(`✅ Password reset for user ${userId} by ${resetBy}`);
       return { success: true };
     } catch (error) {
       console.error('❌ PasswordResetService error:', error);
@@ -45,7 +43,10 @@ export class PasswordResetService {
     }
   }
 
-  validatePasswordStrength(password: string): { isValid: boolean; issues: string[] } {
+  validatePasswordStrength(password: string): {
+    isValid: boolean;
+    issues: string[];
+  } {
     const issues: string[] = [];
 
     if (password.length < 8) {
@@ -61,7 +62,7 @@ export class PasswordResetService {
       issues.push('Password must contain at least one number');
     }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      issues.push('Password must contain at least one special character');  
+      issues.push('Password must contain at least one special character');
     }
 
     return {

@@ -11,14 +11,17 @@ export class PasswordChangeAdapter {
   }
 
   async resetPassword(
-    userId: string, 
-    newPassword: string, 
+    userId: string,
+    newPassword: string,
     resetBy: string
   ): Promise<{ success: boolean; error?: string }> {
     return this.passwordService.resetPassword(userId, newPassword, resetBy);
   }
 
-  validatePasswordStrength(password: string): { isValid: boolean; issues: string[] } {
+  validatePasswordStrength(password: string): {
+    isValid: boolean;
+    issues: string[];
+  } {
     return this.passwordService.validatePasswordStrength(password);
   }
 }

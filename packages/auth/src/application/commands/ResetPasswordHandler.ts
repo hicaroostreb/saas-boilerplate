@@ -36,9 +36,13 @@ export class ResetPasswordHandler {
 
     // ✅ Validar força da nova senha
     const passwordAdapter = new PasswordChangeAdapter();
-    const passwordValidation = passwordAdapter.validatePasswordStrength(data.password);
+    const passwordValidation = passwordAdapter.validatePasswordStrength(
+      data.password
+    );
     if (!passwordValidation.isValid) {
-      throw new Error(passwordValidation.issues[0] ?? 'Password does not meet requirements');
+      throw new Error(
+        passwordValidation.issues[0] ?? 'Password does not meet requirements'
+      );
     }
 
     // ✅ Resetar senha usando PasswordChangeAdapter
@@ -53,7 +57,11 @@ export class ResetPasswordHandler {
     }
 
     // ✅ Invalidar token após uso
-    await this.sessionRepo.revoke(data.token, 'system', 'password_reset_completed');
+    await this.sessionRepo.revoke(
+      data.token,
+      'system',
+      'password_reset_completed'
+    );
 
     // ✅ Revogar todas as outras sessões do usuário por segurança
     await this.sessionRepo.revokeAllForUser(
@@ -70,7 +78,8 @@ export class ResetPasswordHandler {
     });
 
     return {
-      message: 'Password has been reset successfully. You can now sign in with your new password.',
+      message:
+        'Password has been reset successfully. You can now sign in with your new password.',
     };
   }
 }

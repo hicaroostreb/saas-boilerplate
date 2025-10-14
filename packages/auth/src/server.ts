@@ -19,14 +19,21 @@ export async function requireAuth() {
   return session;
 }
 
-// ✅ SERVER: Flow exports (with database dependencies)
-export { forgotPasswordFlow } from './core/flows/forgot-password.flow';
-export { resetPasswordFlow } from './core/flows/reset-password.flow';
-export { signInFlow } from './core/flows/sign-in.flow';
-export { signUpFlow } from './core/flows/sign-up.flow';
+// ✅ EXPORTS: Clean Architecture Layers
+export * from './application';
+export * from './infrastructure';
+export * from './utils';
 
-// ✅ SERVER: Service exports
-export * from './core/services';
+// ✅ DOMAIN: Exportar domain entities (User entity)
+export * from './domain';
 
-// ✅ SERVER: Repository exports
-export * from './adapters/repositories';
+// ✅ TYPES: Exportar apenas types específicos (não User interface)
+export type {
+  AuthContext,
+  AuthEventStatus,
+  AuthEventType,
+  DeviceType,
+  EnhancedAuthContext,
+  MemberRole,
+  SecurityLevel,
+} from './types';
