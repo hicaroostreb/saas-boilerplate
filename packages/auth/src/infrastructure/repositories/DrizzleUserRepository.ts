@@ -1,12 +1,11 @@
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 import { User } from '../../domain/entities/User';
 import { Email } from '../../domain/value-objects/Email';
 import {
-  and,
-  eq,
   getDb,
-  isNull,
   users,
+  type CreateUser,
 } from '@workspace/database';
 
 /**
@@ -23,7 +22,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
         .where(
           and(
             eq(users.email, email.toLowerCase().trim()),
-            isNull(users.deletedAt)
+            isNull(users.deleted_at)
           )
         )
         .limit(1);
@@ -41,7 +40,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
       const [dbUser] = await db
         .select()
         .from(users)
-        .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+        .where(and(eq(users.id, userId), isNull(users.deleted_at)))
         .limit(1);
 
       return dbUser ? this.mapToDomainEntity(dbUser) : null;
@@ -54,25 +53,26 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async create(user: User, passwordHash: string): Promise<User> {
     try {
       const db = await getDb();
-      const now = new Date();
+      
+      const createData: CreateUser = {
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+        password_hash: passwordHash,
+        is_active: user.isActive,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      };
 
       const [dbUser] = await db
         .insert(users)
-        .values({
-          id: user.id,
-          email: user.email.value,
-          name: user.name,
-          passwordHash,
-          isActive: user.isActive,
-          createdAt: now,
-          updatedAt: now,
-        })
+        .values(createData)
         .returning();
 
       if (!dbUser) {
         throw new Error('Failed to create user');
       }
-      
+
       return this.mapToDomainEntity(dbUser);
     } catch (error) {
       console.error('❌ DrizzleUserRepository create error:', error);
@@ -86,8 +86,8 @@ export class DrizzleUserRepository implements UserRepositoryPort {
       await db
         .update(users)
         .set({
-          lastLoginAt: new Date(),
-          updatedAt: new Date(),
+          last_login_at: new Date(),
+          updated_at: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
@@ -101,8 +101,8 @@ export class DrizzleUserRepository implements UserRepositoryPort {
       await db
         .update(users)
         .set({
-          loginAttempts: sql`CAST(COALESCE(${users.loginAttempts}, '0') AS INTEGER) + 1`,
-          updatedAt: new Date(),
+          login_attempts: sql`CAST(COALESCE(${users.login_attempts}, '0') AS INTEGER) + 1`,
+          updated_at: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
@@ -110,17 +110,15 @@ export class DrizzleUserRepository implements UserRepositoryPort {
     }
   }
 
-  private mapToDomainEntity(dbUser: Record<string, unknown>): User {
-    const email = Email.create(dbUser.email as string);
-    
+  private mapToDomainEntity(dbUser: any): User {
     return User.reconstitute({
-      id: dbUser.id as string,
-      email: email.value,
-      name: dbUser.name as string,
-      passwordHash: dbUser.passwordHash as string | null,
-      isActive: dbUser.isActive as boolean,
-      createdAt: dbUser.createdAt as Date,
-      updatedAt: dbUser.updatedAt as Date,
+      id: dbUser.id,
+      email: dbUser.email, // ✅ STRING (não Email object)
+      name: dbUser.name,
+      passwordHash: dbUser.password_hash,
+      isActive: dbUser.is_active ?? true,
+      createdAt: dbUser.created_at,
+      updatedAt: dbUser.updated_at,
     });
   }
 }

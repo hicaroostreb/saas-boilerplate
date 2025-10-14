@@ -1,46 +1,98 @@
+import { and, eq, isNull, sql, desc } from 'drizzle-orm';
 import type { OrganizationRepositoryPort } from '../../domain/ports/OrganizationRepositoryPort';
 import { Organization } from '../../domain/entities/Organization';
-import { OrganizationRepository } from '../../adapters/repositories/organization.repository';
+import {
+  getDb,
+  organizations,
+  memberships,
+  type CreateOrganization,
+} from '@workspace/database';
 
 /**
- * Adaptador para OrganizationRepository implementando OrganizationRepositoryPort
+ * Implementação concreta do OrganizationRepositoryPort usando Drizzle
  */
 export class DrizzleOrganizationRepository implements OrganizationRepositoryPort {
-  private orgRepo: OrganizationRepository;
-
-  constructor() {
-    this.orgRepo = new OrganizationRepository();
-  }
-
   async findById(id: string): Promise<Organization | null> {
-    const dbOrg = await this.orgRepo.findById(id);
-    return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
+    try {
+      const db = await getDb();
+      const [dbOrg] = await db
+        .select()
+        .from(organizations)
+        .where(and(eq(organizations.id, id), isNull(organizations.deleted_at)))
+        .limit(1);
+
+      return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
+    } catch (error) {
+      console.error('❌ DrizzleOrganizationRepository findById error:', error);
+      return null;
+    }
   }
 
   async findBySlug(slug: string): Promise<Organization | null> {
-    const dbOrg = await this.orgRepo.findBySlug(slug);
-    return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
+    try {
+      const db = await getDb();
+      const [dbOrg] = await db
+        .select()
+        .from(organizations)
+        .where(and(eq(organizations.slug, slug), isNull(organizations.deleted_at)))
+        .limit(1);
+
+      return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
+    } catch (error) {
+      console.error('❌ DrizzleOrganizationRepository findBySlug error:', error);
+      return null;
+    }
   }
 
   async create(organization: Organization): Promise<Organization> {
-    const dbOrg = await this.orgRepo.create({
-      id: organization.id,
-      tenant_id: organization.tenantId,
-      name: organization.name,
-      slug: organization.slug,
-      description: organization.description,
-      owner_id: organization.ownerId,
-      is_active: organization.isActive,
-      is_verified: organization.isVerified,
-      plan_type: organization.planType as any,
-      member_limit: organization.memberLimit,
-    });
+    try {
+      const db = await getDb();
+      
+      const createData: CreateOrganization = {
+        id: organization.id,
+        tenant_id: organization.tenantId,
+        name: organization.name,
+        slug: organization.slug,
+        description: organization.description,
+        owner_id: organization.ownerId,
+        plan_type: organization.planType as any,
+        member_limit: organization.memberLimit,
+        is_active: organization.isActive,
+        is_verified: organization.isVerified,
+        created_at: organization.createdAt,
+        updated_at: organization.updatedAt,
+      };
 
-    return this.mapToDomainEntity(dbOrg);
+      const [dbOrg] = await db
+        .insert(organizations)
+        .values(createData)
+        .returning();
+
+      if (!dbOrg) {
+        throw new Error('Failed to create organization');
+      }
+
+      return this.mapToDomainEntity(dbOrg);
+    } catch (error) {
+      console.error('❌ DrizzleOrganizationRepository create error:', error);
+      throw error;
+    }
   }
 
   async existsBySlug(slug: string): Promise<boolean> {
-    return this.orgRepo.existsBySlug(slug);
+    try {
+      const db = await getDb();
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(organizations)
+        .where(and(eq(organizations.slug, slug), isNull(organizations.deleted_at)))
+        .limit(1);
+
+      return Number(result?.count ?? 0) > 0;
+    } catch (error) {
+      console.error('❌ DrizzleOrganizationRepository existsBySlug error:', error);
+      return false;
+    }
   }
 
   async findByUserId(userId: string): Promise<Array<{
@@ -48,38 +100,51 @@ export class DrizzleOrganizationRepository implements OrganizationRepositoryPort
     role: string;
     status: string;
   }>> {
-    const userOrgs = await this.orgRepo.findByUserId(userId);
-    
-    const results = await Promise.all(
-      userOrgs.map(async (userOrg) => {
-        const org = await this.findById(userOrg.id);
-        if (!org) throw new Error('Organization not found');
-        
-        return {
-          organization: org,
-          role: userOrg.role,
-          status: userOrg.status,
-        };
-      })
-    );
+    try {
+      const db = await getDb();
+      
+      const userOrgs = await db
+        .select({
+          organization: organizations,
+          role: memberships.role,
+          status: memberships.status,
+        })
+        .from(organizations)
+        .innerJoin(memberships, eq(memberships.organization_id, organizations.id))
+        .where(
+          and(
+            eq(memberships.user_id, userId),
+            isNull(organizations.deleted_at),
+            eq(memberships.status, 'active')
+          )
+        )
+        .orderBy(desc(memberships.created_at));
 
-    return results;
+      return userOrgs.map(userOrg => ({
+        organization: this.mapToDomainEntity(userOrg.organization),
+        role: userOrg.role,
+        status: userOrg.status,
+      }));
+    } catch (error) {
+      console.error('❌ DrizzleOrganizationRepository findByUserId error:', error);
+      return [];
+    }
   }
 
   private mapToDomainEntity(dbOrg: any): Organization {
     return Organization.reconstitute({
       id: dbOrg.id,
-      tenantId: dbOrg.tenant_id || dbOrg.tenantId,
+      tenantId: dbOrg.tenant_id,
       name: dbOrg.name,
       slug: dbOrg.slug,
       description: dbOrg.description,
-      ownerId: dbOrg.owner_id || dbOrg.ownerId,
-      isActive: dbOrg.is_active !== undefined ? dbOrg.is_active : dbOrg.isActive,
-      isVerified: dbOrg.is_verified !== undefined ? dbOrg.is_verified : dbOrg.isVerified,
-      planType: (dbOrg.plan_type || dbOrg.planType || 'free') as any,
-      memberLimit: dbOrg.member_limit || dbOrg.memberLimit || 10,
-      createdAt: dbOrg.created_at || dbOrg.createdAt,
-      updatedAt: dbOrg.updated_at || dbOrg.updatedAt,
+      ownerId: dbOrg.owner_id,
+      isActive: dbOrg.is_active ?? true,
+      isVerified: dbOrg.is_verified ?? false,
+      planType: dbOrg.plan_type ?? 'free',
+      memberLimit: dbOrg.member_limit ?? 10,
+      createdAt: dbOrg.created_at,
+      updatedAt: dbOrg.updated_at,
     });
   }
 }

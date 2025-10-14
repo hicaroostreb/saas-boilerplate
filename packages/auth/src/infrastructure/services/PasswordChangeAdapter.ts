@@ -1,16 +1,20 @@
-import { PasswordChangeService } from '../../core/services/password-change.service';
+import { PasswordResetService } from './PasswordResetService';
 
 /**
- * Adaptador para PasswordChangeService
+ * Adaptador para PasswordResetService
  */
 export class PasswordChangeAdapter {
-  private passwordService: PasswordChangeService;
+  private passwordService: PasswordResetService;
 
   constructor() {
-    this.passwordService = new PasswordChangeService();
+    this.passwordService = new PasswordResetService();
   }
 
-  async resetPassword(userId: string, newPassword: string, resetBy: string): Promise<{ success: boolean; error?: string }> {
+  async resetPassword(
+    userId: string, 
+    newPassword: string, 
+    resetBy: string
+  ): Promise<{ success: boolean; error?: string }> {
     return this.passwordService.resetPassword(userId, newPassword, resetBy);
   }
 
