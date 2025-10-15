@@ -13,11 +13,11 @@
       "@workspace/database/*": ["../database/src/*"],
       "@workspace/common": ["../common/src"],
       "@workspace/common/*": ["../common/src/*"],
-      "@workspace/routes": ["../routes/src"],
-      "@workspace/routes/*": ["../routes/src/*"]
+      "@workspace/http": ["../http/src"],
+      "@workspace/http/*": ["../http/src/*"]
     }
   },
   "include": ["src/**/*", "src/index.ts", "src/server.ts"],
   "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../database" }, { "path": "../common" }, { "path": "../routes" }]
+  "references": [{ "path": "../database" }, { "path": "../common" }, { "path": "../http" }]
 }

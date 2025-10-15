@@ -4,7 +4,7 @@ const nextConfig = {
   transpilePackages: [
     '@workspace/ui', // ✅ Application Layer
     '@workspace/common', // ✅ Foundation Layer
-    '@workspace/routes', // ✅ Foundation Layer
+    '@workspace/http', // ✅ Foundation Layer
     '@workspace/rate-limiter', // ✅ Infrastructure Layer
   ],
 

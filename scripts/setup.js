@@ -219,7 +219,7 @@ async function setupMonorepo() {
       await execAsync('pnpm --filter "@workspace/common" run build', { cwd: rootDir });
       console.log('✅ Common package built');
       
-      await execAsync('pnpm --filter "@workspace/routes" run build', { cwd: rootDir });
+      await execAsync('pnpm --filter "@workspace/http" run build', { cwd: rootDir });
       console.log('✅ Routes package built');
     } catch (error) {
       console.log('⚠️  Some packages may not require building');

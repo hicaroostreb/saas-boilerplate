@@ -1,5 +1,5 @@
 /**
- * @workspace/routes - Route Protection Guards
+ * @workspace/http - HTTP Protection Guards
  * Authentication and authorization utilities following DIP principle
  * Abstracts Next.js redirect logic for testability and flexibility
  */

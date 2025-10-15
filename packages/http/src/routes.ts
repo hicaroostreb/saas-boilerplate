@@ -1,7 +1,6 @@
 /**
- * @workspace/routes - Enterprise Route Definitions
- * Single Source of Truth for all application routes
- * Zero dependencies, type-safe, immutable
+ * @workspace/http - Route Definitions
+ * Mantido igual ao original para compatibilidade
  */
 
 // ===== CORE ROUTE DEFINITIONS =====
@@ -68,11 +67,9 @@ export const ROUTES = {
   },
 } as const;
 
-// ===== TYPE DEFINITIONS =====
 export type RouteKey = keyof typeof ROUTES;
 export type DynamicRoute = (...args: string[]) => string;
 
-// ===== ROUTE CLASSIFICATIONS =====
 export const PUBLIC_ROUTES = [
   '/',
   ROUTES.SIGN_IN,
@@ -88,7 +85,6 @@ export const PUBLIC_ROUTES = [
 
 export const GUEST_ONLY_ROUTES = [ROUTES.SIGN_IN, ROUTES.SIGN_UP] as const;
 
-// ===== NAVIGATION STRUCTURES =====
 export interface NavItem {
   readonly title: string;
   readonly href: string;
