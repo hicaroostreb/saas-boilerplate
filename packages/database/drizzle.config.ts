@@ -1,72 +1,34 @@
-import { config } from 'dotenv';
-import { defineConfig } from 'drizzle-kit';
+import * as dotenv from 'dotenv';
+import type { Config } from 'drizzle-kit';
+import { resolve } from 'path';
 
-// Environment loading
-const envPaths = [
-  '../../.env.local',
-  '../../../.env.local', 
-  '.env.local',
-];
+// Load .env.local from root do monorepo
+dotenv.config({ path: resolve(__dirname, '../../.env.local') });
 
-let envLoaded = false;
-for (const envPath of envPaths) {
-  try {
-    config({ path: envPath, override: false });
-    if (process.env.DATABASE_URL) {
-      console.log(`Drizzle config loaded env from: ${envPath}`);
-      envLoaded = true;
-      break;
-    }
-  } catch (error) {
-    continue;
-  }
+// ✅ Usar DIRECT_DATABASE_URL para migrations (porta 5432)
+const databaseUrl = process.env.DIRECT_DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error(
+    '❌ DIRECT_DATABASE_URL is required for migrations.\n' +
+      'Add to .env.local:\n' +
+      'DIRECT_DATABASE_URL="postgresql://postgres:[password]@db.[project].supabase.co:5432/postgres"'
+  );
 }
 
-if (!envLoaded) {
-  console.warn('Drizzle config: No .env.local found, using system env vars');
-}
+console.log(
+  '✅ Using DIRECT connection for migrations:',
+  databaseUrl.replace(/:[^:@]+@/, ':***@')
+);
 
-export default defineConfig({
-  schema: './src/schemas/index.ts',
+export default {
+  // ✅ IMPORTANTE: Usar src/ não dist/ (Drizzle lê TypeScript direto)
+  schema: './src/schemas/**/*.schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
-  
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: databaseUrl,
   },
-
-  verbose: process.env.NODE_ENV === 'development',
+  verbose: true,
   strict: true,
-  breakpoints: true,
-
-  tablesFilter: [
-    'users',
-    'accounts', 
-    'sessions',
-    'verification_tokens',
-    'organizations',
-    'memberships',
-    'invitations', 
-    'projects',
-    'contacts',
-    'auth_audit_logs',
-    'rate_limits',
-    'password_reset_tokens',
-    'activity_logs',
-  ],
-
-  schemaFilter: ['public'],
-});
-
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL environment variable is required');
-  process.exit(1);
-}
-
-if (process.env.NODE_ENV === 'development') {
-  console.log('Drizzle Kit Enterprise Configuration:');
-  console.log('   Schema: ./src/schemas/index.ts');
-  console.log('   Output: ./drizzle');
-  console.log('   Database: PostgreSQL (Multi-tenant)');
-  console.log('   Tables: 13 tracked enterprise tables');
-}
+} satisfies Config;

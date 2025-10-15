@@ -1,21 +1,22 @@
 // packages/database/src/repositories/contracts/index.ts
 // ============================================
-// REPOSITORY CONTRACTS BARREL EXPORTS (FIXED)
+// REPOSITORY CONTRACTS BARREL EXPORTS
 // ============================================
 
-// Base contracts
 export type {
   IUserRepository,
+  UserFilterOptions,
+  UserQueryOptions,
+} from './user.repository.interface';
+
+export type {
+  CreateSessionData,
   ISessionRepository,
+  SessionData,
+  SessionListItem,
+} from './session.repository.interface';
+
+export type {
   IOrganizationRepository,
-} from './repository.contracts';
-
-// Audit contracts
-export type {
-  IAuditRepository,
-} from '../implementations/drizzle-audit.repository';
-
-// Rate limit contracts
-export type {
-  IRateLimitRepository,
-} from '../implementations/drizzle-rate-limit.repository';
+  OrganizationFilterOptions,
+} from './organization.repository.interface';

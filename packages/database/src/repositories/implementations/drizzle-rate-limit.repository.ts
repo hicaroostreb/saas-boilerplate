@@ -1,18 +1,17 @@
 // packages/database/src/repositories/implementations/drizzle-rate-limit.repository.ts
 // ============================================
-// DRIZZLE RATE LIMIT REPOSITORY - ENTERPRISE RATE LIMITING (FIXED)
+// DRIZZLE RATE LIMIT REPOSITORY - ENTERPRISE RATE LIMITING (REFACTORED)
 // ============================================
 
-import {
-  and,
-  desc,
-  eq,
-  lt,
-  sql,
-} from 'drizzle-orm';
+import { and, eq, isNull, lt } from 'drizzle-orm';
 import type { Database } from '../../connection';
 import { DatabaseError } from '../../connection';
+import { tenantContext } from '../../connection/tenant-context';
 import {
+  calculateWindowBounds,
+  checkRateLimit,
+  createWindowReset,
+  isWindowExpired,
   rate_limits,
   type CreateRateLimit,
   type RateLimit,
@@ -20,17 +19,9 @@ import {
   type RateLimitType,
   type RateLimitWindow,
 } from '../../schemas/security';
-
-// Import helper functions directly from rate-limit schema
-import {
-  calculateWindowBounds,
-  checkRateLimit,
-  createWindowReset,
-  isWindowExpired,
-} from '../../schemas/security/rate-limit.schema';
+import { RLSRepositoryWrapper } from '../rls-wrapper';
 
 export interface IRateLimitRepository {
-  // Core rate limiting operations
   checkAndIncrement(
     type: RateLimitType,
     identifier: string,
@@ -40,37 +31,31 @@ export interface IRateLimitRepository {
     organizationId?: string,
     userId?: string
   ): Promise<RateLimitResult>;
-
-  // Direct CRUD operations
-  findByTypeAndIdentifier(type: RateLimitType, identifier: string): Promise<RateLimit | null>;
+  findByTypeAndIdentifier(
+    type: RateLimitType,
+    identifier: string
+  ): Promise<RateLimit | null>;
   create(rateLimit: CreateRateLimit): Promise<RateLimit>;
   update(rateLimit: RateLimit): Promise<RateLimit>;
-  increment(id: string): Promise<RateLimit>;
   reset(id: string): Promise<RateLimit>;
-
-  // Cleanup and maintenance
   cleanupExpired(): Promise<number>;
-  findExpiredLimits(): Promise<RateLimit[]>;
-
-  // Analytics
-  getTopLimitedIdentifiers(type?: RateLimitType, limit?: number): Promise<Array<{
-    identifier: string;
-    request_count: number;
-    limit_exceeded_count: number;
-  }>>;
-
-  // Bulk operations
   resetAllForIdentifier(identifier: string): Promise<number>;
   resetAllForOrganization(organizationId: string): Promise<number>;
 }
 
 export class DrizzleRateLimitRepository implements IRateLimitRepository {
-  constructor(private readonly db: Database) {}
+  private rls: RLSRepositoryWrapper;
+
+  constructor(private readonly db: Database) {
+    this.rls = new RLSRepositoryWrapper(db);
+  }
 
   private checkBuildTime(): boolean {
-    return process.env.NODE_ENV === 'production' && 
-           (process.env.NEXT_PHASE === 'phase-production-build' || 
-            process.env.CI === 'true');
+    return (
+      process.env.NODE_ENV === 'production' &&
+      (process.env.NEXT_PHASE === 'phase-production-build' ||
+        process.env.CI === 'true')
+    );
   }
 
   async checkAndIncrement(
@@ -91,29 +76,40 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
         current_window_requests: 1,
       };
     }
-    
+
     try {
-      return await this.db.transaction(async (tx) => {
-        // Find existing rate limit
+      return await this.rls.transaction(async tx => {
+        const tenantId = tenantContext.getTenantIdOrNull();
+
+        const conditions = [
+          eq(rate_limits.type, type),
+          eq(rate_limits.identifier, identifier),
+        ];
+
+        if (tenantId) {
+          conditions.push(eq(rate_limits.tenant_id, tenantId));
+        } else {
+          conditions.push(isNull(rate_limits.tenant_id));
+        }
+
         const [existingLimit] = await tx
           .select()
           .from(rate_limits)
-          .where(
-            and(
-              eq(rate_limits.type, type),
-              eq(rate_limits.identifier, identifier)
-            )
-          )
+          .where(and(...conditions)!)
           .limit(1);
 
         const now = new Date();
 
         if (!existingLimit) {
-          // Create new rate limit
-          const { start, end } = calculateWindowBounds(windowType as RateLimitWindow, windowSize, now);
-          
+          const { start, end } = calculateWindowBounds(
+            windowType as RateLimitWindow,
+            windowSize,
+            now
+          );
+
           const newLimit: CreateRateLimit = {
             id: crypto.randomUUID(),
+            tenant_id: tenantId,
             type,
             identifier,
             organization_id: organizationId || null,
@@ -126,6 +122,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
             window_end: end,
             first_request_at: now,
             last_request_at: now,
+            metadata: null,
             created_at: now,
             updated_at: now,
           };
@@ -144,7 +141,6 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
           };
         }
 
-        // Check if window has expired and needs reset
         let currentLimit = existingLimit;
         if (isWindowExpired(currentLimit)) {
           const resetData = createWindowReset(currentLimit, now);
@@ -168,11 +164,9 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
           };
         }
 
-        // Check current rate limit
         const result = checkRateLimit(currentLimit, now);
-        
+
         if (result.allowed) {
-          // Increment counter
           await tx
             .update(rate_limits)
             .set({
@@ -190,22 +184,19 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
     }
   }
 
-  async findByTypeAndIdentifier(type: RateLimitType, identifier: string): Promise<RateLimit | null> {
+  async findByTypeAndIdentifier(
+    type: RateLimitType,
+    identifier: string
+  ): Promise<RateLimit | null> {
     if (this.checkBuildTime()) return null;
-    
-    try {
-      const [result] = await this.db
-        .select()
-        .from(rate_limits)
-        .where(
-          and(
-            eq(rate_limits.type, type),
-            eq(rate_limits.identifier, identifier)
-          )
-        )
-        .limit(1);
 
-      return result || null;
+    try {
+      const result = await this.rls.selectWhere(
+        rate_limits,
+        and(eq(rate_limits.type, type), eq(rate_limits.identifier, identifier))!
+      );
+
+      return (result[0] || null) as RateLimit | null;
     } catch (error) {
       throw this.handleDatabaseError(error, 'findByTypeAndIdentifier');
     }
@@ -215,15 +206,20 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
     if (this.checkBuildTime()) {
       return rateLimit as RateLimit;
     }
-    
+
     try {
+      await this.rls.insert(rate_limits, rateLimit);
+
       const [result] = await this.db
-        .insert(rate_limits)
-        .values(rateLimit)
-        .returning();
+        .select()
+        .from(rate_limits)
+        .where(eq(rate_limits.id, rateLimit.id))
+        .limit(1);
 
       if (!result) {
-        throw new DatabaseError('Failed to create rate limit - no result returned');
+        throw new DatabaseError(
+          'Failed to create rate limit - no result returned'
+        );
       }
 
       return result;
@@ -234,16 +230,22 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
 
   async update(rateLimit: RateLimit): Promise<RateLimit> {
     if (this.checkBuildTime()) return rateLimit;
-    
+
     try {
+      await this.rls
+        .updateWhere(rate_limits, eq(rate_limits.id, rateLimit.id))
+        .set({ ...rateLimit, updated_at: new Date() });
+
       const [result] = await this.db
-        .update(rate_limits)
-        .set({ ...rateLimit, updated_at: new Date() })
+        .select()
+        .from(rate_limits)
         .where(eq(rate_limits.id, rateLimit.id))
-        .returning();
+        .limit(1);
 
       if (!result) {
-        throw new DatabaseError('Failed to update rate limit - rate limit not found');
+        throw new DatabaseError(
+          'Failed to update rate limit - rate limit not found'
+        );
       }
 
       return result;
@@ -252,61 +254,41 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
     }
   }
 
-  async increment(id: string): Promise<RateLimit> {
-    if (this.checkBuildTime()) {
-      return {} as RateLimit;
-    }
-    
-    try {
-      const [result] = await this.db
-        .update(rate_limits)
-        .set({
-          current_count: sql`${rate_limits.current_count} + 1`,
-          last_request_at: new Date(),
-          updated_at: new Date(),
-        })
-        .where(eq(rate_limits.id, id))
-        .returning();
-
-      if (!result) {
-        throw new DatabaseError('Failed to increment rate limit - rate limit not found');
-      }
-
-      return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'increment');
-    }
-  }
-
   async reset(id: string): Promise<RateLimit> {
     if (this.checkBuildTime()) {
       return {} as RateLimit;
     }
-    
+
     try {
       const now = new Date();
-      const [current] = await this.db
+
+      const current = await this.rls.selectWhere(
+        rate_limits,
+        eq(rate_limits.id, id)
+      );
+
+      if (!current || current.length === 0 || !current[0]) {
+        throw new DatabaseError('Rate limit not found');
+      }
+
+      const resetData = createWindowReset(current[0], now);
+
+      await this.rls.updateWhere(rate_limits, eq(rate_limits.id, id)).set({
+        ...resetData,
+        updated_at: now,
+      });
+
+      const [result] = await this.db
         .select()
         .from(rate_limits)
         .where(eq(rate_limits.id, id))
         .limit(1);
 
-      if (!current) {
-        throw new DatabaseError('Rate limit not found');
+      if (!result) {
+        throw new DatabaseError('Failed to reset rate limit');
       }
 
-      const resetData = createWindowReset(current, now);
-      
-      const [result] = await this.db
-        .update(rate_limits)
-        .set({
-          ...resetData,
-          updated_at: now,
-        })
-        .where(eq(rate_limits.id, id))
-        .returning();
-
-      return result!;
+      return result;
     } catch (error) {
       throw this.handleDatabaseError(error, 'reset');
     }
@@ -314,85 +296,43 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
 
   async cleanupExpired(): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
-      // Delete rate limits that are expired and haven't been accessed in 24 hours
       const cleanupTime = new Date();
       cleanupTime.setHours(cleanupTime.getHours() - 24);
 
-      await this.db
-        .delete(rate_limits)
-        .where(
-          and(
-            lt(rate_limits.window_end, cleanupTime),
-            eq(rate_limits.current_count, 0)
-          )
-        );
+      await this.rls.deleteWhere(
+        rate_limits,
+        and(
+          lt(rate_limits.window_end, cleanupTime),
+          eq(rate_limits.current_count, 0)
+        )!
+      );
 
-      return 0; // Can't get affected rows count with current setup
+      return 0;
     } catch (error) {
       throw this.handleDatabaseError(error, 'cleanupExpired');
     }
   }
 
-  async findExpiredLimits(): Promise<RateLimit[]> {
-    if (this.checkBuildTime()) return [];
-    
-    try {
-      const now = new Date();
-      const result = await this.db
-        .select()
-        .from(rate_limits)
-        .where(lt(rate_limits.window_end, now))
-        .orderBy(desc(rate_limits.window_end));
-
-      return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'findExpiredLimits');
-    }
-  }
-
-  async getTopLimitedIdentifiers(
-    type?: RateLimitType,
-    limit = 10
-  ): Promise<Array<{
-    identifier: string;
-    request_count: number;
-    limit_exceeded_count: number;
-  }>> {
-    if (this.checkBuildTime()) return [];
-    
-    try {
-      // This would require complex GROUP BY queries
-      // For now, return empty array as placeholder
-      return [];
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'getTopLimitedIdentifiers');
-    }
-  }
-
   async resetAllForIdentifier(identifier: string): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
       const now = new Date();
-      
-      // Get all rate limits for identifier
-      const limits = await this.db
-        .select()
-        .from(rate_limits)
-        .where(eq(rate_limits.identifier, identifier));
+      const limits = await this.rls.selectWhere(
+        rate_limits,
+        eq(rate_limits.identifier, identifier)
+      );
 
-      // Reset each one
       for (const rateLimit of limits) {
         const resetData = createWindowReset(rateLimit, now);
-        await this.db
-          .update(rate_limits)
+        await this.rls
+          .updateWhere(rate_limits, eq(rate_limits.id, rateLimit.id))
           .set({
             ...resetData,
             updated_at: now,
-          })
-          .where(eq(rate_limits.id, rateLimit.id));
+          });
       }
 
       return limits.length;
@@ -403,26 +343,22 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
 
   async resetAllForOrganization(organizationId: string): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
       const now = new Date();
-      
-      // Get all rate limits for organization
-      const limits = await this.db
-        .select()
-        .from(rate_limits)
-        .where(eq(rate_limits.organization_id, organizationId));
+      const limits = await this.rls.selectWhere(
+        rate_limits,
+        eq(rate_limits.organization_id, organizationId)
+      );
 
-      // Reset each one
       for (const rateLimit of limits) {
         const resetData = createWindowReset(rateLimit, now);
-        await this.db
-          .update(rate_limits)
+        await this.rls
+          .updateWhere(rate_limits, eq(rate_limits.id, rateLimit.id))
           .set({
             ...resetData,
             updated_at: now,
-          })
-          .where(eq(rate_limits.id, rateLimit.id));
+          });
       }
 
       return limits.length;
@@ -431,8 +367,15 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
     }
   }
 
-  private handleDatabaseError(error: unknown, operation: string): DatabaseError {
-    const err = error as { code?: string; message?: string; constraint?: string };
+  private handleDatabaseError(
+    error: unknown,
+    operation: string
+  ): DatabaseError {
+    const err = error as {
+      code?: string;
+      message?: string;
+      constraint?: string;
+    };
 
     console.error(`[DrizzleRateLimitRepository.${operation}] Database error:`, {
       code: err.code,

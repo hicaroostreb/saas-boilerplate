@@ -1,19 +1,27 @@
 // packages/database/src/repositories/factory.ts
 // ============================================
-// REPOSITORY FACTORY - ENTERPRISE DI PATTERN (ALIGNED)
+// REPOSITORY FACTORY - ENTERPRISE DI PATTERN (REFACTORED)
 // ============================================
 
 import type { Database } from '../connection';
-import { DrizzleUserRepository } from './implementations/drizzle-user.repository';
-import { DrizzleSessionRepository } from './implementations/drizzle-session.repository';
-import { DrizzleOrganizationRepository } from './implementations/drizzle-organization.repository';
-import { DrizzleAuditRepository, type IAuditRepository } from './implementations/drizzle-audit.repository';
-import { DrizzleRateLimitRepository, type IRateLimitRepository } from './implementations/drizzle-rate-limit.repository';
-import type { 
-  IUserRepository, 
-  ISessionRepository, 
+import { AuthorizationGuard } from './authorization-guard';
+import type {
   IOrganizationRepository,
+  ISessionRepository,
+  IUserRepository,
 } from './contracts';
+import {
+  DrizzleAuditRepository,
+  type IAuditRepository,
+} from './implementations/drizzle-audit.repository';
+import { DrizzleOrganizationRepository } from './implementations/drizzle-organization.repository';
+import {
+  DrizzleRateLimitRepository,
+  type IRateLimitRepository,
+} from './implementations/drizzle-rate-limit.repository';
+import { DrizzleSessionRepository } from './implementations/drizzle-session.repository';
+import { DrizzleUserRepository } from './implementations/drizzle-user.repository';
+import { RLSRepositoryWrapper } from './rls-wrapper';
 
 export interface RepositoryRegistry {
   userRepository: IUserRepository;
@@ -21,6 +29,8 @@ export interface RepositoryRegistry {
   organizationRepository: IOrganizationRepository;
   auditRepository: IAuditRepository;
   rateLimitRepository: IRateLimitRepository;
+  authorizationGuard: AuthorizationGuard;
+  rlsWrapper: RLSRepositoryWrapper;
 }
 
 export interface RepositoryFactory {
@@ -29,6 +39,8 @@ export interface RepositoryFactory {
   createOrganizationRepository(): IOrganizationRepository;
   createAuditRepository(): IAuditRepository;
   createRateLimitRepository(): IRateLimitRepository;
+  createAuthorizationGuard(): AuthorizationGuard;
+  createRLSWrapper(): RLSRepositoryWrapper;
 }
 
 export function createRepositoryFactory(database: Database): RepositoryFactory {
@@ -52,10 +64,20 @@ export function createRepositoryFactory(database: Database): RepositoryFactory {
     createRateLimitRepository(): IRateLimitRepository {
       return new DrizzleRateLimitRepository(database);
     },
+
+    createAuthorizationGuard(): AuthorizationGuard {
+      return new AuthorizationGuard(database);
+    },
+
+    createRLSWrapper(): RLSRepositoryWrapper {
+      return new RLSRepositoryWrapper(database);
+    },
   };
 }
 
-export async function createRepositories(database: Database): Promise<RepositoryRegistry> {
+export async function createRepositories(
+  database: Database
+): Promise<RepositoryRegistry> {
   const factory = createRepositoryFactory(database);
 
   return {
@@ -64,5 +86,7 @@ export async function createRepositories(database: Database): Promise<Repository
     organizationRepository: factory.createOrganizationRepository(),
     auditRepository: factory.createAuditRepository(),
     rateLimitRepository: factory.createRateLimitRepository(),
+    authorizationGuard: factory.createAuthorizationGuard(),
+    rlsWrapper: factory.createRLSWrapper(),
   };
 }

@@ -1,38 +1,45 @@
 // packages/database/src/connection/index.ts
 // ============================================
-// CONNECTION BARREL EXPORTS - ENTERPRISE
+// CONNECTION BARREL EXPORTS (REFACTORED)
 // ============================================
 
-// Core database connection
 export {
+  DatabaseConnection,
+  closeConnection,
+  db,
+  getConnectionInfo,
   getDatabaseConnection,
   getDb,
-  db,
   healthCheck,
-  closeConnection,
-  getConnectionInfo,
   type Database,
 } from './database.connection';
 
-// Configuration
+export {
+  DatabaseError,
+  formatDatabaseError,
+  isCheckConstraintError,
+  isConnectionError,
+  isDeadlockError,
+  isDuplicateKeyError,
+  isForeignKeyError,
+  isNotNullError,
+  isUniqueConstraintError,
+  withQueryPerformance,
+} from './errors';
+
 export {
   createDatabaseConfig,
   createPostgresTypes,
+  type BuildContext,
   type DatabaseConfig,
   type PoolConfig,
   type SSLConfig,
 } from './config';
 
-// Error handling
 export {
-  DatabaseError,
-  isDuplicateKeyError,
-  isForeignKeyError,
-  isNotNullError,
-  isCheckConstraintError,
-  isUniqueConstraintError,
-  isDeadlockError,
-  isConnectionError,
-  withQueryPerformance,
-  formatDatabaseError,
-} from './errors';
+  AllowSystemContext,
+  RequiresTenantContext,
+  TenantContextError,
+  tenantContext,
+  type TenantContext,
+} from './tenant-context';

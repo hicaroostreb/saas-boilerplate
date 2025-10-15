@@ -201,10 +201,12 @@
       "dependencies": {
         "bcryptjs": "^2.4.3",
         "dotenv": "^16.4.7",
+        "drizzle-orm": "^0.44.6",
         "postgres": "^3.4.5",
       },
       "devDependencies": {
         "@types/bcryptjs": "^2.4.6",
+        "drizzle-kit": "^0.31.5",
         "typescript": "^5.9.2",
       },
     },

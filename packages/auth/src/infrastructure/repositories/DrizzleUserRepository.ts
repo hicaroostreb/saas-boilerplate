@@ -1,4 +1,5 @@
 import { getDb, users, type CreateUser } from '@workspace/database';
+import { tenantContext } from '@workspace/database/connection';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { User } from '../../domain/entities/User';
 import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
@@ -48,9 +49,11 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async create(user: User, passwordHash: string): Promise<User> {
     try {
       const db = await getDb();
+      const tenantId = tenantContext.getTenantIdOrNull() ?? 'system-tenant';
 
       const createData: CreateUser = {
         id: user.id,
+        tenant_id: tenantId,
         email: user.email.value,
         name: user.name,
         password_hash: passwordHash,
@@ -93,7 +96,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
       await db
         .update(users)
         .set({
-          login_attempts: sql`CAST(COALESCE(${users.login_attempts}, '0') AS INTEGER) + 1`,
+          login_attempts: sql`COALESCE(${users.login_attempts}, 0) + 1`,
           updated_at: new Date(),
         })
         .where(eq(users.id, userId));
@@ -105,11 +108,10 @@ export class DrizzleUserRepository implements UserRepositoryPort {
     }
   }
 
-  // ✅ Tipo específico do Drizzle
   private mapToDomainEntity(dbUser: typeof users.$inferSelect): User {
     return User.reconstitute({
       id: dbUser.id,
-      email: dbUser.email, // ✅ STRING (não Email object)
+      email: dbUser.email,
       name: dbUser.name,
       passwordHash: dbUser.password_hash,
       isActive: dbUser.is_active ?? true,

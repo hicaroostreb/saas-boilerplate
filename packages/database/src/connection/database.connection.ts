@@ -1,16 +1,11 @@
 // packages/database/src/connection/database.connection.ts
 // ============================================
-// DATABASE CONNECTION - ENTERPRISE LAZY INITIALIZATION
-// Zero any, circuit breaker, pooling otimizado
+// DATABASE CONNECTION - SUPABASE POOLER (FIXED)
 // ============================================
 
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import {
-  createDatabaseConfig,
-  createPostgresTypes,
-  type DatabaseConfig,
-} from './config';
 
 // Schema imports
 import * as activitySchemas from '../schemas/activity';
@@ -19,370 +14,162 @@ import * as businessSchemas from '../schemas/business';
 import * as securitySchemas from '../schemas/security';
 
 const allSchemas = {
-  ...activitySchemas,
   ...authSchemas,
   ...businessSchemas,
   ...securitySchemas,
+  ...activitySchemas,
 };
 
+export type Database = PostgresJsDatabase<typeof allSchemas>;
+
 export class DatabaseConnection {
-  private config: DatabaseConfig | null = null;
-  private client: postgres.Sql | null = null;
-  private drizzleDb: ReturnType<typeof drizzle> | null = null;
-  private isInitialized = false;
-  private isConnected = false;
-  private failureCount = 0;
-  private lastFailure: Date | null = null;
+  private static instance: DatabaseConnection | null = null;
+  private client: ReturnType<typeof postgres> | null = null;
+  private drizzleDb: Database | null = null;
+  private isConnecting = false;
 
-  private readonly MAX_FAILURES = 5;
-  private readonly CIRCUIT_TIMEOUT = 30000;
+  private constructor() {}
 
-  constructor() {}
-
-  async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      return;
+  static getInstance(): DatabaseConnection {
+    if (!DatabaseConnection.instance) {
+      DatabaseConnection.instance = new DatabaseConnection();
     }
-
-    this.config = createDatabaseConfig();
-
-    if (this.isBuildTime()) {
-      // Build time: Return immediately without connection
-      this.isInitialized = true;
-      this.isConnected = true;
-      return;
-    }
-
-    await this.setupRealConnection();
-    this.isInitialized = true;
+    return DatabaseConnection.instance;
   }
 
-  private isBuildTime(): boolean {
-    return (
-      this.config?.buildContext.isBuild ||
-      this.config?.buildContext.isCI ||
-      false
-    );
-  }
-
-  private async setupRealConnection(): Promise<void> {
-    if (!this.config) {
-      throw new Error('Configuration not initialized');
+  async connect(): Promise<Database> {
+    // Se já está conectado, retorna
+    if (this.drizzleDb) {
+      return this.drizzleDb;
     }
 
-    if (this.isCircuitOpen()) {
-      throw new Error('Database circuit breaker is open');
+    // Evita múltiplas conexões simultâneas
+    if (this.isConnecting) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return this.connect();
     }
+
+    this.isConnecting = true;
 
     try {
-      this.client = this.createPostgresClient();
-      this.drizzleDb = this.createDrizzleInstance();
-      this.setupProcessHandlers();
-      await this.initializeConnection();
-      
-      this.failureCount = 0;
-      this.lastFailure = null;
-    } catch (error) {
-      this.recordFailure();
-      throw error;
-    }
-  }
+      // Usar DATABASE_URL (pooler) em runtime
+      const databaseUrl =
+        process.env.DATABASE_URL || process.env.DIRECT_DATABASE_URL;
 
-  private isCircuitOpen(): boolean {
-    if (this.failureCount < this.MAX_FAILURES) {
-      return false;
-    }
-
-    if (!this.lastFailure) {
-      return false;
-    }
-
-    const timeSinceLastFailure = Date.now() - this.lastFailure.getTime();
-    return timeSinceLastFailure < this.CIRCUIT_TIMEOUT;
-  }
-
-  private recordFailure(): void {
-    this.failureCount++;
-    this.lastFailure = new Date();
-    
-    if (this.failureCount >= this.MAX_FAILURES) {
-      console.error(
-        `Database circuit breaker opened after ${this.failureCount} failures`
-      );
-    }
-  }
-
-  private createPostgresClient(): postgres.Sql {
-    if (!this.config) {
-      throw new Error('Configuration not initialized');
-    }
-
-    const types = createPostgresTypes();
-
-    return postgres(this.config.connectionString, {
-      max: this.config.poolConfig.max,
-      idle_timeout: this.config.poolConfig.idleTimeout,
-      connect_timeout: this.config.poolConfig.connectTimeout,
-      prepare: this.config.prepare,
-      onnotice: this.config.isDevelopment ? console.log : () => {},
-      ssl: this.config.sslConfig,
-      transform: this.config.transform ? postgres.camel : undefined,
-      types: types.bigint ? {
-        [types.bigint.to]: types.bigint,
-        [types.json.to]: types.json,
-      } : undefined,
-    });
-  }
-
-  private createDrizzleInstance() {
-    if (!this.config || !this.client) {
-      throw new Error('Configuration or client not initialized');
-    }
-
-    const logger = this.config.logging ? {
-      logQuery: (query: string, params: unknown[]) => {
-        const truncatedQuery = query.length > 200 
-          ? `${query.substring(0, 200)}...` 
-          : query;
-        
-        console.log('[DB Query]:', truncatedQuery);
-        
-        if (params.length > 0) {
-          const safeParams = params.slice(0, 5).map(param => 
-            typeof param === 'string' && param.length > 50 
-              ? '[LARGE_STRING]' 
-              : param
-          );
-          console.log('[DB Params]:', safeParams);
-        }
-      },
-    } : false;
-
-    return drizzle(this.client, {
-      schema: allSchemas,
-      logger,
-      casing: 'snake_case',
-    });
-  }
-
-  private async initializeConnection(): Promise<void> {
-    if (!this.config) {
-      throw new Error('Configuration not initialized');
-    }
-
-    if (this.config.isDevelopment) {
-      try {
-        await this.runHealthCheck();
-        await this.logConnectionInfo();
-        this.isConnected = true;
-        console.log('Database connection initialized successfully');
-      } catch (error) {
-        console.error('Database initialization failed:', error);
-        this.isConnected = false;
-        throw error;
+      if (!databaseUrl) {
+        throw new Error(
+          'DATABASE_URL or DIRECT_DATABASE_URL must be set in environment variables'
+        );
       }
-    } else {
-      this.isConnected = true;
-    }
-  }
 
-  private async runHealthCheck(): Promise<void> {
-    if (!this.client) {
-      throw new Error('Client not initialized');
-    }
+      // ✅ Detectar pooler APENAS pela porta :6543
+      const isSupabasePooler = databaseUrl.includes(':6543');
 
-    const [result] = await this.client`SELECT 1 as health`;
+      if (isSupabasePooler) {
+        console.log('✅ Using Supabase Pooler (PgBouncer) - port 6543');
+      } else {
+        console.log('✅ Using Direct Connection - port 5432');
+      }
 
-    if (!result?.health) {
-      throw new Error('Database health check failed');
-    }
-
-    console.log('Database health check: OK');
-  }
-
-  private async logConnectionInfo(): Promise<void> {
-    if (!this.client) {
-      return;
-    }
-
-    try {
-      const [result] = await this.client`
-        SELECT
-          current_database() as database,
-          current_user as "user", 
-          current_setting('server_version') as server_version,
-          current_setting('max_connections') as max_connections
-      `;
-
-      console.log('Database Info:', {
-        database: result?.database ?? 'unknown',
-        user: result?.user ?? 'unknown', 
-        version: result?.server_version ?? 'unknown',
-        maxConnections: result?.max_connections ?? 'unknown',
+      this.client = postgres(databaseUrl, {
+        max: isSupabasePooler ? 10 : 20,
+        idle_timeout: 20,
+        connect_timeout: 10,
+        prepare: !isSupabasePooler, // Disable prepared statements com pooler
+        onnotice: () => {}, // Silenciar notices
       });
+
+      this.drizzleDb = drizzle(this.client, {
+        schema: allSchemas,
+        logger: false,
+      });
+
+      console.log('✅ Database connected successfully');
+      return this.drizzleDb;
     } catch (error) {
-      console.warn('Could not retrieve database info:', error);
+      const err = error as Error;
+      console.error('❌ Database connection failed:', err.message);
+      throw error;
+    } finally {
+      this.isConnecting = false;
     }
   }
 
-  private setupProcessHandlers(): void {
-    if (this.isBuildTime()) {
-      return;
-    }
-
-    process.setMaxListeners(20);
-
-    const gracefulShutdown = async (signal: string) => {
-      console.log(`Received ${signal}, closing database connection...`);
-
-      try {
-        await this.close();
-        console.log('Database connection closed gracefully');
-        process.exit(0);
-      } catch (error) {
-        console.error('Error during graceful shutdown:', error);
-        process.exit(1);
-      }
-    };
-
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
-
-    process.on('uncaughtException', error => {
-      console.error('Uncaught Exception:', error);
-      gracefulShutdown('uncaughtException');
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      gracefulShutdown('unhandledRejection');
-    });
-  }
-
-  get database() {
-    if (!this.isInitialized) {
+  getDb(): Database {
+    if (!this.drizzleDb) {
       throw new Error(
-        'Database not initialized. Call await DatabaseConnection.getInstance().initialize() first.'
+        'Database not initialized. Call await getDb() instead of db directly.'
       );
     }
-
-    if (this.isBuildTime()) {
-      // Build time: Return null - Repository should handle this
-      return null as unknown as ReturnType<typeof drizzle>;
-    }
-
-    return this.drizzleDb!;
+    return this.drizzleDb;
   }
 
-  async healthCheck(): Promise<boolean> {
-    if (!this.isInitialized) {
-      await this.initialize();
+  async closeConnection(): Promise<void> {
+    if (this.client) {
+      await this.client.end();
+      this.client = null;
+      this.drizzleDb = null;
+      console.log('✅ Database connection closed');
     }
+  }
 
-    if (this.isBuildTime()) {
-      return true;
-    }
-
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    latency_ms: number;
+    pool_size: number;
+  }> {
     try {
-      if (!this.client) {
-        return false;
-      }
-      await this.client`SELECT 1 as health`;
-      return true;
+      const db = await this.connect();
+      const start = performance.now();
+      await db.execute('SELECT 1');
+      const latency = performance.now() - start;
+
+      return {
+        healthy: true,
+        latency_ms: Math.round(latency),
+        pool_size: 10,
+      };
     } catch (error) {
       console.error('Health check failed:', error);
-      this.recordFailure();
-      return false;
-    }
-  }
-
-  async getConnectionInfo() {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
-    if (this.isBuildTime()) {
-      return {
-        build: true,
-        environment: this.config?.buildContext.environment,
-      };
-    }
-
-    try {
-      if (!this.client) {
-        return null;
-      }
-
-      const [result] = await this.client`
-        SELECT
-          current_database() as database,
-          current_user as "user",
-          version() as version,
-          current_setting('server_version') as server_version
-      `;
-      return result;
-    } catch (error) {
-      console.error('Failed to get connection info:', error);
-      return null;
-    }
-  }
-
-  async close(): Promise<void> {
-    if (!this.isInitialized || this.isBuildTime()) {
-      return;
-    }
-
-    try {
-      if (this.client) {
-        await this.client.end();
-      }
-      this.isConnected = false;
-      console.log('Database connection closed');
-    } catch (error) {
-      console.error('Error closing database connection:', error);
-      throw error;
+      return { healthy: false, latency_ms: 0, pool_size: 0 };
     }
   }
 }
 
-let dbConnectionInstance: DatabaseConnection | null = null;
+// ============================================
+// EXPORTS
+// ============================================
 
-export function getDatabaseConnection(): DatabaseConnection {
-  if (!dbConnectionInstance) {
-    dbConnectionInstance = new DatabaseConnection();
-  }
-  return dbConnectionInstance;
-}
+export const getDatabaseConnection = () => DatabaseConnection.getInstance();
 
-export async function getDb() {
+// ✅ ASYNC function - conecta automaticamente
+export const getDb = async (): Promise<Database> => {
   const connection = getDatabaseConnection();
-  await connection.initialize();
-  return connection.database;
-}
+  return connection.connect();
+};
 
-export const db = new Proxy({} as ReturnType<typeof getDb>, {
-  get(_, prop) {
-    throw new Error(
-      `Database not initialized. Use "await getDb()" instead of direct "db.${String(prop)}" access. ` +
-      `This ensures proper lazy initialization and build-time safety.`
-    );
+// ✅ Proxy que lança erro se usar direto (força uso de await getDb())
+export const db = new Proxy({} as Database, {
+  get() {
+    throw new Error('Do not access db directly. Use: const db = await getDb()');
   },
 });
 
 export const healthCheck = async () => {
-  const connection = getDatabaseConnection();
-  return connection.healthCheck();
+  return getDatabaseConnection().healthCheck();
 };
 
 export const closeConnection = async () => {
-  const connection = getDatabaseConnection();
-  return connection.close();
+  return getDatabaseConnection().closeConnection();
 };
 
-export const getConnectionInfo = async () => {
-  const connection = getDatabaseConnection();
-  return connection.getConnectionInfo();
-};
+export const getConnectionInfo = () => {
+  const url = process.env.DATABASE_URL || '';
+  const isPooler = url.includes(':6543'); // Detectar apenas pela porta
 
-export type Database = Awaited<ReturnType<typeof getDb>>;
+  return {
+    type: isPooler ? 'pooler' : 'direct',
+    port: isPooler ? '6543' : '5432',
+    pooling: isPooler ? 'PgBouncer' : 'Direct',
+  };
+};

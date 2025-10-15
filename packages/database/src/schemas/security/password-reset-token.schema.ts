@@ -1,9 +1,17 @@
 // packages/database/src/schemas/security/password-reset-token.schema.ts
 // ============================================
-// PASSWORD RESET TOKEN SCHEMA - ENTERPRISE SECURITY (COMPLETE)
+// PASSWORD RESET TOKEN SCHEMA - ENTERPRISE SECURITY (REFACTORED)
 // ============================================
 
-import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 
 // Token status enum
 export const password_reset_status_enum = pgEnum('password_reset_status', [
@@ -17,67 +25,92 @@ export const password_reset_tokens = pgTable(
   'password_reset_tokens',
   {
     id: text('id').primaryKey(),
-    
+    tenant_id: text('tenant_id'), // ✅ ADICIONADO - Nullable para tokens pre-signup
+
     // User context
     user_id: text('user_id').notNull(),
     organization_id: text('organization_id'),
-    
+
     // Token details
     token: text('token').notNull(),
     token_hash: text('token_hash').notNull(),
-    
+
     // Status
     status: password_reset_status_enum('status').default('active').notNull(),
-    
+
     // Expiry and usage
     expires_at: timestamp('expires_at').notNull(),
     used_at: timestamp('used_at'),
     revoked_at: timestamp('revoked_at'),
     revoked_by: text('revoked_by'),
     revoked_reason: text('revoked_reason'),
-    
+
     // Security tracking
     ip_address: text('ip_address'),
     user_agent: text('user_agent'),
-    
+
     // Attempt tracking
     attempt_count: integer('attempt_count').default(0).notNull(),
     last_attempt_at: timestamp('last_attempt_at'),
-    
+
     // Rate limiting
     is_rate_limited: boolean('is_rate_limited').default(false).notNull(),
     rate_limit_expires_at: timestamp('rate_limit_expires_at'),
-    
+
     // Timestamps
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => ({
+  table => ({
+    // ✅ REFATORADO - tenant_id sempre primeiro (nullable ok)
+    tenantUserIdx: index('password_reset_tokens_tenant_user_idx').on(
+      table.tenant_id,
+      table.user_id
+    ),
+    tenantStatusIdx: index('password_reset_tokens_tenant_status_idx').on(
+      table.tenant_id,
+      table.status
+    ),
+
     // Primary access patterns
     userIdx: index('password_reset_tokens_user_idx').on(table.user_id),
     tokenIdx: index('password_reset_tokens_token_idx').on(table.token),
-    tokenHashIdx: index('password_reset_tokens_token_hash_idx').on(table.token_hash),
+    tokenHashIdx: index('password_reset_tokens_token_hash_idx').on(
+      table.token_hash
+    ),
     orgIdx: index('password_reset_tokens_org_idx').on(table.organization_id),
-    
+
     // Status and expiry
     statusIdx: index('password_reset_tokens_status_idx').on(table.status),
     expiresIdx: index('password_reset_tokens_expires_idx').on(table.expires_at),
     usedIdx: index('password_reset_tokens_used_idx').on(table.used_at),
     revokedIdx: index('password_reset_tokens_revoked_idx').on(table.revoked_at),
-    
+
     // Security and rate limiting
     ipIdx: index('password_reset_tokens_ip_idx').on(table.ip_address),
-    attemptCountIdx: index('password_reset_tokens_attempt_count_idx').on(table.attempt_count),
-    lastAttemptIdx: index('password_reset_tokens_last_attempt_idx').on(table.last_attempt_at),
-    rateLimitIdx: index('password_reset_tokens_rate_limit_idx').on(table.is_rate_limited),
-    rateLimitExpiresIdx: index('password_reset_tokens_rate_limit_expires_idx')
-      .on(table.rate_limit_expires_at),
-    
+    attemptCountIdx: index('password_reset_tokens_attempt_count_idx').on(
+      table.attempt_count
+    ),
+    lastAttemptIdx: index('password_reset_tokens_last_attempt_idx').on(
+      table.last_attempt_at
+    ),
+    rateLimitIdx: index('password_reset_tokens_rate_limit_idx').on(
+      table.is_rate_limited
+    ),
+    rateLimitExpiresIdx: index(
+      'password_reset_tokens_rate_limit_expires_idx'
+    ).on(table.rate_limit_expires_at),
+
     // Composite indexes
-    userStatusIdx: index('password_reset_tokens_user_status_idx').on(table.user_id, table.status),
-    statusExpiresIdx: index('password_reset_tokens_status_expires_idx')
-      .on(table.status, table.expires_at),
-    
+    userStatusIdx: index('password_reset_tokens_user_status_idx').on(
+      table.user_id,
+      table.status
+    ),
+    statusExpiresIdx: index('password_reset_tokens_status_expires_idx').on(
+      table.status,
+      table.expires_at
+    ),
+
     // Timestamps
     createdIdx: index('password_reset_tokens_created_idx').on(table.created_at),
     updatedIdx: index('password_reset_tokens_updated_idx').on(table.updated_at),
@@ -86,11 +119,13 @@ export const password_reset_tokens = pgTable(
 
 // Types
 export type PasswordResetToken = typeof password_reset_tokens.$inferSelect;
-export type CreatePasswordResetToken = typeof password_reset_tokens.$inferInsert;
-export type PasswordResetStatus = typeof password_reset_status_enum.enumValues[number];
+export type CreatePasswordResetToken =
+  typeof password_reset_tokens.$inferInsert;
+export type PasswordResetStatus =
+  (typeof password_reset_status_enum.enumValues)[number];
 
 // Token validation result
-export type TokenValidationResult = {
+export interface TokenValidationResult {
   isValid: boolean;
   isExpired: boolean;
   isUsed: boolean;
@@ -99,7 +134,7 @@ export type TokenValidationResult = {
   token?: PasswordResetToken;
   error?: string;
   remainingAttempts?: number;
-};
+}
 
 // Constants
 export const PASSWORD_RESET_TOKEN_LENGTH = 32;
@@ -108,41 +143,40 @@ export const MAX_RESET_ATTEMPTS = 5;
 export const RATE_LIMIT_HOURS = 24;
 
 // Token generation
-export function generatePasswordResetToken(length = PASSWORD_RESET_TOKEN_LENGTH): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+export function generatePasswordResetToken(
+  length = PASSWORD_RESET_TOKEN_LENGTH
+): string {
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let token = '';
-  
+
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     const array = new Uint8Array(length);
     crypto.getRandomValues(array);
-    
+
     for (let i = 0; i < length; i++) {
-      // Fixed null safety
       const arrayValue = array[i];
       if (arrayValue !== undefined) {
         token += chars[arrayValue % chars.length];
       }
     }
   } else {
-    // Fallback
     for (let i = 0; i < length; i++) {
       token += chars[Math.floor(Math.random() * chars.length)];
     }
   }
-  
+
   return token;
 }
 
 // Token hashing
 export function hashPasswordResetToken(token: string): string {
-  // Simple hash implementation (in production, use proper crypto)
   let hash = 0;
   for (let i = 0; i < token.length; i++) {
     const char = token.charCodeAt(i);
-    // Fixed null safety
     if (char !== undefined) {
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
     }
   }
   return Math.abs(hash).toString(16);
@@ -151,6 +185,7 @@ export function hashPasswordResetToken(token: string): string {
 // Token creation
 export function createPasswordResetToken(
   userId: string,
+  tenantId?: string,
   organizationId?: string,
   ipAddress?: string,
   userAgent?: string
@@ -161,6 +196,7 @@ export function createPasswordResetToken(
 
   return {
     id: crypto.randomUUID(),
+    tenant_id: tenantId || null,
     user_id: userId,
     organization_id: organizationId || null,
     token,
@@ -210,8 +246,11 @@ export function validatePasswordResetToken(
     };
   }
 
-  if (storedToken.is_rate_limited && storedToken.rate_limit_expires_at && 
-      new Date() < storedToken.rate_limit_expires_at) {
+  if (
+    storedToken.is_rate_limited &&
+    storedToken.rate_limit_expires_at &&
+    new Date() < storedToken.rate_limit_expires_at
+  ) {
     return {
       isValid: false,
       isExpired: false,
@@ -248,8 +287,11 @@ export function validatePasswordResetToken(
   }
 
   if (storedToken.token !== providedToken) {
-    const remainingAttempts = Math.max(0, MAX_RESET_ATTEMPTS - (storedToken.attempt_count + 1));
-    
+    const remainingAttempts = Math.max(
+      0,
+      MAX_RESET_ATTEMPTS - (storedToken.attempt_count + 1)
+    );
+
     return {
       isValid: false,
       isExpired: false,
@@ -272,7 +314,7 @@ export function validatePasswordResetToken(
   };
 }
 
-// Token utilities  
+// Token utilities
 export function isTokenExpired(token: PasswordResetToken): boolean {
   return new Date() > token.expires_at;
 }
@@ -286,65 +328,13 @@ export function isTokenRevoked(token: PasswordResetToken): boolean {
 }
 
 export function isTokenRateLimited(token: PasswordResetToken): boolean {
-  return token.is_rate_limited && 
-         token.rate_limit_expires_at !== null &&
-         new Date() < token.rate_limit_expires_at;
+  return (
+    token.is_rate_limited &&
+    token.rate_limit_expires_at !== null &&
+    new Date() < token.rate_limit_expires_at
+  );
 }
 
 export function shouldRateLimit(token: PasswordResetToken): boolean {
   return token.attempt_count >= MAX_RESET_ATTEMPTS;
-}
-
-// Token updates
-export function markTokenAsUsed(token: PasswordResetToken): Partial<PasswordResetToken> {
-  return {
-    status: 'used',
-    used_at: new Date(),
-    updated_at: new Date(),
-  };
-}
-
-export function incrementAttemptCount(token: PasswordResetToken): Partial<PasswordResetToken> {
-  const newAttemptCount = token.attempt_count + 1;
-  const shouldLimit = newAttemptCount >= MAX_RESET_ATTEMPTS;
-  
-  const update: Partial<PasswordResetToken> = {
-    attempt_count: newAttemptCount,
-    last_attempt_at: new Date(),
-    updated_at: new Date(),
-  };
-  
-  if (shouldLimit) {
-    const rateLimitExpiry = new Date();
-    rateLimitExpiry.setHours(rateLimitExpiry.getHours() + RATE_LIMIT_HOURS);
-    
-    update.is_rate_limited = true;
-    update.rate_limit_expires_at = rateLimitExpiry;
-  }
-  
-  return update;
-}
-
-export function revokeToken(
-  token: PasswordResetToken,
-  revokedBy: string,
-  reason?: string
-): Partial<PasswordResetToken> {
-  return {
-    status: 'revoked',
-    revoked_at: new Date(),
-    revoked_by: revokedBy,
-    revoked_reason: reason || null,
-    updated_at: new Date(),
-  };
-}
-
-// Cleanup utilities - FIXED NULL SAFETY
-export function shouldCleanupToken(token: PasswordResetToken, cleanupAfterHours = 72): boolean {
-  const cleanupTime = new Date();
-  cleanupTime.setHours(cleanupTime.getHours() - cleanupAfterHours);
-  
-  return (token.expires_at !== null && token.expires_at < cleanupTime) ||
-         (token.used_at !== null && token.used_at < cleanupTime) ||
-         (token.revoked_at !== null && token.revoked_at < cleanupTime);
 }

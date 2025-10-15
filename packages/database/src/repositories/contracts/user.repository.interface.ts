@@ -1,6 +1,6 @@
 // packages/database/src/repositories/contracts/user.repository.interface.ts
 // ============================================
-// USER REPOSITORY CONTRACT - ENTERPRISE
+// USER REPOSITORY CONTRACT - ENTERPRISE (REFACTORED)
 // ============================================
 
 import type { UserEntity } from '../../entities/auth/user.entity';
@@ -13,7 +13,6 @@ export interface UserQueryOptions {
 
 export interface UserFilterOptions {
   is_active?: boolean;
-  organization_id?: string;
   is_email_verified?: boolean;
   include_deleted?: boolean;
   limit?: number;
@@ -29,19 +28,16 @@ export interface IUserRepository {
   update(user: UserEntity): Promise<UserEntity>;
   delete(id: string): Promise<void>;
 
-  // Organization-specific queries
-  findByOrganizationId(
-    organization_id: string,
-    options?: UserQueryOptions
-  ): Promise<UserEntity[]>;
-
   // Soft delete operations
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<UserEntity | null>;
 
   // Search and filtering
   findMany(options: UserFilterOptions): Promise<UserEntity[]>;
-  findByEmailPattern(pattern: string, options?: UserQueryOptions): Promise<UserEntity[]>;
+  findByEmailPattern(
+    pattern: string,
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]>;
 
   // Authentication-specific
   findForAuthentication(email: string): Promise<UserEntity | null>;
@@ -60,5 +56,11 @@ export interface IUserRepository {
   existsById(id: string): Promise<boolean>;
 
   // Statistics
-  count(filters?: Pick<UserFilterOptions, 'is_active' | 'organization_id'>): Promise<number>;
+  count(filters?: Pick<UserFilterOptions, 'is_active'>): Promise<number>;
+
+  // Legacy compatibility (deprecated)
+  findByOrganizationId(
+    organization_id: string,
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]>;
 }
