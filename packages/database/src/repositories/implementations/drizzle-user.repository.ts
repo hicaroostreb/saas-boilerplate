@@ -83,41 +83,29 @@ export class DrizzleUserRepository implements IUserRepository {
   async create(user: UserEntity): Promise<UserEntity> {
     if (this.checkBuildTime()) return user;
 
-    try {
-      const inserted = await this.rls.insert(users, user.toDatabase());
-
-      const [result] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1);
+    return this.rls.transactionWithRLS(async tx => {
+      const [result] = await tx
+        .insert(users)
+        .values(user.toDatabase())
+        .returning();
 
       if (!result) {
         throw new DatabaseError('Failed to create user - no result returned');
       }
 
       return UserEntity.fromDatabase(result);
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'create');
-    }
+    });
   }
 
   async update(user: UserEntity): Promise<UserEntity> {
     if (this.checkBuildTime()) return user;
 
-    try {
-      await this.rls
-        .updateWhere(
-          users,
-          and(eq(users.id, user.id), isNull(users.deleted_at))!
-        )
-        .set({ ...user.toDatabase(), updated_at: new Date() });
-
-      const [result] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1);
+    return this.rls.transactionWithRLS(async tx => {
+      const [result] = await tx
+        .update(users)
+        .set({ ...user.toDatabase(), updated_at: new Date() })
+        .where(and(eq(users.id, user.id), isNull(users.deleted_at))!)
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -126,9 +114,7 @@ export class DrizzleUserRepository implements IUserRepository {
       }
 
       return UserEntity.fromDatabase(result);
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'update');
-    }
+    });
   }
 
   async delete(id: string): Promise<void> {

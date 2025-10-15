@@ -139,19 +139,16 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       } as Organization;
     }
 
-    try {
+    return this.rls.transactionWithRLS(async tx => {
       const now = new Date();
-      await this.rls.insert(organizations, {
-        ...organization,
-        created_at: now,
-        updated_at: now,
-      });
-
-      const [result] = await this.db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.id, organization.id))
-        .limit(1);
+      const [result] = await tx
+        .insert(organizations)
+        .values({
+          ...organization,
+          created_at: now,
+          updated_at: now,
+        })
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -160,9 +157,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       }
 
       return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'create');
-    }
+    });
   }
 
   async update(
@@ -171,7 +166,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   ): Promise<Organization> {
     if (this.checkBuildTime()) return organization;
 
-    try {
+    return this.rls.transactionWithRLS(async tx => {
       if (requestingUserId) {
         await this.guard.requirePermission(
           requestingUserId,
@@ -180,21 +175,16 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         );
       }
 
-      await this.rls
-        .updateWhere(
-          organizations,
+      const [result] = await tx
+        .update(organizations)
+        .set({ ...organization, updated_at: new Date() })
+        .where(
           and(
             eq(organizations.id, organization.id),
             isNull(organizations.deleted_at)
           )!
         )
-        .set({ ...organization, updated_at: new Date() });
-
-      const [result] = await this.db
-        .select()
-        .from(organizations)
-        .where(eq(organizations.id, organization.id))
-        .limit(1);
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -203,9 +193,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       }
 
       return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'update');
-    }
+    });
   }
 
   async delete(id: string, requestingUserId?: string): Promise<void> {

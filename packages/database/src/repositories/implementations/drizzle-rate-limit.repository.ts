@@ -207,14 +207,11 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       return rateLimit as RateLimit;
     }
 
-    try {
-      await this.rls.insert(rate_limits, rateLimit);
-
-      const [result] = await this.db
-        .select()
-        .from(rate_limits)
-        .where(eq(rate_limits.id, rateLimit.id))
-        .limit(1);
+    return this.rls.transactionWithRLS(async tx => {
+      const [result] = await tx
+        .insert(rate_limits)
+        .values(rateLimit)
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -223,24 +220,18 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       }
 
       return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'create');
-    }
+    });
   }
 
   async update(rateLimit: RateLimit): Promise<RateLimit> {
     if (this.checkBuildTime()) return rateLimit;
 
-    try {
-      await this.rls
-        .updateWhere(rate_limits, eq(rate_limits.id, rateLimit.id))
-        .set({ ...rateLimit, updated_at: new Date() });
-
-      const [result] = await this.db
-        .select()
-        .from(rate_limits)
+    return this.rls.transactionWithRLS(async tx => {
+      const [result] = await tx
+        .update(rate_limits)
+        .set({ ...rateLimit, updated_at: new Date() })
         .where(eq(rate_limits.id, rateLimit.id))
-        .limit(1);
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -249,9 +240,7 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       }
 
       return result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'update');
-    }
+    });
   }
 
   async reset(id: string): Promise<RateLimit> {

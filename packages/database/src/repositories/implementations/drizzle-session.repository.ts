@@ -3,9 +3,9 @@
 // DRIZZLE SESSION REPOSITORY - ENTERPRISE MULTI-TENANT (REFACTORED)
 // ============================================
 
-import { and, count, desc, eq, gt, lt, ne } from 'drizzle-orm';
+import { and, desc, eq, gt, lt, ne } from 'drizzle-orm';
 import type { Database } from '../../connection';
-import { DatabaseError } from '../../connection';
+import { DatabaseError, tenantContext } from '../../connection';
 import { sessions, type Session } from '../../schemas/auth';
 import type {
   CreateSessionData,
@@ -49,30 +49,29 @@ export class DrizzleSessionRepository implements ISessionRepository {
       };
     }
 
-    try {
+    return this.rls.transactionWithRLS(async tx => {
       const session_token = data.session_token ?? crypto.randomUUID();
       const now = new Date();
+      const tenant_id = tenantContext.getTenantId();
 
-      await this.rls.insert(sessions, {
-        session_token,
-        user_id: data.user_id,
-        expires: data.expires,
-        created_at: now,
-        last_accessed_at: now,
-        ip_address: data.ip_address ?? null,
-        user_agent: data.user_agent ?? null,
-        device_type: data.device_type ?? null,
-        device_name: data.device_name ?? null,
-        browser: data.browser ?? null,
-        os: data.os ?? null,
-        location: data.location ?? null,
-      });
-
-      const [result] = await this.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.session_token, session_token))
-        .limit(1);
+      const [result] = await tx
+        .insert(sessions)
+        .values({
+          tenant_id,
+          session_token,
+          user_id: data.user_id,
+          expires: data.expires,
+          created_at: now,
+          last_accessed_at: now,
+          ip_address: data.ip_address ?? null,
+          user_agent: data.user_agent ?? null,
+          device_type: data.device_type ?? null,
+          device_name: data.device_name ?? null,
+          browser: data.browser ?? null,
+          os: data.os ?? null,
+          location: data.location ?? null,
+        })
+        .returning();
 
       if (!result) {
         throw new DatabaseError(
@@ -81,9 +80,7 @@ export class DrizzleSessionRepository implements ISessionRepository {
       }
 
       return this.mapToSessionData(result);
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'create');
-    }
+    });
   }
 
   async findByToken(session_token: string): Promise<SessionData | null> {
