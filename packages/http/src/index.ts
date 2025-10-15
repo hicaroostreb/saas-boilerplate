@@ -33,8 +33,8 @@ export {
 } from './middleware';
 
 export type {
-  BillingTab as GuardBillingTab,
   ConditionalGuardFunction,
+  BillingTab as GuardBillingTab,
   GuardFunction,
   HttpMiddleware,
   RedirectFunction,
