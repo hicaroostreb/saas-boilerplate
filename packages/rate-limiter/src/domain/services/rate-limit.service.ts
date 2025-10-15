@@ -1,29 +1,42 @@
-// packages/rate-limiter/src/domain/services/rate-limit.service.ts
-
-import type { IRateLimitRepository } from '../repositories/rate-limit.repository.js';
+import type { IKeyGenerator } from '../ports/key-generator.port.js';
+import type { IRateLimitAlgorithm } from '../ports/rate-limit-algorithm.port.js';
+import type { IRateLimitRepository } from '../ports/rate-limit-repository.port.js';
 import {
-  type IRateLimitService,
+  RateLimitDomainError,
+  RateLimitValidationError,
+} from '../types/errors.js';
+import {
   type RateLimitConfig,
   type RateLimitResult,
   RateLimitConfigSchema,
-  RateLimitDomainError,
-  RateLimitValidationError,
 } from '../types/rate-limit.types.js';
+
+export interface IRateLimitService {
+  checkLimit(identifier: string): Promise<RateLimitResult>;
+  resetLimit(identifier: string): Promise<void>;
+  getConfig(): RateLimitConfig;
+  getHealthStatus(): Promise<{
+    healthy: boolean;
+    config: RateLimitConfig;
+    repository: { connected: boolean; latency: number; error?: string };
+  }>;
+}
 
 export class RateLimitService implements IRateLimitService {
   private readonly config: RateLimitConfig;
 
   constructor(
     private readonly repository: IRateLimitRepository,
+    private readonly algorithm: IRateLimitAlgorithm,
+    private readonly keyGenerator: IKeyGenerator,
     config: RateLimitConfig
   ) {
-    // Validate configuration using Zod
     const validation = RateLimitConfigSchema.safeParse(config);
 
     if (!validation.success) {
       const firstError = validation.error.errors[0];
       throw new RateLimitValidationError(
-        `Invalid rate limit configuration: ${firstError?.message}`,
+        `Invalid rate limit configuration: ${firstError?.message ?? 'Unknown validation error'}`,
         firstError?.path.join('.') ?? 'unknown'
       );
     }
@@ -40,16 +53,28 @@ export class RateLimitService implements IRateLimitService {
     }
 
     try {
-      const key = this.generateKey(identifier);
+      const key = this.keyGenerator.generate(identifier, this.config.algorithm);
+      const record = await this.repository.findByKey(key);
 
-      const result = await this.repository.increment(
-        key,
-        this.config.windowMs,
-        this.config.algorithm,
-        this.config.maxRequests
+      const result = this.algorithm.process(
+        record,
+        {
+          windowMs: this.config.windowMs,
+          maxRequests: this.config.maxRequests,
+        },
+        Date.now()
       );
 
-      return this.enrichResult(result);
+      const ttlMs = result.resetTime - Date.now() + 60_000;
+      await this.repository.save(result.record, ttlMs);
+
+      return {
+        allowed: result.allowed,
+        remaining: result.remaining,
+        resetTime: result.resetTime,
+        totalHits: result.totalHits,
+        limit: this.config.maxRequests,
+      };
     } catch (error) {
       if (error instanceof RateLimitValidationError) {
         throw error;
@@ -74,13 +99,11 @@ export class RateLimitService implements IRateLimitService {
 
     const results = new Map<string, RateLimitResult>();
 
-    // Process all identifiers in parallel
     const promises = identifiers.map(async identifier => {
       try {
         const result = await this.checkLimit(identifier);
         results.set(identifier, result);
-      } catch (_error) {
-        // Store error as failed result
+      } catch {
         results.set(identifier, {
           allowed: false,
           remaining: 0,
@@ -104,8 +127,8 @@ export class RateLimitService implements IRateLimitService {
     }
 
     try {
-      const key = this.generateKey(identifier);
-      await this.repository.reset(key);
+      const key = this.keyGenerator.generate(identifier, this.config.algorithm);
+      await this.repository.delete(key);
     } catch (error) {
       throw new RateLimitDomainError(
         `Failed to reset rate limit: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -123,8 +146,10 @@ export class RateLimitService implements IRateLimitService {
     }
 
     try {
-      const keys = identifiers.map(id => this.generateKey(id));
-      await this.repository.resetMultiple(keys);
+      const keys = identifiers.map(id =>
+        this.keyGenerator.generate(id, this.config.algorithm)
+      );
+      await this.repository.deleteMultiple(keys);
     } catch (error) {
       throw new RateLimitDomainError(
         `Failed to reset multiple rate limits: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -142,22 +167,22 @@ export class RateLimitService implements IRateLimitService {
     }
 
     try {
-      const key = this.generateKey(identifier);
-      const entity = await this.repository.findByKey(key);
+      const key = this.keyGenerator.generate(identifier, this.config.algorithm);
+      const record = await this.repository.findByKey(key);
 
-      if (!entity) {
+      if (!record) {
         return null;
       }
 
-      if (entity.isExpired()) {
+      if (record.resetTime <= Date.now()) {
         return null;
       }
 
       return {
-        allowed: !entity.hasExceededLimit(this.config.maxRequests),
-        remaining: entity.getRemainingRequests(this.config.maxRequests),
-        resetTime: entity.resetTime,
-        totalHits: entity.count,
+        allowed: record.count <= this.config.maxRequests,
+        remaining: Math.max(0, this.config.maxRequests - record.count),
+        resetTime: record.resetTime,
+        totalHits: record.count,
         limit: this.config.maxRequests,
       };
     } catch (error) {
@@ -207,44 +232,5 @@ export class RateLimitService implements IRateLimitService {
 
   getConfig(): RateLimitConfig {
     return { ...this.config };
-  }
-
-  private generateKey(identifier: string): string {
-    if (this.config.keyGenerator) {
-      return this.config.keyGenerator(identifier);
-    }
-
-    // Default key generation strategy
-    const sanitizedIdentifier = identifier.replace(/[^a-zA-Z0-9-_.]/g, '_');
-    return `rate_limit:${this.config.algorithm}:${sanitizedIdentifier}`;
-  }
-
-  private enrichResult(result: RateLimitResult): RateLimitResult {
-    return {
-      ...result,
-      // Ensure consistency
-      allowed: result.totalHits <= this.config.maxRequests,
-      remaining: Math.max(0, this.config.maxRequests - result.totalHits),
-      limit: this.config.maxRequests,
-    };
-  }
-
-  /**
-   * Validate if the current configuration allows the operation
-   */
-  private validateOperation(operationName: string): void {
-    if (this.config.maxRequests <= 0) {
-      throw new RateLimitValidationError(
-        `Cannot perform ${operationName}: maxRequests must be positive`,
-        'maxRequests'
-      );
-    }
-
-    if (this.config.windowMs <= 0) {
-      throw new RateLimitValidationError(
-        `Cannot perform ${operationName}: windowMs must be positive`,
-        'windowMs'
-      );
-    }
   }
 }
