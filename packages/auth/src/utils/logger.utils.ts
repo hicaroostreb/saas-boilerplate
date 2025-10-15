@@ -3,7 +3,7 @@
  * Logs em formato JSON com contexto consistente
  */
 
-import { DomainError } from '@workspace/shared';
+import { DomainError } from '@workspace/shared/errors';
 
 /**
  * Contexto base para todos os logs
@@ -37,6 +37,20 @@ export interface StructuredLog {
     statusCode?: number;
     stack?: string;
   };
+}
+
+/**
+ * Type guard para DomainError
+ */
+function isDomainError(error: unknown): error is DomainError {
+  return error instanceof DomainError;
+}
+
+/**
+ * Type guard para Error básico
+ */
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
 }
 
 /**
@@ -134,7 +148,7 @@ export class AuthLogger {
    * Serializar erro para JSON seguro
    */
   private static serializeError(error: unknown): StructuredLog['error'] {
-    if (error instanceof DomainError) {
+    if (isDomainError(error)) {
       return {
         name: error.constructor.name,
         message: error.message,
@@ -144,7 +158,7 @@ export class AuthLogger {
       };
     }
 
-    if (error instanceof Error) {
+    if (isError(error)) {
       return {
         name: error.constructor.name,
         message: error.message,

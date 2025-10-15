@@ -1,4 +1,4 @@
-import { ValidationError } from '@workspace/shared';
+import { ValidationError } from '@workspace/shared/errors';
 import { InvalidTokenError } from '../../domain/exceptions';
 import type { SessionRepositoryPort } from '../../domain/ports/SessionRepositoryPort';
 import { PasswordChangeAdapter } from '../../infrastructure/services/PasswordChangeAdapter';

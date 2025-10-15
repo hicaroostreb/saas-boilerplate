@@ -3,7 +3,7 @@
  * Elimina duplicação de try/catch nos controllers
  */
 
-import { DomainError } from '@workspace/shared';
+import { DomainError } from '@workspace/shared/errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthLogger, type LogContext } from './logger.utils';
 
@@ -54,6 +54,13 @@ interface ZodError extends Error {
     path: Array<string | number>;
     message: string;
   }>;
+}
+
+/**
+ * Type guard para DomainError
+ */
+function isDomainError(error: unknown): error is DomainError {
+  return error instanceof DomainError;
 }
 
 /**
@@ -119,7 +126,7 @@ function isZodError(error: unknown): error is ZodError {
  */
 export function handleErrorResponse(error: unknown): NextResponse {
   // Erros de domínio específicos
-  if (error instanceof DomainError) {
+  if (isDomainError(error)) {
     return NextResponse.json(
       {
         error: error.message,

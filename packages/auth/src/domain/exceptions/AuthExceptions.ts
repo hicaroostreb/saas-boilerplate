@@ -3,7 +3,7 @@
  * Classes de erro para casos de uso de auth
  */
 
-import { ConflictError, DomainError } from '@workspace/shared';
+import { ConflictError, DomainError } from '@workspace/shared/errors';
 
 /**
  * Erro de credenciais inválidas
@@ -38,9 +38,8 @@ export class InvalidTokenError extends DomainError {
 export class UserAlreadyExistsError extends ConflictError {
   constructor(email: string) {
     super('User', 'email');
-    if (this.context) {
-      this.context.email = email;
-    }
+    // Usar Object.assign para evitar erro de tipagem
+    Object.assign(this, { context: { ...this.context, email } });
   }
 }
 
@@ -50,9 +49,8 @@ export class UserAlreadyExistsError extends ConflictError {
 export class OrganizationAlreadyExistsError extends ConflictError {
   constructor(slug: string) {
     super('Organization', 'slug');
-    if (this.context) {
-      this.context.slug = slug;
-    }
+    // Usar Object.assign para evitar erro de tipagem
+    Object.assign(this, { context: { ...this.context, slug } });
   }
 }
 
