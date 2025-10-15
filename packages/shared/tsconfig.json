@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "declaration": true,
     "declarationMap": true,
@@ -11,7 +11,7 @@
       "@workspace/shared/*": ["src/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", ".turbo", "coverage", "**/*.test.*", "**/*.spec.*"],
+  "include": ["src/**/*", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist", ".turbo", "coverage"],
   "references": []
 }
