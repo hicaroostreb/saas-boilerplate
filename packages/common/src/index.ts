@@ -24,10 +24,3 @@ export * from './domain/user/validators/user.validators';
 export * from './infrastructure/api/errors/api.errors';
 export * from './infrastructure/api/types/api.types';
 export * from './infrastructure/api/types/pagination.types';
-
-// === MIGRATED TO @workspace/shared ===
-// - Constants: @workspace/shared/constants
-// - Formatters: @workspace/shared/utils
-// - File utils: @workspace/shared/utils
-// - Domain errors: @workspace/shared/errors
-// - Basic schemas: @workspace/shared/schemas

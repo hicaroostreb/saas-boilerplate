@@ -1,11 +1,10 @@
 // packages/auth/src/server.ts - SERVER-SIDE ONLY EXPORTS
 
-// ✅ SERVER: NextAuth handlers and functions
-export {
-  auth as getServerSession,
-  handlers,
-  signOutAction,
-} from './lib/nextauth/handlers';
+// ✅ SERVER: NextAuth handlers and functions (sem Server Actions inline)
+export { auth as getServerSession, handlers } from './lib/nextauth/handlers';
+
+// ✅ SERVER: Server Actions do arquivo dedicado
+export { signInAction, signOutAction } from './lib/nextauth/server-actions';
 
 // ✅ SERVER: RequireAuth wrapper
 export async function requireAuth() {

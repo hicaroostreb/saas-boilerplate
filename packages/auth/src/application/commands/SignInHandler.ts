@@ -1,3 +1,4 @@
+import { InvalidCredentialsError } from '../../domain/exceptions';
 import type { PasswordHasherPort } from '../../domain/ports/PasswordHasherPort';
 import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 import { Email } from '../../domain/value-objects/Email';
@@ -17,12 +18,12 @@ export class SignInHandler {
     // ✅ Buscar usuário
     const user = await this.userRepo.findByEmail(emailVO.value);
     if (!user || !user.canAuthenticate()) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     // ✅ Verificar se tem password hash antes de usar
     if (!user.passwordHash) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     // ✅ Verificar senha - agora sabemos que passwordHash existe
@@ -31,7 +32,7 @@ export class SignInHandler {
     if (!isValid) {
       // ✅ Incrementar tentativas de login
       await this.userRepo.incrementLoginAttempts(user.id);
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     // ✅ Sucesso - atualizar último login

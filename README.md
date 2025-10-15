@@ -25,8 +25,9 @@ saas-boilerplate/
     ├── @workspace/common
     ├── @workspace/database
     ├── @workspace/e2e
-    ├── @workspace/rate-limiter
     ├── @workspace/http
+    ├── @workspace/rate-limiter
+    ├── @workspace/shared
     ├── @workspace/ui
     └── @workspace/webhooks
 ```
@@ -139,6 +140,7 @@ bun run reset:nuclear   # ☢️ tudo + bun.lockb + install
 - `reset:nuclear` → corrupção, migração (⚠️ muda lockfile)
 
 **Utilitários:**
+
 ```bash
 bun run clean:check     # ver tamanhos
 bun run reset:cache     # rebuild com --force

@@ -1,3 +1,5 @@
+import { ValidationError } from '@workspace/shared';
+import { InvalidTokenError } from '../../domain/exceptions';
 import type { SessionRepositoryPort } from '../../domain/ports/SessionRepositoryPort';
 import { PasswordChangeAdapter } from '../../infrastructure/services/PasswordChangeAdapter';
 
@@ -18,20 +20,20 @@ export class ResetPasswordHandler {
     // ✅ Verificar se token existe e é válido
     const resetSession = await this.sessionRepo.findByToken(data.token);
     if (!resetSession) {
-      throw new Error('Invalid or expired reset token');
+      throw new InvalidTokenError('Invalid or expired reset token');
     }
 
     // ✅ Verificar se é realmente uma sessão de reset de senha
     const sessionData = resetSession.sessionData;
     if (sessionData?.type !== 'password_reset') {
-      throw new Error('Invalid reset token');
+      throw new InvalidTokenError('Invalid reset token');
     }
 
     // ✅ Verificar se token não expirou
     const now = new Date();
     if (resetSession.expires < now) {
       await this.sessionRepo.revoke(data.token, 'system', 'expired');
-      throw new Error('Reset token has expired');
+      throw new InvalidTokenError('Reset token has expired');
     }
 
     // ✅ Validar força da nova senha
@@ -40,7 +42,7 @@ export class ResetPasswordHandler {
       data.password
     );
     if (!passwordValidation.isValid) {
-      throw new Error(
+      throw new ValidationError(
         passwordValidation.issues[0] ?? 'Password does not meet requirements'
       );
     }
@@ -53,7 +55,9 @@ export class ResetPasswordHandler {
     );
 
     if (!resetResult.success) {
-      throw new Error(resetResult.error ?? 'Failed to reset password');
+      throw new ValidationError(
+        resetResult.error ?? 'Failed to reset password'
+      );
     }
 
     // ✅ Invalidar token após uso

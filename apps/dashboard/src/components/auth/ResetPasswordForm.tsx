@@ -1,6 +1,6 @@
 'use client';
 
-import { resetPasswordSchema } from '@workspace/auth';
+import { resetPasswordSchema } from '@workspace/auth/client';
 import { Button, FormField, PasswordStrength } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

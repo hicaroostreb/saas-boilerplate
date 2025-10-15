@@ -1,4 +1,5 @@
 import { User } from '../../domain/entities/User';
+import { UserAlreadyExistsError } from '../../domain/exceptions';
 import type { PasswordHasherPort } from '../../domain/ports/PasswordHasherPort';
 import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 import { Email } from '../../domain/value-objects/Email';
@@ -24,7 +25,7 @@ export class RegisterUserHandler {
     // ✅ Verificar se usuário já existe
     const existingUser = await this.userRepo.findByEmail(emailVO.value);
     if (existingUser) {
-      throw new Error('User already exists with this email');
+      throw new UserAlreadyExistsError(emailVO.value);
     }
 
     // ✅ Criar entidade User

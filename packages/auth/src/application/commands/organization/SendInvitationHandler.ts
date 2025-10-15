@@ -1,4 +1,8 @@
 import { Invitation } from '../../../domain/entities/Invitation';
+import {
+  InsufficientPermissionError,
+  OrganizationNotFoundError,
+} from '../../../domain/exceptions';
 import type { InvitationRepositoryPort } from '../../../domain/ports/InvitationRepositoryPort';
 import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
 import type {
@@ -19,12 +23,12 @@ export class SendInvitationHandler {
     // ✅ Verificar se organização existe
     const organization = await this.orgRepo.findById(data.organizationId);
     if (!organization) {
-      throw new Error('Organization not found');
+      throw new OrganizationNotFoundError(data.organizationId);
     }
 
     // ✅ Verificar se usuário tem permissão (por enquanto só owner)
     if (!organization.isOwnedBy(invitedBy)) {
-      throw new Error('Only organization owner can send invitations');
+      throw new InsufficientPermissionError('send invitations', 'organization');
     }
 
     // ✅ Criar convite
