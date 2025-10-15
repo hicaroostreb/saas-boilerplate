@@ -5,6 +5,9 @@ export * from './entities/Invitation';
 export * from './entities/Organization';
 export * from './entities/User';
 
+// Exceptions
+export * from './exceptions';
+
 // Ports
 export * from './ports/InvitationRepositoryPort';
 export * from './ports/OrganizationRepositoryPort';

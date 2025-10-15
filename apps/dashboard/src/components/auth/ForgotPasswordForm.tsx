@@ -1,6 +1,6 @@
 'use client';
 
-import { forgotPasswordSchema } from '@workspace/auth';
+import { forgotPasswordSchema } from '@workspace/auth/client';
 import { Button, FormField } from '@workspace/ui';
 import Link from 'next/link';
 import { useState } from 'react';

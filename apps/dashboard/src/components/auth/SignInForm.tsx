@@ -1,6 +1,6 @@
 'use client';
 
-import { signInSchema } from '@workspace/auth';
+import { signInSchema } from '@workspace/auth/client';
 import { Button, FormField, SocialButton } from '@workspace/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

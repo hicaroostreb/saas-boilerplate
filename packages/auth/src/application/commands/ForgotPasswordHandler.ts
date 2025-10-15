@@ -50,7 +50,7 @@ export class ForgotPasswordHandler {
     const resetUrl = `${process.env.NEXT_PUBLIC_DASHBOARD_URL ?? 'http://localhost:3001'}/auth/reset-password?token=${resetToken}`;
 
     console.warn('Password reset requested for user:', user.id);
-    console.warn('��� RESET PASSWORD LINK (DEV):');
+    console.warn('🔑 RESET PASSWORD LINK (DEV):');
     console.warn(resetUrl);
     console.warn(`⏰ Expires: ${expiresAt.toLocaleString()}`);
 

@@ -1,22 +1,16 @@
-// packages/auth/src/index.ts - CLIENT-SAFE EXPORTS ONLY
+// packages/auth/src/index.ts - SERVER-SIDE EXPORTS (Node.js dependencies)
 
-// ============================================
-// SCHEMAS & TYPES (CLIENT-SAFE)
-// ============================================
-export * from './types';
-export * from './types/schemas';
+// ✅ SERVER: Application Layer completa
+export * from './application';
 
-// ============================================
-// UTILS (CLIENT-SAFE)
-// ============================================
+// ✅ SERVER: Domain Layer completo
+export * from './domain';
+
+// ✅ SERVER: Infrastructure Layer (repositories, services)
+export * from './infrastructure';
+
+// ✅ SERVER: Utils completos (incluindo error handlers)
 export * from './utils';
 
-// ============================================
-// CONSTANTS
-// ============================================
-export const AUTH_PACKAGE_VERSION = '1.0.0';
-
-// ✅ TEMPORARILY REMOVED: NextAuth config (causing database leak)
-// Use direct import: import { authConfig } from '@workspace/auth/server'
-
-// ⚠️ FLOWS REMOVED: Server-side only, import directly in API routes
+// ✅ SERVER: Re-export client-safe items
+export * from './client';

@@ -1,4 +1,5 @@
 import { Organization } from '../../../domain/entities/Organization';
+import { OrganizationAlreadyExistsError } from '../../../domain/exceptions';
 import type { OrganizationRepositoryPort } from '../../../domain/ports/OrganizationRepositoryPort';
 import type {
   CreateOrganizationDTO,
@@ -15,7 +16,7 @@ export class CreateOrganizationHandler {
     // ✅ Verificar se slug já existe
     const slugExists = await this.orgRepo.existsBySlug(data.slug);
     if (slugExists) {
-      throw new Error('Organization slug already exists');
+      throw new OrganizationAlreadyExistsError(data.slug);
     }
 
     // ✅ Criar entidade Organization

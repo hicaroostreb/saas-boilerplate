@@ -1,6 +1,6 @@
 'use client';
 
-import { signUpSchema } from '@workspace/auth';
+import { signUpSchema } from '@workspace/auth/client';
 import {
   Button,
   CheckboxField,
