@@ -65,7 +65,7 @@
 
     // ENTERPRISE: Base Configuration
     "baseUrl": ".",
-    "types": ["node", "bun-types"],
+    "types": ["node"],
 
     // ENTERPRISE: Path Mapping - CORRIGIDO
     "paths": {
