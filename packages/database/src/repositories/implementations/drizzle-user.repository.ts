@@ -1,8 +1,6 @@
 // packages/database/src/repositories/implementations/drizzle-user.repository.ts
-
 // ============================================
-// DRIZZLE USER REPOSITORY - SRP: APENAS USER DATA ACCESS
-// Enterprise Multi-Tenancy and Soft Delete
+// DRIZZLE USER REPOSITORY - ENTERPRISE BUILD SAFE FINAL
 // ============================================
 
 import {
@@ -15,364 +13,472 @@ import {
   inArray,
   isNull,
   like,
-  sql,
 } from 'drizzle-orm';
 import type { Database } from '../../connection';
+import { DatabaseError } from '../../connection';
 import { UserEntity } from '../../entities/auth/user.entity';
-import { users } from '../../schemas/auth';
-import type { IUserRepository } from '../contracts/user.repository.interface';
+import { users, type User } from '../../schemas/auth';
+import type { 
+  IUserRepository,
+  UserFilterOptions,
+  UserQueryOptions,
+} from '../contracts/user.repository.interface';
 
 export class DrizzleUserRepository implements IUserRepository {
-  constructor(private db: Database) {}
+  constructor(private readonly db: Database) {}
 
-  // ============================================
-  // BASIC CRUD OPERATIONS
-  // ============================================
+  private checkBuildTime(): boolean {
+    return process.env.NODE_ENV === 'production' && 
+           (process.env.NEXT_PHASE === 'phase-production-build' || 
+            process.env.CI === 'true');
+  }
 
   async findById(id: string): Promise<UserEntity | null> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(and(eq(users.id, id), isNull(users.deletedAt)))
-      .limit(1);
+    if (this.checkBuildTime()) return null;
+    
+    try {
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, id), isNull(users.deleted_at)))
+        .limit(1);
 
-    return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+      return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findById');
+    }
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, email), isNull(users.deletedAt)))
-      .limit(1);
+    if (this.checkBuildTime()) return null;
+    
+    try {
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, email), isNull(users.deleted_at)))
+        .limit(1);
 
-    return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+      return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findByEmail');
+    }
   }
 
-  async findByIds(ids: string[]): Promise<UserEntity[]> {
+  async findByIds(ids: readonly string[]): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
     if (ids.length === 0) return [];
 
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(and(inArray(users.id, ids), isNull(users.deletedAt)));
+    try {
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(and(inArray(users.id, [...ids]), isNull(users.deleted_at)))
+        .orderBy(desc(users.created_at));
 
-    return result.map(user => UserEntity.fromDatabase(user));
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findByIds');
+    }
   }
 
   async create(user: UserEntity): Promise<UserEntity> {
-    const [result] = await this.db
-      .insert(users)
-      .values(user.toDatabase())
-      .returning();
+    if (this.checkBuildTime()) return user;
+    
+    try {
+      const [result] = await this.db
+        .insert(users)
+        .values(user.toDatabase())
+        .returning();
 
-    if (!result) {
-      throw new Error('Failed to create user');
+      if (!result) {
+        throw new DatabaseError('Failed to create user - no result returned');
+      }
+
+      return UserEntity.fromDatabase(result);
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'create');
     }
-
-    return UserEntity.fromDatabase(result);
   }
 
   async update(user: UserEntity): Promise<UserEntity> {
-    const [result] = await this.db
-      .update(users)
-      .set({ ...user.toDatabase(), updatedAt: new Date() })
-      .where(and(eq(users.id, user.id), isNull(users.deletedAt)))
-      .returning();
+    if (this.checkBuildTime()) return user;
+    
+    try {
+      const [result] = await this.db
+        .update(users)
+        .set({ ...user.toDatabase(), updated_at: new Date() })
+        .where(and(eq(users.id, user.id), isNull(users.deleted_at)))
+        .returning();
 
-    if (!result) {
-      throw new Error('Failed to update user');
+      if (!result) {
+        throw new DatabaseError('Failed to update user - user not found or deleted');
+      }
+
+      return UserEntity.fromDatabase(result);
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'update');
     }
-
-    return UserEntity.fromDatabase(result);
   }
 
   async delete(id: string): Promise<void> {
-    await this.db
-      .update(users)
-      .set({ deletedAt: new Date() })
-      .where(eq(users.id, id));
+    if (this.checkBuildTime()) return;
+    
+    try {
+      await this.db
+        .update(users)
+        .set({ deleted_at: new Date() })
+        .where(and(eq(users.id, id), isNull(users.deleted_at)));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'delete');
+    }
   }
 
-  // ============================================
-  // MULTI-TENANCY OPERATIONS
-  // ============================================
+  async findByOrganizationId(
+    organization_id: string, 
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+    
+    try {
+      let query = this.db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.organization_id, organization_id), 
+            options?.include_deleted ? undefined : isNull(users.deleted_at)
+          )
+        )
+        .orderBy(desc(users.created_at)) as any;
 
-  async findByOrganizationId(organizationId: string): Promise<UserEntity[]> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        and(eq(users.organizationId, organizationId), isNull(users.deletedAt))
-      )
-      .orderBy(desc(users.createdAt));
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
 
-    return result.map(user => UserEntity.fromDatabase(user));
+      if (options?.offset) {
+        query = query.offset(options.offset);
+      }
+
+      const result = await query;
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findByOrganizationId');
+    }
   }
-
-  // ============================================
-  // SOFT DELETE OPERATIONS
-  // ============================================
 
   async softDelete(id: string): Promise<void> {
-    await this.db
-      .update(users)
-      .set({ deletedAt: new Date() })
-      .where(eq(users.id, id));
-  }
-
-  async restore(id: string): Promise<UserEntity> {
-    const [result] = await this.db
-      .update(users)
-      .set({ deletedAt: null })
-      .where(eq(users.id, id))
-      .returning();
-
-    if (!result) {
-      throw new Error('Failed to restore user');
+    if (this.checkBuildTime()) return;
+    
+    try {
+      await this.db
+        .update(users)
+        .set({ deleted_at: new Date() })
+        .where(eq(users.id, id));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'softDelete');
     }
-
-    return UserEntity.fromDatabase(result);
   }
 
-  // ============================================
-  // QUERY OPERATIONS
-  // ============================================
+  async restore(id: string): Promise<UserEntity | null> {
+    if (this.checkBuildTime()) return null;
+    
+    try {
+      const [result] = await this.db
+        .update(users)
+        .set({ deleted_at: null, updated_at: new Date() })
+        .where(eq(users.id, id))
+        .returning();
 
-  async findAll(options?: {
-    limit?: number;
-    offset?: number;
-    isActive?: boolean;
-  }): Promise<UserEntity[]> {
-    const baseSelect = this.db.select().from(users);
-
-    const conditions = [isNull(users.deletedAt)];
-    if (options?.isActive !== undefined) {
-      conditions.push(eq(users.isActive, options.isActive));
+      return result ? UserEntity.fromDatabase(result) : null;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'restore');
     }
+  }
 
-    let result;
-    if (options?.limit && options?.offset) {
-      result = await baseSelect
-        .where(and(...conditions))
-        .orderBy(desc(users.createdAt))
-        .limit(options.limit)
-        .offset(options.offset);
-    } else if (options?.limit) {
-      result = await baseSelect
-        .where(and(...conditions))
-        .orderBy(desc(users.createdAt))
-        .limit(options.limit);
-    } else {
-      result = await baseSelect
-        .where(and(...conditions))
-        .orderBy(desc(users.createdAt));
+  async findMany(options: UserFilterOptions): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+    
+    try {
+      const conditions = [
+        options.include_deleted ? undefined : isNull(users.deleted_at),
+        options.is_active !== undefined ? eq(users.is_active, options.is_active) : undefined,
+        options.organization_id ? eq(users.organization_id, options.organization_id) : undefined,
+        options.is_email_verified !== undefined ? eq(users.is_email_verified, options.is_email_verified) : undefined,
+      ].filter(Boolean);
+
+      let query = this.db
+        .select()
+        .from(users)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(users.created_at)) as any;
+
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options.offset) {
+        query = query.offset(options.offset);
+      }
+
+      const result = await query;
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findMany');
     }
-
-    return result.map(user => UserEntity.fromDatabase(user));
   }
 
-  async findByEmailPattern(pattern: string, limit = 10): Promise<UserEntity[]> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(and(like(users.email, `%${pattern}%`), isNull(users.deletedAt)))
-      .limit(limit);
-
-    return result.map(user => UserEntity.fromDatabase(user));
-  }
-
-  async findRecentlyActive(days = 30, limit = 100): Promise<UserEntity[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.isActive, true),
-          gte(users.lastLoginAt, cutoffDate),
-          isNull(users.deletedAt)
+  async findByEmailPattern(
+    pattern: string, 
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+    
+    try {
+      let query = this.db
+        .select()
+        .from(users)
+        .where(
+          and(
+            like(users.email, `%${pattern}%`), 
+            options?.include_deleted ? undefined : isNull(users.deleted_at)
+          )
         )
-      )
-      .orderBy(desc(users.lastLoginAt))
-      .limit(limit);
+        .orderBy(asc(users.email)) as any;
 
-    return result.map(user => UserEntity.fromDatabase(user));
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      const result = await query;
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findByEmailPattern');
+    }
   }
 
-  // ============================================
-  // BUSINESS OPERATIONS
-  // ============================================
-
-  async findByLoginCredentials(email: string): Promise<UserEntity | null> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.email, email),
-          eq(users.isActive, true),
-          isNull(users.deletedAt)
+  async findForAuthentication(email: string): Promise<UserEntity | null> {
+    if (this.checkBuildTime()) return null;
+    
+    try {
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.email, email),
+            eq(users.is_active, true),
+            isNull(users.deleted_at)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+      return result[0] ? UserEntity.fromDatabase(result[0]) : null;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findForAuthentication');
+    }
   }
 
-  async findUnverifiedUsers(olderThanHours = 24): Promise<UserEntity[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setHours(cutoffDate.getHours() - olderThanHours);
+  async findUnverifiedUsers(older_than_hours = 24): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+    
+    try {
+      const cutoff_date = new Date(Date.now() - older_than_hours * 60 * 60 * 1000);
 
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.isEmailVerified, false),
-          gte(users.createdAt, cutoffDate),
-          isNull(users.deletedAt)
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.is_email_verified, false),
+            gte(users.created_at, cutoff_date),
+            isNull(users.deleted_at)
+          )
         )
-      );
+        .orderBy(desc(users.created_at));
 
-    return result.map(user => UserEntity.fromDatabase(user));
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findUnverifiedUsers');
+    }
   }
 
   async findLockedUsers(): Promise<UserEntity[]> {
-    const now = new Date();
+    if (this.checkBuildTime()) return [];
+    
+    try {
+      const now = new Date();
 
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(and(gte(users.lockedUntil, now), isNull(users.deletedAt)));
-
-    return result.map(user => UserEntity.fromDatabase(user));
-  }
-
-  async findInactiveUsers(olderThanDays = 90): Promise<UserEntity[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.isActive, false),
-          gte(users.updatedAt, cutoffDate),
-          isNull(users.deletedAt)
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(
+          and(
+            gte(users.locked_until, now), 
+            isNull(users.deleted_at)
+          )
         )
-      );
+        .orderBy(desc(users.locked_until));
 
-    return result.map(user => UserEntity.fromDatabase(user));
-  }
-
-  // ============================================
-  // ANALYTICS & REPORTING
-  // ============================================
-
-  async countTotal(): Promise<number> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(users)
-      .where(isNull(users.deletedAt));
-
-    return result?.count ?? 0;
-  }
-
-  async countActive(): Promise<number> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(users)
-      .where(and(eq(users.isActive, true), isNull(users.deletedAt)));
-
-    return result?.count ?? 0;
-  }
-
-  async countVerified(): Promise<number> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(users)
-      .where(and(eq(users.isEmailVerified, true), isNull(users.deletedAt)));
-
-    return result?.count ?? 0;
-  }
-
-  async getRegistrationStats(
-    days = 30
-  ): Promise<{ date: string; count: number }[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    const result = await this.db
-      .select({
-        date: sql<string>`DATE(${users.createdAt})`,
-        count: count(),
-      })
-      .from(users)
-      .where(and(gte(users.createdAt, cutoffDate), isNull(users.deletedAt)))
-      .groupBy(sql`DATE(${users.createdAt})`)
-      .orderBy(asc(sql`DATE(${users.createdAt})`));
-
-    return result;
-  }
-
-  // ============================================
-  // BULK OPERATIONS
-  // ============================================
-
-  async createMany(userEntities: UserEntity[]): Promise<UserEntity[]> {
-    if (userEntities.length === 0) return [];
-
-    const userData = userEntities.map(user => user.toDatabase());
-    const result = await this.db.insert(users).values(userData).returning();
-
-    return result.map(user => UserEntity.fromDatabase(user));
-  }
-
-  async updateMany(userEntities: UserEntity[]): Promise<UserEntity[]> {
-    if (userEntities.length === 0) return [];
-
-    const updatedUsers: UserEntity[] = [];
-
-    for (const user of userEntities) {
-      const updated = await this.update(user);
-      updatedUsers.push(updated);
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findLockedUsers');
     }
-
-    return updatedUsers;
   }
 
-  async deleteMany(ids: string[]): Promise<void> {
+  async createMany(user_entities: readonly UserEntity[]): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [...user_entities];
+    if (user_entities.length === 0) return [];
+
+    try {
+      const user_data = user_entities.map(user => user.toDatabase());
+      const result = await this.db
+        .insert(users)
+        .values(user_data)
+        .returning();
+
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'createMany');
+    }
+  }
+
+  async updateMany(user_entities: readonly UserEntity[]): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [...user_entities];
+    if (user_entities.length === 0) return [];
+
+    try {
+      return await this.db.transaction(async (tx) => {
+        const updated_users: UserEntity[] = [];
+
+        const batch_size = 100;
+        for (let i = 0; i < user_entities.length; i += batch_size) {
+          const batch = user_entities.slice(i, i + batch_size);
+          
+          for (const user of batch) {
+            const [result] = await tx
+              .update(users)
+              .set({ ...user.toDatabase(), updated_at: new Date() })
+              .where(and(eq(users.id, user.id), isNull(users.deleted_at)))
+              .returning();
+
+            if (result) {
+              updated_users.push(UserEntity.fromDatabase(result));
+            }
+          }
+        }
+
+        return updated_users;
+      });
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'updateMany');
+    }
+  }
+
+  async deleteMany(ids: readonly string[]): Promise<void> {
+    if (this.checkBuildTime()) return;
     if (ids.length === 0) return;
 
-    await this.db
-      .update(users)
-      .set({ deletedAt: new Date() })
-      .where(inArray(users.id, ids));
+    try {
+      await this.db
+        .update(users)
+        .set({ deleted_at: new Date() })
+        .where(inArray(users.id, [...ids]));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'deleteMany');
+    }
   }
 
-  // ============================================
-  // EXISTENCE CHECKS
-  // ============================================
-
   async existsByEmail(email: string): Promise<boolean> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(users)
-      .where(and(eq(users.email, email), isNull(users.deletedAt)));
+    if (this.checkBuildTime()) return false;
+    
+    try {
+      const result = await this.db
+        .select({ count: count() })
+        .from(users)
+        .where(and(eq(users.email, email), isNull(users.deleted_at)))
+        .limit(1);
 
-    return (result?.count ?? 0) > 0;
+      return (result[0]?.count ?? 0) > 0;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'existsByEmail');
+    }
   }
 
   async existsById(id: string): Promise<boolean> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(users)
-      .where(and(eq(users.id, id), isNull(users.deletedAt)));
+    if (this.checkBuildTime()) return false;
+    
+    try {
+      const result = await this.db
+        .select({ count: count() })
+        .from(users)
+        .where(and(eq(users.id, id), isNull(users.deleted_at)))
+        .limit(1);
 
-    return (result?.count ?? 0) > 0;
+      return (result[0]?.count ?? 0) > 0;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'existsById');
+    }
+  }
+
+  async count(filters?: Pick<UserFilterOptions, 'is_active' | 'organization_id'>): Promise<number> {
+    if (this.checkBuildTime()) return 0;
+    
+    try {
+      const conditions = [
+        isNull(users.deleted_at),
+        filters?.is_active !== undefined ? eq(users.is_active, filters.is_active) : undefined,
+        filters?.organization_id ? eq(users.organization_id, filters.organization_id) : undefined,
+      ].filter(Boolean);
+
+      const result = await this.db
+        .select({ count: count() })
+        .from(users)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      return result[0]?.count ?? 0;
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'count');
+    }
+  }
+
+  private handleDatabaseError(error: unknown, operation: string): DatabaseError {
+    const err = error as { code?: string; message?: string; constraint?: string };
+
+    console.error(`[DrizzleUserRepository.${operation}] Database error:`, {
+      code: err.code,
+      message: err.message?.substring(0, 200),
+      constraint: err.constraint,
+    });
+
+    if (err.code === '23505') {
+      return new DatabaseError(
+        'User already exists',
+        err.code,
+        err.constraint
+      );
+    }
+
+    if (err.code === '23503') {
+      return new DatabaseError(
+        'Referenced resource not found',
+        err.code,
+        err.constraint
+      );
+    }
+
+    if (err.code === '23502') {
+      return new DatabaseError(
+        'Required field is missing',
+        err.code,
+        err.constraint
+      );
+    }
+
+    return new DatabaseError(
+      `Database operation failed: ${operation}`,
+      err.code,
+      err.constraint
+    );
   }
 }

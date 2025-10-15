@@ -1,28 +1,9 @@
 // packages/database/src/schemas/activity/index.ts
-
 // ============================================
-// ACTIVITY SCHEMAS BARREL EXPORTS
+// ACTIVITY SCHEMAS BARREL EXPORTS (FIXED)
 // ============================================
 
-// Table exports
 export {
-  activityCategoryEnum,
-  activityLogs,
-  activityTypeEnum,
+  activity_logs, activity_resource_enum, activity_type_enum, ActivityLogBuilder, createSystemActivityLog, createUserActivityLog, getActivitySummary, isSignificantChange, parseChanges, type ActivityLog, type ActivityResource, type ActivityType, type CreateActivityLog, type CreateActivityLogData
 } from './activity-log.schema';
 
-// Type exports
-export type {
-  ActivityCategory,
-  ActivityChange,
-  ActivityFeedItem,
-  ActivityLog,
-  ActivityLogWithOrganization,
-  ActivityLogWithProject,
-  ActivityLogWithUser,
-  ActivitySummary,
-  ActivityType,
-  CreateActivityLog,
-  FullActivityLog,
-  TimelineItem,
-} from './activity-log.schema';

@@ -1,314 +1,44 @@
+// packages/database/src/index.ts - CLIENT-SAFE EXPORTS ONLY
 // ============================================
-// DATABASE PACKAGE - SAFE EXPORTS ENTERPRISE
-// ============================================
-
-// ============================================
-// CONNECTION LAYER - LAZY INITIALIZATION
+// DATABASE PACKAGE MAIN EXPORTS - ENTERPRISE
 // ============================================
 
-// Safe database exports
+// Connection and database
 export {
-  closeConnection,
-  getConnectionInfo, // ✅ Lazy async getter
+  DatabaseError,
   getDatabaseConnection,
   getDb,
-  healthCheck,
   type Database,
 } from './connection';
 
-// Configuration exports
-export {
-  createDatabaseConfig,
-  detectBuildContext,
-  validateEnvironment,
-  type BuildContext,
-  type DatabaseConfig,
-} from './connection';
-
-// Connection utilities
-export {
-  DatabaseError,
-  isCheckConstraintError,
-  isDuplicateKeyError,
-  isForeignKeyError,
-  isNotNullError,
-  withQueryPerformance,
-} from './connection';
-
-// ============================================
-// SCHEMA LAYER
-// ============================================
-
-// Schema exports by domain
+// Schemas
 export * from './schemas';
 
-// ============================================
-// ENTITY LAYER (DOMAIN OBJECTS)
-// ============================================
-
-// Domain entities
+// Entities
 export * from './entities';
 
-// ============================================
-// REPOSITORY LAYER (DATA ACCESS)
-// ============================================
-
-// Repository patterns
-export * from './repositories';
-
-// ============================================
-// DRIZZLE ORM UTILITIES
-// ============================================
-
-// Core query builders
+// Repositories
 export {
-  and,
-  between,
-  eq,
-  exists,
-  gt,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  like,
-  lt,
-  lte,
-  ne,
-  not,
-  notExists,
-  notInArray,
-  or,
-} from './connection';
+  DrizzleAuditRepository,
+  DrizzleOrganizationRepository,
+  DrizzleRateLimitRepository,
+  DrizzleSessionRepository,
+  DrizzleUserRepository,
+  createRepositories,
+  createRepositoryFactory,
+  type IAuditRepository,
+  type IOrganizationRepository,
+  type IRateLimitRepository,
+  type ISessionRepository,
+  type IUserRepository,
+  type RepositoryFactory,
+  type RepositoryRegistry,
+} from './repositories';
 
-// Aggregation functions
-export { avg, count, max, min, sum } from './connection';
+// ❌ REMOVED: Seeders and Scripts (server-only, causing Next.js build issues)
+// Use direct imports for seeding:
+// import { runSeed } from '@workspace/database/src/scripts/seed';
+// import { developmentSeeder } from '@workspace/database/src/seeders';
 
-// Sorting and utilities
-export { asc, desc, placeholder, sql } from './connection';
-
-// Type utilities
-export type {
-  InferInsertModel,
-  InferSelectModel,
-  Placeholder,
-  SQL,
-} from './connection';
-
-// ============================================
-// PAGINATION UTILITIES
-// ============================================
-
-export interface PaginationOptions {
-  page?: number;
-  limit?: number;
-  offset?: number;
-}
-
-export interface PaginationResult<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasMore: boolean;
-  };
-}
-
-export const DEFAULT_PAGE_SIZE = 20;
-export const MAX_PAGE_SIZE = 100;
-
-export function createPaginationParams(options: PaginationOptions = {}) {
-  const page = Math.max(1, options.page ?? 1);
-  const limit = Math.min(
-    MAX_PAGE_SIZE,
-    Math.max(1, options.limit || DEFAULT_PAGE_SIZE)
-  );
-  const offset = options.offset || (page - 1) * limit;
-
-  return { page, limit, offset };
-}
-
-export function createPaginationResult<T>(
-  data: T[],
-  total: number,
-  options: { page: number; limit: number }
-): PaginationResult<T> {
-  const { page, limit } = options;
-  const totalPages = Math.ceil(total / limit);
-  const hasMore = page < totalPages;
-
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasMore,
-    },
-  };
-}
-
-// ============================================
-// VALIDATION UTILITIES
-// ============================================
-
-// UUID validation
-export function isValidUUID(uuid: string): boolean {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-}
-
-// Slug validation
-export function isValidSlug(slug: string): boolean {
-  const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  return slugRegex.test(slug) && slug.length >= 3 && slug.length <= 100;
-}
-
-// Email validation
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// Slug generation
-export function generateSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special chars
-    .replace(/[\s_-]+/g, '-') // Replace spaces/underscores with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-}
-
-// ============================================
-// SEED UTILITIES - BUILD-TIME SAFE
-// ============================================
-
-export interface SeedOptions {
-  force?: boolean; // Force reseed even if data exists
-  verbose?: boolean; // Log detailed information
-}
-
-export async function seedDatabase(options: SeedOptions = {}): Promise<void> {
-  const { verbose = false } = options;
-
-  // Import seeders dynamically to avoid side effects
-  const { runAllSeeders } = await import('./seeders');
-
-  if (verbose) {
-    console.log('Starting database seed...');
-  }
-
-  try {
-    await runAllSeeders(options);
-
-    if (verbose) {
-      console.log('Database seed completed successfully');
-    }
-  } catch (error) {
-    console.error('Database seed failed:', error);
-    throw error;
-  }
-}
-
-// ============================================
-// TRANSACTION UTILITIES - BUILD-TIME SAFE
-// ============================================
-
-import {
-  getConnectionInfo,
-  getDatabaseConnection,
-  getDb,
-  healthCheck,
-} from './connection';
-
-export async function withTransaction<T>(
-  callback: (tx: any) => Promise<T>
-): Promise<T> {
-  const db = await getDb();
-  return db.transaction(callback) as Promise<T>;
-}
-
-// ============================================
-// HEALTH CHECK UTILITIES - BUILD-TIME SAFE
-// ============================================
-
-export async function checkDatabaseHealth(): Promise<{
-  healthy: boolean;
-  details: Record<string, unknown>;
-}> {
-  try {
-    const connection = getDatabaseConnection();
-    await connection.initialize();
-
-    const isHealthy = await healthCheck();
-    const connectionInfo = await getConnectionInfo();
-
-    return {
-      healthy: isHealthy,
-      details: {
-        connected: isHealthy,
-        connectionInfo,
-        timestamp: new Date().toISOString(),
-      },
-    };
-  } catch (error) {
-    return {
-      healthy: false,
-      details: {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
-      },
-    };
-  }
-}
-
-// ============================================
-// PACKAGE INFO
-// ============================================
-
-export const packageInfo = {
-  name: '@workspace/database',
-  version: '1.0.0',
-  description:
-    'Enterprise database layer with Clean Architecture and Build-Time Safety',
-
-  // Architecture layers
-  layers: {
-    connection: 'Database connection with lazy initialization',
-    schemas: 'Drizzle table definitions organized by domain',
-    entities: 'Domain objects with business logic',
-    repositories: 'Data access layer with Repository Pattern',
-  },
-
-  // Features
-  features: [
-    'Clean Architecture',
-    'Repository Pattern',
-    'Domain-Driven Design',
-    'Build-Time Safety',
-    'Lazy Initialization',
-    'CI/CD Compatible',
-    'Type Safety',
-    'Performance Optimized',
-    'Enterprise Scalable',
-    'Singleton Pattern',
-  ],
-
-  // Tech stack
-  techStack: {
-    orm: 'Drizzle ORM',
-    database: 'PostgreSQL',
-    architecture: 'Clean Architecture + DDD-Lite',
-    patterns: ['Repository', 'Entity', 'Factory', 'Singleton', 'Lazy Loading'],
-    principles: ['SRP', 'DIP', 'ISP', 'Build-Time Safety'],
-  },
-} as const;
-
-// Export schema info for introspection
-export { schemaInfo } from './schemas';
+// Types and utilities (keeping only client-safe types)
+export type { SeedOptions } from './types';

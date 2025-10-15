@@ -1,238 +1,103 @@
+// packages/database/src/schemas/index.ts
 // ============================================
-// SCHEMAS MASTER BARREL EXPORTS - SRP: APENAS EXPORTS
-// ============================================
-
-// ============================================
-// DOMAIN EXPORTS
+// SCHEMAS MAIN BARREL EXPORTS - ENTERPRISE (COMPLETE FIXED)
 // ============================================
 
-// Auth domain
-export * from './auth';
+// Auth schemas
+export {
+  accounts,
+  sessions,
+  user_role_enum,
+  user_status_enum,
+  users, verification_token_type_enum, verification_tokens, type Account,
+  type CreateAccount,
+  type CreateSession,
+  type CreateUser,
+  type CreateVerificationToken,
+  type PublicUser,
+  type Session,
+  type User,
+  type UserProfile,
+  type UserRole,
+  type UserStatus,
+  type VerificationToken,
+  type VerificationTokenType
+} from './auth';
 
-// Business domain
-export * from './business';
-
-// Security domain
-export * from './security';
-
-// Activity domain
-export * from './activity';
-
-// ============================================
-// RELATIONS CONFIGURATION
-// ============================================
-
-import { relations } from 'drizzle-orm';
-
-// Import all tables
-import { activityLogs } from './activity';
-import { accounts, sessions, users } from './auth';
-import {
+// Business schemas  
+export {
+  company_size_enum,
+  contact_priority_enum,
+  contact_source_enum,
+  contact_status_enum,
   contacts,
+  invitation_status_enum,
   invitations,
+  member_role_enum,
+  member_status_enum,
   memberships,
+  organization_industry_enum,
+  organization_plan_enum,
   organizations,
+  project_priority_enum,
+  project_status_enum,
+  project_visibility_enum,
   projects,
+  type CompanySize,
+  type Contact,
+  type ContactPriority,
+  type ContactSource,
+  type ContactStatus,
+  type CreateContact,
+  type CreateInvitation,
+  type CreateMembership,
+  type CreateOrganization,
+  type CreateProject,
+  type Invitation,
+  type InvitationStatus,
+  type MemberRole,
+  type MemberStatus,
+  type Membership,
+  type Organization,
+  type OrganizationIndustry,
+  type OrganizationPlan,
+  type Project,
+  type ProjectPriority,
+  type ProjectStatus,
+  type ProjectVisibility,
 } from './business';
-import { authAuditLogs, passwordResetTokens, rateLimits } from './security';
 
-// ============================================
-// AUTH RELATIONS
-// ============================================
+// Activity schemas
+export {
+  activity_logs,
+  activity_type_enum,
+  activity_resource_enum,
+  type ActivityLog,
+  type ActivityType,
+  type ActivityResource,
+  type CreateActivityLog
+} from './activity';
 
-export const usersRelations = relations(users, ({ many }) => ({
-  accounts: many(accounts),
-  sessions: many(sessions),
-  ownedOrganizations: many(organizations),
-  memberships: many(memberships),
-  sentInvitations: many(invitations, { relationName: 'sentInvitations' }),
-  receivedInvitations: many(invitations, {
-    relationName: 'receivedInvitations',
-  }),
-  ownedProjects: many(projects),
-  createdContacts: many(contacts, { relationName: 'createdContacts' }),
-  assignedContacts: many(contacts, { relationName: 'assignedContacts' }),
-  authAuditLogs: many(authAuditLogs),
-  rateLimits: many(rateLimits),
-  passwordResetTokens: many(passwordResetTokens),
-  activityLogs: many(activityLogs),
-}));
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, {
-    fields: [accounts.userId],
-    references: [users.id],
-  }),
-}));
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
-}));
-
-// ============================================
-// BUSINESS RELATIONS
-// ============================================
-
-export const organizationsRelations = relations(
-  organizations,
-  ({ one, many }) => ({
-    owner: one(users, {
-      fields: [organizations.ownerId],
-      references: [users.id],
-    }),
-    memberships: many(memberships),
-    invitations: many(invitations),
-    projects: many(projects),
-    contacts: many(contacts),
-    authAuditLogs: many(authAuditLogs),
-    activityLogs: many(activityLogs),
-  })
-);
-
-export const membershipsRelations = relations(memberships, ({ one }) => ({
-  user: one(users, {
-    fields: [memberships.userId],
-    references: [users.id],
-  }),
-  organization: one(organizations, {
-    fields: [memberships.organizationId],
-    references: [organizations.id],
-  }),
-  inviter: one(users, {
-    fields: [memberships.invitedBy],
-    references: [users.id],
-    relationName: 'invitedMemberships',
-  }),
-}));
-
-export const invitationsRelations = relations(invitations, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [invitations.organizationId],
-    references: [organizations.id],
-  }),
-  inviter: one(users, {
-    fields: [invitations.invitedBy],
-    references: [users.id],
-    relationName: 'sentInvitations',
-  }),
-  invitedUser: one(users, {
-    fields: [invitations.invitedUserId],
-    references: [users.id],
-    relationName: 'receivedInvitations',
-  }),
-}));
-
-export const projectsRelations = relations(projects, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [projects.organizationId],
-    references: [organizations.id],
-  }),
-  owner: one(users, {
-    fields: [projects.ownerId],
-    references: [users.id],
-  }),
-  activityLogs: many(activityLogs),
-}));
-
-export const contactsRelations = relations(contacts, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [contacts.organizationId],
-    references: [organizations.id],
-  }),
-  creator: one(users, {
-    fields: [contacts.createdBy],
-    references: [users.id],
-    relationName: 'createdContacts',
-  }),
-  assignee: one(users, {
-    fields: [contacts.assignedTo],
-    references: [users.id],
-    relationName: 'assignedContacts',
-  }),
-  referrer: one(contacts, {
-    fields: [contacts.referredBy],
-    references: [contacts.id],
-    relationName: 'referredContacts',
-  }),
-}));
-
-// ============================================
-// SECURITY RELATIONS
-// ============================================
-
-export const authAuditLogsRelations = relations(authAuditLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [authAuditLogs.userId],
-    references: [users.id],
-  }),
-  organization: one(organizations, {
-    fields: [authAuditLogs.organizationId],
-    references: [organizations.id],
-  }),
-}));
-
-export const rateLimitsRelations = relations(rateLimits, ({ one }) => ({
-  user: one(users, {
-    fields: [rateLimits.userId],
-    references: [users.id],
-  }),
-}));
-
-export const passwordResetTokensRelations = relations(
-  passwordResetTokens,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [passwordResetTokens.userId],
-      references: [users.id],
-    }),
-    previousToken: one(passwordResetTokens, {
-      fields: [passwordResetTokens.previousTokenId],
-      references: [passwordResetTokens.id],
-      relationName: 'tokenChain',
-    }),
-  })
-);
-
-// ============================================
-// ACTIVITY RELATIONS
-// ============================================
-
-export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [activityLogs.organizationId],
-    references: [organizations.id],
-  }),
-  user: one(users, {
-    fields: [activityLogs.userId],
-    references: [users.id],
-  }),
-  project: one(projects, {
-    fields: [activityLogs.projectId],
-    references: [projects.id],
-  }),
-}));
-
-// ============================================
-// SCHEMA SUMMARY
-// ============================================
-
-export const schemaInfo = {
-  domains: ['auth', 'business', 'security', 'activity'],
-  tables: {
-    auth: ['users', 'accounts', 'sessions', 'verificationTokens'],
-    business: [
-      'organizations',
-      'memberships',
-      'invitations',
-      'projects',
-      'contacts',
-    ],
-    security: ['authAuditLogs', 'rateLimits', 'passwordResetTokens'],
-    activity: ['activityLogs'],
-  },
-  totalTables: 12,
-  totalRelations: 10,
-} as const;
+// Security schemas - FIXED: ADDED MISSING password_reset_status_enum
+export {
+  auth_audit_logs,
+  auth_event_type_enum,
+  auth_risk_level_enum,
+  password_reset_status_enum,  // <-- ESTAVA FALTANDO ESTA LINHA!
+  password_reset_tokens,
+  rate_limit_type_enum,
+  rate_limit_window_enum,
+  rate_limits,
+  type AuthAuditLog,
+  type AuthEventType,
+  type AuthRiskLevel,
+  type CreateAuthAuditLog,
+  type CreatePasswordResetToken,
+  type CreateRateLimit,
+  type PasswordResetStatus,     // <-- TAMBÉM FALTAVA O TYPE!
+  type PasswordResetToken,
+  type RateLimit,
+  type RateLimitResult,
+  type RateLimitType,
+  type RateLimitWindow
+} from './security';

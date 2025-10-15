@@ -1,89 +1,58 @@
 // packages/database/src/schemas/business/index.ts
-
 // ============================================
-// BUSINESS SCHEMAS BARREL EXPORTS
+// BUSINESS SCHEMAS BARREL EXPORTS (FIXED)
 // ============================================
 
-// Table exports
-export { contactStatusEnum, contactTypeEnum, contacts } from './contact.schema';
 export {
-  invitationStatusEnum,
-  invitationTypeEnum,
-  invitations,
-} from './invitation.schema';
-export {
-  memberRoleEnum,
-  memberStatusEnum,
-  memberships,
-} from './membership.schema';
-export { organizations } from './organization.schema';
-export {
-  projectPriorityEnum,
-  projectStatusEnum,
-  projectVisibilityEnum,
-  projects,
-} from './project.schema';
-
-// Type exports - Organizations
-export type {
-  CompanySize,
-  CreateOrganization,
-  Organization,
-  OrganizationBilling,
-  OrganizationProfile,
-  OrganizationSettings,
-  OrganizationWithOwner,
-  PlanType,
-  PublicOrganization,
+  company_size_enum,
+  organization_industry_enum,
+  organization_plan_enum,
+  organizations,
+  type CompanySize,
+  type CreateOrganization,
+  type Organization,
+  type OrganizationIndustry,
+  type OrganizationPlan,
 } from './organization.schema';
 
-// Type exports - Memberships
-export type {
-  CreateMembership,
-  FullMembership,
-  MemberPermissions,
-  MemberRole,
-  MemberStatus,
-  Membership,
-  MembershipWithOrganization,
-  MembershipWithUser,
+export {
+  member_role_enum,
+  member_status_enum,
+  memberships,
+  type CreateMembership,
+  type MemberRole,
+  type MemberStatus,
+  type Membership,
 } from './membership.schema';
 
-// Type exports - Invitations
-export type {
-  CreateInvitation,
-  FullInvitation,
-  Invitation,
-  InvitationStatus,
-  InvitationSummary,
-  InvitationType,
-  InvitationWithInviter,
-  InvitationWithOrganization,
-} from './invitation.schema';
-
-// Type exports - Projects
-export type {
-  CreateProject,
-  FullProject,
-  Project,
-  ProjectCard,
-  ProjectPriority,
-  ProjectStatus,
-  ProjectSummary,
-  ProjectVisibility,
-  ProjectWithOrganization,
-  ProjectWithOwner,
+export {
+  project_priority_enum,
+  project_status_enum,
+  project_visibility_enum,
+  projects,
+  type CreateProject,
+  type Project,
+  type ProjectPriority,
+  type ProjectStatus,
+  type ProjectVisibility,
 } from './project.schema';
 
-// Type exports - Contacts
-export type {
-  Contact,
-  ContactStatus,
-  ContactSummary,
-  ContactType,
-  ContactWithAssignee,
-  ContactWithCreator,
-  ContactWithOrganization,
-  CreateContact,
-  FullContact,
+export {
+  contact_priority_enum,
+  contact_source_enum,
+  contact_status_enum,
+  contacts,
+  type Contact,
+  type ContactPriority,
+  type ContactSource,
+  type ContactStatus,
+  type CreateContact,
 } from './contact.schema';
+
+export {
+  invitation_status_enum,
+  invitations,
+  type CreateInvitation,
+  type Invitation,
+  type InvitationStatus,
+} from './invitation.schema';

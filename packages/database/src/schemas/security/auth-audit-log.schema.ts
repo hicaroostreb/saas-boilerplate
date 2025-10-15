@@ -1,168 +1,325 @@
 // packages/database/src/schemas/security/auth-audit-log.schema.ts
-
 // ============================================
-// AUTH AUDIT LOG SCHEMA - SRP: APENAS AUTH AUDIT TABLE
-// Enterprise Audit with Soft Delete and Modification Tracking
+// AUTH AUDIT LOG SCHEMA - ENTERPRISE SECURITY (FIXED FILTER)
 // ============================================
 
-import {
-  boolean,
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-export const authEventTypeEnum = pgEnum('auth_event_type', [
+// Auth event type enum
+export const auth_event_type_enum = pgEnum('auth_event_type', [
   'login_success',
-  'login_failed',
+  'login_failure',
   'logout',
-  'session_expired',
-  'register_success',
-  'register_failed',
-  'email_verification_sent',
-  'email_verified',
-  'password_changed',
-  'password_reset_requested',
-  'password_reset_completed',
-  'password_reset_failed',
+  'password_change',
+  'password_reset_request',
+  'password_reset_success',
+  'email_verification',
   'account_locked',
   'account_unlocked',
-  'account_suspended',
-  'account_reactivated',
+  'two_factor_enabled',
+  'two_factor_disabled',
+  'session_expired',
+  'token_refresh',
+  'account_created',
   'account_deleted',
-  'suspicious_activity',
-  'multiple_login_attempts',
-  'login_from_new_device',
-  'login_from_new_location',
-  'api_key_created',
-  'api_key_revoked',
-  'organization_joined',
-  'organization_left',
   'role_changed',
-  'permissions_modified',
+  'permissions_changed',
 ]);
 
-export const authRiskLevelEnum = pgEnum('auth_risk_level', [
+// Risk level enum
+export const auth_risk_level_enum = pgEnum('auth_risk_level', [
   'low',
-  'medium',
+  'medium', 
   'high',
   'critical',
 ]);
 
-export const authAuditLogs = pgTable(
+export const auth_audit_logs = pgTable(
   'auth_audit_logs',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').primaryKey(),
     
-    // ✅ REMOVED REFERENCES to avoid circular dependency - will add via relations
-    userId: text('user_id'),
-    organizationId: text('organization_id'),
+    // Event details
+    event_type: auth_event_type_enum('event_type').notNull(),
+    event_description: text('event_description'),
     
-    eventType: authEventTypeEnum('event_type').notNull(),
-    riskLevel: authRiskLevelEnum('risk_level').default('low').notNull(),
-    ipAddress: varchar('ip_address', { length: 45 }),
-    userAgent: text('user_agent'),
-    country: varchar('country', { length: 2 }),
-    region: varchar('region', { length: 100 }),
-    city: varchar('city', { length: 100 }),
-    deviceId: varchar('device_id', { length: 100 }),
-    deviceType: varchar('device_type', { length: 50 }),
-    browserName: varchar('browser_name', { length: 50 }),
-    browserVersion: varchar('browser_version', { length: 20 }),
-    osName: varchar('os_name', { length: 50 }),
-    osVersion: varchar('os_version', { length: 20 }),
-    sessionId: varchar('session_id', { length: 255 }),
-    sessionToken: text('session_token'),
-    success: boolean('success').notNull(),
-    errorCode: varchar('error_code', { length: 50 }),
-    errorMessage: text('error_message'),
-    resource: varchar('resource', { length: 200 }),
-    action: varchar('action', { length: 100 }),
-    requestHeaders: jsonb('request_headers').$type<Record<string, string>>(),
-    responseData: jsonb('response_data').$type<Record<string, any>>(),
-    metadata: jsonb('metadata').$type<Record<string, any>>(),
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at', { mode: 'date' }),
-    expiresAt: timestamp('expires_at', { mode: 'date' }),
+    // User context
+    user_id: text('user_id'),
+    organization_id: text('organization_id'),
+    session_id: text('session_id'),
+    
+    // Security context
+    ip_address: text('ip_address'),
+    user_agent: text('user_agent'),
+    location: text('location'), // JSON object with geo data
+    
+    // Risk assessment
+    risk_level: auth_risk_level_enum('risk_level').default('low').notNull(),
+    risk_factors: text('risk_factors'), // JSON array of risk factors
+    risk_score: integer('risk_score').default(0).notNull(),
+    
+    // Event metadata
+    metadata: text('metadata'), // JSON object with additional context
+    
+    // Success/failure
+    is_success: boolean('is_success').notNull(),
+    failure_reason: text('failure_reason'),
+    
+    // Timestamps
+    occurred_at: timestamp('occurred_at').notNull().defaultNow(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
   },
-  table => ({
-    userIdx: index('auth_audit_user_idx').on(table.userId),
-    orgIdx: index('auth_audit_org_idx').on(table.organizationId),
-    eventTypeIdx: index('auth_audit_event_type_idx').on(table.eventType),
-    riskLevelIdx: index('auth_audit_risk_level_idx').on(table.riskLevel),
-    ipAddressIdx: index('auth_audit_ip_address_idx').on(table.ipAddress),
-    createdAtIdx: index('auth_audit_created_at_idx').on(table.createdAt),
-    updatedAtIdx: index('auth_audit_updated_at_idx').on(table.updatedAt),
-    deletedAtIdx: index('auth_audit_deleted_at_idx').on(table.deletedAt),
-    successIdx: index('auth_audit_success_idx').on(table.success),
-    deviceIdIdx: index('auth_audit_device_id_idx').on(table.deviceId),
-    sessionIdIdx: index('auth_audit_session_id_idx').on(table.sessionId),
-    expiresAtIdx: index('auth_audit_expires_at_idx').on(table.expiresAt),
-    userEventIdx: index('auth_audit_user_event_idx').on(
-      table.userId,
-      table.eventType
-    ),
-    userCreatedIdx: index('auth_audit_user_created_idx').on(
-      table.userId,
-      table.createdAt
-    ),
-    ipEventIdx: index('auth_audit_ip_event_idx').on(
-      table.ipAddress,
-      table.eventType
-    ),
-    riskEventIdx: index('auth_audit_risk_event_idx').on(
-      table.riskLevel,
-      table.eventType
-    ),
+  (table) => ({
+    // Primary access patterns
+    eventTypeIdx: index('auth_audit_logs_event_type_idx').on(table.event_type),
+    userIdx: index('auth_audit_logs_user_idx').on(table.user_id),
+    orgIdx: index('auth_audit_logs_org_idx').on(table.organization_id),
+    sessionIdx: index('auth_audit_logs_session_idx').on(table.session_id),
+    
+    // Security analysis
+    ipIdx: index('auth_audit_logs_ip_idx').on(table.ip_address),
+    riskLevelIdx: index('auth_audit_logs_risk_level_idx').on(table.risk_level),
+    riskScoreIdx: index('auth_audit_logs_risk_score_idx').on(table.risk_score),
+    
+    // Success/failure analysis
+    isSuccessIdx: index('auth_audit_logs_is_success_idx').on(table.is_success),
+    failureReasonIdx: index('auth_audit_logs_failure_reason_idx').on(table.failure_reason),
+    
+    // Time-based queries
+    occurredIdx: index('auth_audit_logs_occurred_idx').on(table.occurred_at),
+    createdIdx: index('auth_audit_logs_created_idx').on(table.created_at),
+    
+    // Composite indexes for security analysis
+    userEventIdx: index('auth_audit_logs_user_event_idx').on(table.user_id, table.event_type),
+    ipEventIdx: index('auth_audit_logs_ip_event_idx').on(table.ip_address, table.event_type),
+    orgRiskIdx: index('auth_audit_logs_org_risk_idx').on(table.organization_id, table.risk_level),
+    userRiskIdx: index('auth_audit_logs_user_risk_idx').on(table.user_id, table.risk_level),
+    
+    // Time-based security analysis
+    occurredRiskIdx: index('auth_audit_logs_occurred_risk_idx').on(table.occurred_at, table.risk_level),
+    occurredSuccessIdx: index('auth_audit_logs_occurred_success_idx')
+      .on(table.occurred_at, table.is_success),
   })
 );
 
-export type AuthAuditLog = typeof authAuditLogs.$inferSelect;
-export type CreateAuthAuditLog = typeof authAuditLogs.$inferInsert;
-export type AuthEventType = (typeof authEventTypeEnum.enumValues)[number];
-export type AuthRiskLevel = (typeof authRiskLevelEnum.enumValues)[number];
+// Types
+export type AuthAuditLog = typeof auth_audit_logs.$inferSelect;
+export type CreateAuthAuditLog = typeof auth_audit_logs.$inferInsert;
+export type AuthEventType = typeof auth_event_type_enum.enumValues[number];
+export type AuthRiskLevel = typeof auth_risk_level_enum.enumValues[number];
 
-// ✅ ADD MISSING TYPES that security/index.ts is trying to export
-export type AuthAuditLogWithUser = AuthAuditLog & {
-  user: {
-    id: string;
-    name: string | null;
-    email: string;
-  } | null;
-};
+// Helper functions with null safety fixes
+export function parseRiskFactors(log: AuthAuditLog): string[] {
+  if (!log.risk_factors) return [];
+  
+  try {
+    const parsed = JSON.parse(log.risk_factors);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
-export type DeviceInfo = {
-  deviceId?: string;
-  deviceType?: string;
-  browserName?: string;
-  browserVersion?: string;
-  osName?: string;
-  osVersion?: string;
-};
+export function parseLocation(log: AuthAuditLog): Record<string, any> | null {
+  if (!log.location) return null;
+  
+  try {
+    return JSON.parse(log.location);
+  } catch {
+    return null;
+  }
+}
 
-export type LocationInfo = {
-  country?: string;
-  region?: string;
-  city?: string;
-  ipAddress?: string;
-};
+export function parseMetadata(log: AuthAuditLog): Record<string, any> | null {
+  if (!log.metadata) return null;
+  
+  try {
+    return JSON.parse(log.metadata);
+  } catch {
+    return null;
+  }
+}
 
-export type RiskAssessment = {
-  level: AuthRiskLevel;
-  factors: string[];
-  score: number;
-};
+export function calculateRiskScore(factors: string[]): number {
+  const riskWeights: Record<string, number> = {
+    'suspicious_ip': 30,
+    'unusual_location': 20,
+    'multiple_failures': 25,
+    'brute_force_pattern': 40,
+    'compromised_credentials': 50,
+    'unusual_device': 15,
+    'off_hours_access': 10,
+  };
+  
+  return factors.reduce((score, factor) => score + (riskWeights[factor] || 5), 0);
+}
 
-export type SecurityEventSummary = {
-  eventType: AuthEventType;
-  count: number;
-  lastOccurrence: Date;
-  riskLevel: AuthRiskLevel;
-};
+export function getRiskLevel(score: number): AuthRiskLevel {
+  if (score >= 50) return 'critical';
+  if (score >= 30) return 'high';
+  if (score >= 15) return 'medium';
+  return 'low';
+}
+
+export function isSecurityEvent(eventType: AuthEventType): boolean {
+  const securityEvents: AuthEventType[] = [
+    'login_failure',
+    'account_locked',
+    'password_reset_request',
+    'two_factor_disabled',
+    'role_changed',
+    'permissions_changed',
+  ];
+  
+  return securityEvents.includes(eventType);
+}
+
+export function isCriticalEvent(log: AuthAuditLog): boolean {
+  return log.risk_level === 'critical' || 
+         log.event_type === 'account_deleted' ||
+         log.event_type === 'role_changed';
+}
+
+export function getEventSeverity(log: AuthAuditLog): 'info' | 'warning' | 'error' | 'critical' {
+  if (log.risk_level === 'critical') return 'critical';
+  if (log.risk_level === 'high') return 'error';
+  if (log.risk_level === 'medium') return 'warning';
+  return 'info';
+}
+
+// Analytics helpers
+export function analyzeLoginPatterns(logs: AuthAuditLog[]): {
+  totalAttempts: number;
+  successfulLogins: number;
+  failedLogins: number;
+  successRate: number;
+  topFailureReasons: Array<{ reason: string; count: number }>;
+} {
+  const loginLogs = logs.filter(log => 
+    log.event_type === 'login_success' || log.event_type === 'login_failure'
+  );
+  
+  const successful = loginLogs.filter(log => log.is_success);
+  const failed = loginLogs.filter(log => !log.is_success);
+  
+  const failureReasons: Record<string, number> = {};
+  failed.forEach(log => {
+    if (log.failure_reason) {
+      failureReasons[log.failure_reason] = (failureReasons[log.failure_reason] || 0) + 1;
+    }
+  });
+  
+  const topFailureReasons = Object.entries(failureReasons)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+  
+  return {
+    totalAttempts: loginLogs.length,
+    successfulLogins: successful.length,
+    failedLogins: failed.length,
+    successRate: loginLogs.length > 0 ? (successful.length / loginLogs.length) * 100 : 0,
+    topFailureReasons,
+  };
+}
+
+export function analyzeHourlyActivity(logs: AuthAuditLog[]): Record<number, number> {
+  const hourCounts: Record<number, number> = {};
+  
+  // Initialize all hours
+  for (let i = 0; i < 24; i++) {
+    hourCounts[i] = 0;
+  }
+  
+  logs.forEach(log => {
+    const hour = log.occurred_at.getHours();
+    // Fixed null safety
+    if (hourCounts[hour] !== undefined) {
+      hourCounts[hour]++;
+    }
+  });
+  
+  return hourCounts;
+}
+
+export function analyzeDailyActivity(logs: AuthAuditLog[]): Record<string, number> {
+  const dayCounts: Record<string, number> = {};
+  
+  logs.forEach(log => {
+    const dateKey = log.occurred_at.toISOString().split('T')[0];
+    // Fixed null safety
+    if (dateKey) {
+      dayCounts[dateKey] = (dayCounts[dateKey] || 0) + 1;
+    }
+  });
+  
+  return dayCounts;
+}
+
+export function detectAnomalies(logs: AuthAuditLog[]): {
+  suspiciousIPs: string[];
+  unusualHours: number[];
+  highRiskEvents: AuthAuditLog[];
+} {
+  const ipCounts: Record<string, number> = {};
+  const hourCounts: Record<number, number> = {};
+  
+  logs.forEach(log => {
+    if (log.ip_address) {
+      ipCounts[log.ip_address] = (ipCounts[log.ip_address] || 0) + 1;
+    }
+    
+    const hour = log.occurred_at.getHours();
+    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+  });
+  
+  // Find IPs with unusually high activity
+  const avgIPActivity = Object.values(ipCounts).reduce((a, b) => a + b, 0) / Object.keys(ipCounts).length;
+  const suspiciousIPs = Object.entries(ipCounts)
+    .filter(([_, count]) => count > avgIPActivity * 3)
+    .map(([ip]) => ip);
+  
+  // Find unusual hours (very low or very high activity)
+  const avgHourlyActivity = Object.values(hourCounts).reduce((a, b) => a + b, 0) / 24;
+  const unusualHours = Object.entries(hourCounts)
+    .filter(([_, count]) => count > avgHourlyActivity * 2 || count < avgHourlyActivity * 0.1)
+    .map(([hour]) => parseInt(hour));
+  
+  // High risk events
+  const highRiskEvents = logs.filter(log => 
+    log.risk_level === 'high' || log.risk_level === 'critical'
+  );
+  
+  return {
+    suspiciousIPs,
+    unusualHours,
+    highRiskEvents,
+  };
+}
+
+export function generateSecurityReport(logs: AuthAuditLog[]): {
+  summary: {
+    totalEvents: number;
+    securityEvents: number;
+    criticalEvents: number;
+    averageRiskScore: number;
+  };
+  patterns: ReturnType<typeof analyzeLoginPatterns>;
+  anomalies: ReturnType<typeof detectAnomalies>;
+} {
+  // Fixed: pass log object instead of just event_type
+  const securityEvents = logs.filter(log => isSecurityEvent(log.event_type));
+  const criticalEvents = logs.filter(isCriticalEvent);
+  const avgRiskScore = logs.reduce((sum, log) => sum + log.risk_score, 0) / logs.length;
+  
+  return {
+    summary: {
+      totalEvents: logs.length,
+      securityEvents: securityEvents.length,
+      criticalEvents: criticalEvents.length,
+      averageRiskScore: Math.round(avgRiskScore * 100) / 100,
+    },
+    patterns: analyzeLoginPatterns(logs),
+    anomalies: detectAnomalies(logs),
+  };
+}

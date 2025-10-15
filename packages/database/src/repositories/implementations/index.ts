@@ -1,6 +1,10 @@
+// packages/database/src/repositories/implementations/index.ts
 // ============================================
-// REPOSITORY IMPLEMENTATIONS BARREL EXPORTS
+// REPOSITORY IMPLEMENTATIONS BARREL EXPORTS - COMPLETE
 // ============================================
 
 export { DrizzleUserRepository } from './drizzle-user.repository';
-// More implementations as we add them...
+export { DrizzleSessionRepository } from './drizzle-session.repository';
+export { DrizzleOrganizationRepository } from './drizzle-organization.repository';
+export { DrizzleAuditRepository, type IAuditRepository } from './drizzle-audit.repository';
+export { DrizzleRateLimitRepository, type IRateLimitRepository } from './drizzle-rate-limit.repository';

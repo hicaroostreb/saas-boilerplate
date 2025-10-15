@@ -1,222 +1,141 @@
+// packages/database/src/schemas/business/project.schema.ts
 // ============================================
-// PROJECT SCHEMA - SRP: APENAS PROJECT TABLE
+// PROJECTS SCHEMA - ENTERPRISE PROJECT MANAGEMENT (FIXED ENUMS)
 // ============================================
 
-import {
-  boolean,
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { organizations } from './organization.schema';
 
-// ============================================
-// ENUMS
-// ============================================
-
-export const projectStatusEnum = pgEnum('project_status', [
+// Project enums
+export const project_status_enum = pgEnum('project_status', [
   'active',
   'inactive',
-  'archived',
-  'deleted',
+  'completed',
+  'cancelled',
+  'on_hold',
 ]);
 
-export const projectPriorityEnum = pgEnum('project_priority', [
+export const project_priority_enum = pgEnum('project_priority', [
   'low',
   'medium',
   'high',
   'urgent',
 ]);
 
-export const projectVisibilityEnum = pgEnum('project_visibility', [
-  'private',
-  'organization',
+// ADDED MISSING ENUM
+export const project_visibility_enum = pgEnum('project_visibility', [
   'public',
+  'organization',
+  'private',
 ]);
-
-// ============================================
-// PROJECT TABLE DEFINITION
-// ============================================
 
 export const projects = pgTable(
   'projects',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Relations
-    organizationId: text('organization_id')
+    id: text('id').primaryKey(),
+    organization_id: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    ownerId: text('owner_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-
-    // Basic info
-    name: varchar('name', { length: 200 }).notNull(),
-    slug: varchar('slug', { length: 200 }).notNull(),
+    
+    // Basic information
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
     description: text('description'),
-
-    // Project details
-    status: projectStatusEnum('status').default('active').notNull(),
-    priority: projectPriorityEnum('priority').default('medium').notNull(),
-    visibility: projectVisibilityEnum('visibility')
-      .default('organization')
-      .notNull(),
-
-    // Branding
-    color: varchar('color', { length: 7 }), // #FFFFFF format
-    icon: varchar('icon', { length: 50 }), // Icon identifier
-    coverImageUrl: text('cover_image_url'),
-
+    
+    // Status and priority
+    status: project_status_enum('status').notNull().default('active'),
+    priority: project_priority_enum('priority').notNull().default('medium'),
+    visibility: project_visibility_enum('visibility').notNull().default('organization'),
+    
+    // Branding and display
+    color: text('color'),
+    icon: text('icon'),
+    cover_image_url: text('cover_image_url'),
+    
+    // Ownership and management
+    owner_id: text('owner_id').notNull(),
+    
     // Timeline
-    startDate: timestamp('start_date', { mode: 'date' }),
-    endDate: timestamp('end_date', { mode: 'date' }),
-    dueDate: timestamp('due_date', { mode: 'date' }),
-
+    start_date: timestamp('start_date'),
+    end_date: timestamp('end_date'),
+    due_date: timestamp('due_date'),
+    
     // Progress tracking
-    progressPercentage: integer('progress_percentage').default(0),
-
+    progress_percentage: integer('progress_percentage').default(0),
+    
     // Settings
-    allowComments: boolean('allow_comments').default(true).notNull(),
-    requireApproval: boolean('require_approval').default(false).notNull(),
-    enableNotifications: boolean('enable_notifications')
-      .default(true)
-      .notNull(),
-
-    // Resources
+    allow_comments: boolean('allow_comments').notNull().default(true),
+    require_approval: boolean('require_approval').notNull().default(false),
+    enable_notifications: boolean('enable_notifications').notNull().default(true),
+    
+    // Budget
     budget: integer('budget'), // In cents
-    currency: varchar('currency', { length: 3 }).default('USD'), // ISO currency code
-
-    // External integrations
-    externalUrl: text('external_url'),
-    repositoryUrl: text('repository_url'),
-
-    // Custom fields
-    tags: jsonb('tags').$type<string[]>(),
-    customFields: jsonb('custom_fields').$type<Record<string, any>>(),
-
+    currency: text('currency').default('USD'),
+    
+    // External integration
+    external_url: text('external_url'),
+    repository_url: text('repository_url'),
+    
     // Metadata
-    metadata: jsonb('metadata').$type<Record<string, any>>(),
-
+    tags: text('tags'), // JSON array
+    
     // Analytics
-    viewCount: integer('view_count').default(0).notNull(),
-    lastViewedAt: timestamp('last_viewed_at', { mode: 'date' }),
-
+    view_count: integer('view_count').notNull().default(0),
+    last_viewed_at: timestamp('last_viewed_at'),
+    
     // Timestamps
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
-    archivedAt: timestamp('archived_at', { mode: 'date' }),
-    deletedAt: timestamp('deleted_at', { mode: 'date' }),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+    archived_at: timestamp('archived_at'),
+    deleted_at: timestamp('deleted_at'), // Soft delete
   },
-  table => ({
-    // Indexes for performance
-    orgIdx: index('project_org_idx').on(table.organizationId),
-    ownerIdx: index('project_owner_idx').on(table.ownerId),
-    slugIdx: index('project_slug_idx').on(table.slug),
-    statusIdx: index('project_status_idx').on(table.status),
-    priorityIdx: index('project_priority_idx').on(table.priority),
-    visibilityIdx: index('project_visibility_idx').on(table.visibility),
-    createdAtIdx: index('project_created_at_idx').on(table.createdAt),
-    dueDateIdx: index('project_due_date_idx').on(table.dueDate),
-
-    // Composite indexes
-    orgStatusIdx: index('project_org_status_idx').on(
-      table.organizationId,
-      table.status
-    ),
-    orgSlugIdx: index('project_org_slug_idx').on(
-      table.organizationId,
-      table.slug
-    ),
-    nameIdx: index('project_name_idx').on(table.name),
+  (table) => ({
+    // Organization and owner relationships
+    orgIdx: index('projects_org_idx').on(table.organization_id),
+    ownerIdx: index('projects_owner_idx').on(table.owner_id),
+    
+    // Unique constraint per organization
+    orgSlugUniqueIdx: index('projects_org_slug_unique_idx').on(table.organization_id, table.slug),
+    
+    // Performance indexes
+    slugIdx: index('projects_slug_idx').on(table.slug),
+    nameIdx: index('projects_name_idx').on(table.name),
+    
+    // Status and priority
+    statusIdx: index('projects_status_idx').on(table.status),
+    priorityIdx: index('projects_priority_idx').on(table.priority),
+    visibilityIdx: index('projects_visibility_idx').on(table.visibility),
+    
+    // Timeline indexes
+    startDateIdx: index('projects_start_date_idx').on(table.start_date),
+    endDateIdx: index('projects_end_date_idx').on(table.end_date),
+    dueDateIdx: index('projects_due_date_idx').on(table.due_date),
+    
+    // Soft delete
+    archivedIdx: index('projects_archived_idx').on(table.archived_at),
+    deletedIdx: index('projects_deleted_idx').on(table.deleted_at),
+    
+    // Composite indexes for common queries
+    orgStatusIdx: index('projects_org_status_idx').on(table.organization_id, table.status),
+    orgVisibilityIdx: index('projects_org_visibility_idx').on(table.organization_id, table.visibility),
+    ownerStatusIdx: index('projects_owner_status_idx').on(table.owner_id, table.status),
+    orgActiveIdx: index('projects_org_active_idx').on(table.organization_id, table.status, table.deleted_at),
+    orgDueDateIdx: index('projects_org_due_date_idx').on(table.organization_id, table.due_date),
+    statusDueDateIdx: index('projects_status_due_date_idx').on(table.status, table.due_date),
+    
+    // Analytics indexes
+    viewCountIdx: index('projects_view_count_idx').on(table.view_count),
+    lastViewedIdx: index('projects_last_viewed_idx').on(table.last_viewed_at),
+    
+    // Timestamps
+    createdIdx: index('projects_created_idx').on(table.created_at),
+    updatedIdx: index('projects_updated_idx').on(table.updated_at),
   })
 );
 
-// ============================================
-// PROJECT TYPES
-// ============================================
-
+// Types
 export type Project = typeof projects.$inferSelect;
 export type CreateProject = typeof projects.$inferInsert;
-
-// Enum types
-export type ProjectStatus = (typeof projectStatusEnum.enumValues)[number];
-export type ProjectPriority = (typeof projectPriorityEnum.enumValues)[number];
-export type ProjectVisibility =
-  (typeof projectVisibilityEnum.enumValues)[number];
-
-// Project with organization info
-export type ProjectWithOrganization = Project & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl: string | null;
-  };
-};
-
-// Project with owner info
-export type ProjectWithOwner = Project & {
-  owner: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
-
-// Full project info
-export type FullProject = Project & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl: string | null;
-  };
-  owner: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
-
-// Project summary for lists
-export type ProjectSummary = Pick<
-  Project,
-  | 'id'
-  | 'name'
-  | 'slug'
-  | 'description'
-  | 'status'
-  | 'priority'
-  | 'color'
-  | 'icon'
-  | 'progressPercentage'
-  | 'dueDate'
-  | 'createdAt'
-> & {
-  organizationName: string;
-  ownerName: string | null;
-};
-
-// Project card for dashboard
-export type ProjectCard = Pick<
-  Project,
-  | 'id'
-  | 'name'
-  | 'slug'
-  | 'color'
-  | 'icon'
-  | 'progressPercentage'
-  | 'status'
-  | 'updatedAt'
->;
+export type ProjectStatus = typeof project_status_enum.enumValues[number];
+export type ProjectPriority = typeof project_priority_enum.enumValues[number];
+export type ProjectVisibility = typeof project_visibility_enum.enumValues[number];

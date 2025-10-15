@@ -1,113 +1,76 @@
-import { getDb } from '../connection';
-import type { SeedOptions } from '../index';
-import { memberships, organizations, users } from '../schemas';
+// packages/database/src/seeders/production.ts
+// ============================================
+// PRODUCTION SEED - EXACT FIELD NAMES
+// ============================================
 
-export const productionSeeder = {
-  name: 'Production (Minimal)',
-  async run(options: SeedOptions): Promise<void> {
-    if (options.verbose) {
-      console.log('Running production minimal seed...');
-    }
+import type { Database } from '../connection/index.js';
+import { 
+  users, 
+  organizations, 
+  memberships,
+} from '../schemas/index.js';
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        'Production seeder should only run in production environment'
-      );
-      if (!options.force) {
-        throw new Error('Production seeder blocked - use --force to override');
-      }
-    }
+export async function productionSeeder(db: Database): Promise<number> {
+  console.log('Production seed: Creating essential system data...');
+  
+  let recordsCreated = 0;
 
-    const db = await getDb();
-    const existingUsers = await db.select().from(users).limit(1);
-
-    if (existingUsers.length > 0 && !options.force) {
-      if (options.verbose) {
-        console.log('Production data already exists, skipping');
-      }
-      return;
-    }
-
-    const now = new Date();
-    const tenantId = crypto.randomUUID();
-
-    const defaultOrg = {
-      id: crypto.randomUUID(),
-      tenantId: tenantId,
-      name: process.env.DEFAULT_ORG_NAME || 'Default Organization',
-      slug: process.env.DEFAULT_ORG_SLUG || 'default',
-      description: 'Default organization for production',
-      ownerId: '',
-      isPublic: false,
-      allowJoinRequests: false,
-      requireApproval: true,
-      memberLimit: 100,
-      projectLimit: 50,
-      storageLimit: 10737418240,
-      planType: 'enterprise',
-      isActive: true,
-      isVerified: true,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    };
-
-    const adminUser = {
-      id: crypto.randomUUID(),
-      email: process.env.ADMIN_EMAIL || 'admin@example.com',
+  try {
+    // System admin user - EXACT FIELD NAMES
+    const systemAdmin = {
+      id: 'system-admin-' + crypto.randomUUID(),
       name: 'System Administrator',
-      passwordHash: null,
-      emailVerified: now,
-      isActive: true,
-      isSuperAdmin: true,
-      isEmailVerified: true,
-      emailNotifications: true,
-      marketingEmails: false,
-      timezone: 'UTC',
-      locale: 'en',
-      loginAttempts: '0',
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
+      email: process.env.ADMIN_EMAIL || 'admin@system.local',
+      image: null,
+      email_verified: new Date(),
+      role: 'admin' as const,
+      status: 'active' as const,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
-    defaultOrg.ownerId = adminUser.id;
+    await db.insert(users).values(systemAdmin);
+    recordsCreated++;
 
-    await db.insert(users).values(adminUser);
-
-    if (options.verbose) {
-      console.log(`Created admin user: ${adminUser.email}`);
-    }
+    // Default organization - EXACT FIELD NAMES
+    const defaultOrg = {
+      id: 'default-org-' + crypto.randomUUID(),
+      tenant_id: 'system-tenant-' + crypto.randomUUID(),
+      name: 'System Organization',
+      slug: 'system',
+      description: 'Default system organization',
+      industry: 'technology' as const,
+      company_size: '1-10' as const,
+      plan_type: 'enterprise' as const,
+      owner_id: systemAdmin.id,
+      is_active: true,
+      is_verified: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
 
     await db.insert(organizations).values(defaultOrg);
+    recordsCreated++;
 
-    if (options.verbose) {
-      console.log(`Created default organization: ${defaultOrg.name}`);
-    }
-
-    const adminMembership = {
-      id: crypto.randomUUID(),
-      userId: adminUser.id,
-      organizationId: defaultOrg.id,
+    // System membership - EXACT FIELD NAMES (NO ID!)
+    const systemMembership = {
+      user_id: systemAdmin.id,
+      organization_id: defaultOrg.id,
       role: 'owner' as const,
       status: 'active' as const,
-      acceptedAt: now,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
+      joined_at: new Date(),
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
-    await db.insert(memberships).values(adminMembership);
+    await db.insert(memberships).values(systemMembership);
+    recordsCreated++;
 
-    if (options.verbose) {
-      console.log('Created admin membership');
-      console.log('');
-      console.log('PRODUCTION SETUP REQUIRED:');
-      console.log(`Admin Email: ${adminUser.email}`);
-      console.log('Password: Not set - requires first-time setup');
-      console.log(`Organization: ${defaultOrg.name} (${defaultOrg.slug})`);
-      console.log(`Tenant ID: ${tenantId}`);
-      console.log('Complete setup via admin interface');
-    }
-  },
-};
+    console.log(`Production seed completed: ${recordsCreated} records created`);
+    return recordsCreated;
+
+  } catch (error) {
+    console.error('Production seed failed:', error);
+    throw error;
+  }
+}

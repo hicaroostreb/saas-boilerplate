@@ -1,169 +1,154 @@
+// packages/database/src/schemas/business/invitation.schema.ts
 // ============================================
-// INVITATION SCHEMA - SRP: APENAS INVITATION TABLE
-// ============================================
-
-import {
-  index,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
-import { memberRoleEnum } from './membership.schema';
-import { organizations } from './organization.schema';
-
-// ============================================
-// ENUMS
+// INVITATION SCHEMA - ENTERPRISE INVITATIONS (FIXED NULL SAFETY)
 // ============================================
 
-export const invitationStatusEnum = pgEnum('invitation_status', [
+import { index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+
+// Invitation status enum
+export const invitation_status_enum = pgEnum('invitation_status', [
   'pending',
   'accepted',
-  'declined',
+  'rejected',
   'expired',
   'cancelled',
 ]);
 
-export const invitationTypeEnum = pgEnum('invitation_type', [
-  'email',
-  'link',
-  'direct',
-]);
-
-// ============================================
-// INVITATION TABLE DEFINITION
-// ============================================
-
 export const invitations = pgTable(
   'invitations',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Relations
-    organizationId: text('organization_id')
-      .notNull()
-      .references(() => organizations.id, { onDelete: 'cascade' }),
-    invitedBy: text('invited_by')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    invitedUserId: text('invited_user_id').references(() => users.id), // Null if inviting by email
-
+    id: text('id').primaryKey(),
+    
+    // Context
+    organization_id: text('organization_id').notNull(),
+    invited_by: text('invited_by').notNull(),
+    
     // Invitation details
-    email: varchar('email', { length: 255 }).notNull(),
-    role: memberRoleEnum('role').default('member').notNull(),
-
-    // Invitation method
-    type: invitationTypeEnum('type').default('email').notNull(),
-
-    // Tokens & security
-    token: text('token').notNull().unique(),
-
-    // Status
-    status: invitationStatusEnum('status').default('pending').notNull(),
-
-    // Personal message
+    email: text('email').notNull(),
+    role: text('role').notNull(),
     message: text('message'),
-
-    // Timing
-    expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
-    sentAt: timestamp('sent_at', { mode: 'date' }),
-    acceptedAt: timestamp('accepted_at', { mode: 'date' }),
-    declinedAt: timestamp('declined_at', { mode: 'date' }),
-
+    
+    // Token and security
+    token: text('token').notNull(),
+    
+    // Status and responses
+    status: invitation_status_enum('status').default('pending').notNull(),
+    accepted_by: text('accepted_by'),
+    accepted_at: timestamp('accepted_at'),
+    rejected_at: timestamp('rejected_at'),
+    
+    // Expiry
+    expires_at: timestamp('expires_at').notNull(),
+    
     // Tracking
-    reminderSentAt: timestamp('reminder_sent_at', { mode: 'date' }),
-    reminderCount: varchar('reminder_count', { length: 2 })
-      .default('0')
-      .notNull(),
-
+    sent_at: timestamp('sent_at'),
+    reminder_sent_at: timestamp('reminder_sent_at'),
+    
     // Timestamps
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
   },
-  table => ({
-    // Indexes for performance
-    tokenIdx: index('invitation_token_idx').on(table.token),
-    emailIdx: index('invitation_email_idx').on(table.email),
-    orgIdx: index('invitation_org_idx').on(table.organizationId),
-    invitedByIdx: index('invitation_invited_by_idx').on(table.invitedBy),
-    statusIdx: index('invitation_status_idx').on(table.status),
-    expiresAtIdx: index('invitation_expires_at_idx').on(table.expiresAt),
-    createdAtIdx: index('invitation_created_at_idx').on(table.createdAt),
-
+  (table) => ({
+    // Primary access patterns
+    orgIdx: index('invitations_org_idx').on(table.organization_id),
+    emailIdx: index('invitations_email_idx').on(table.email),
+    tokenIdx: index('invitations_token_idx').on(table.token),
+    invitedByIdx: index('invitations_invited_by_idx').on(table.invited_by),
+    
+    // Status and expiry
+    statusIdx: index('invitations_status_idx').on(table.status),
+    expiresIdx: index('invitations_expires_idx').on(table.expires_at),
+    
+    // Response tracking
+    acceptedByIdx: index('invitations_accepted_by_idx').on(table.accepted_by),
+    acceptedAtIdx: index('invitations_accepted_at_idx').on(table.accepted_at),
+    rejectedAtIdx: index('invitations_rejected_at_idx').on(table.rejected_at),
+    
     // Composite indexes
-    orgStatusIdx: index('invitation_org_status_idx').on(
-      table.organizationId,
-      table.status
-    ),
-    emailOrgIdx: index('invitation_email_org_idx').on(
-      table.email,
-      table.organizationId
-    ),
+    orgStatusIdx: index('invitations_org_status_idx').on(table.organization_id, table.status),
+    emailStatusIdx: index('invitations_email_status_idx').on(table.email, table.status),
+    
+    // Timestamps
+    createdIdx: index('invitations_created_idx').on(table.created_at),
+    updatedIdx: index('invitations_updated_idx').on(table.updated_at),
+    sentIdx: index('invitations_sent_idx').on(table.sent_at),
+    reminderIdx: index('invitations_reminder_idx').on(table.reminder_sent_at),
   })
 );
 
-// ============================================
-// INVITATION TYPES
-// ============================================
-
+// Types
 export type Invitation = typeof invitations.$inferSelect;
 export type CreateInvitation = typeof invitations.$inferInsert;
+export type InvitationStatus = typeof invitation_status_enum.enumValues[number];
 
-// Enum types
-export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
-export type InvitationType = (typeof invitationTypeEnum.enumValues)[number];
+// Token generation
+export function generateInvitationToken(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    
+    for (let i = 0; i < length; i++) {
+      // Fixed null safety
+      const arrayValue = array[i];
+      if (arrayValue !== undefined) {
+        token += chars[arrayValue % chars.length];
+      }
+    }
+  } else {
+    // Fallback
+    for (let i = 0; i < length; i++) {
+      token += chars[Math.floor(Math.random() * chars.length)];
+    }
+  }
+  
+  return token;
+}
 
-// Invitation with organization info
-export type InvitationWithOrganization = Invitation & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl: string | null;
-  };
-};
+// Invitation utilities
+export function isInvitationExpired(invitation: Invitation): boolean {
+  return new Date() > invitation.expires_at;
+}
 
-// Invitation with inviter info
-export type InvitationWithInviter = Invitation & {
-  inviter: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
+export function isInvitationPending(invitation: Invitation): boolean {
+  return invitation.status === 'pending' && !isInvitationExpired(invitation);
+}
 
-// Full invitation info
-export type FullInvitation = Invitation & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl: string | null;
-  };
-  inviter: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-  invitedUser?: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
+export function canInvitationBeAccepted(invitation: Invitation): boolean {
+  return invitation.status === 'pending' && !isInvitationExpired(invitation);
+}
 
-// Invitation summary for dashboard
-export type InvitationSummary = Pick<
-  Invitation,
-  'id' | 'email' | 'role' | 'status' | 'createdAt' | 'expiresAt'
-> & {
-  organizationName: string;
-  inviterName: string | null;
-};
+export function getInvitationExpiryTime(invitation: Invitation): number {
+  return Math.max(0, invitation.expires_at.getTime() - Date.now());
+}
+
+export function shouldSendReminder(invitation: Invitation, reminderAfterHours = 72): boolean {
+  if (invitation.status !== 'pending') return false;
+  if (isInvitationExpired(invitation)) return false;
+  if (invitation.reminder_sent_at) return false;
+  
+  const reminderTime = new Date(invitation.created_at);
+  reminderTime.setHours(reminderTime.getHours() + reminderAfterHours);
+  
+  return new Date() >= reminderTime;
+}
+
+export function createInvitationExpiry(daysFromNow = 7): Date {
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + daysFromNow);
+  return expiry;
+}
+
+export function formatInvitationUrl(baseUrl: string, token: string): string {
+  return `${baseUrl}/invite/${token}`;
+}
+
+export function getInvitationAge(invitation: Invitation): number {
+  return Date.now() - invitation.created_at.getTime();
+}
+
+export function getInvitationAgeInDays(invitation: Invitation): number {
+  return Math.floor(getInvitationAge(invitation) / (1000 * 60 * 60 * 24));
+}

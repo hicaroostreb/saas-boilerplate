@@ -13,6 +13,7 @@
       "@workspace/common": ["../../packages/common/src"],
       "@workspace/routes": ["../../packages/routes/src"],
       "@workspace/auth": ["../../packages/auth/src"],
+      "@workspace/auth/server": ["../../packages/auth/dist/server"],
       "@workspace/database": ["../../packages/database/src"]
     },
     "plugins": [
@@ -32,6 +33,7 @@
     "../../packages/common/src/**/*.ts",
     "../../packages/routes/src/**/*.ts",
     "../../packages/auth/src/**/*.ts",
+    "../../packages/auth/dist/**/*.d.ts",
     "../../packages/database/src/**/*.ts"
   ],
   "exclude": ["node_modules"]

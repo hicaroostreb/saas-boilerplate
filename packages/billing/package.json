@@ -23,12 +23,11 @@
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
-    "@workspace/webhooks": "workspace:*",
-    "@workspace/database": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/common": "workspace:*",
-    "stripe": "^12.18.0",
-    "drizzle-orm": "^0.44.5"
+    "@workspace/database": "workspace:*",
+    "@workspace/webhooks": "workspace:*",
+    "stripe": "^12.18.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

@@ -1,91 +1,64 @@
 // packages/database/src/repositories/contracts/user.repository.interface.ts
-
 // ============================================
-// USER REPOSITORY CONTRACT - SRP: APENAS USER INTERFACE
-// Enterprise Multi-Tenancy and Soft Delete
+// USER REPOSITORY CONTRACT - ENTERPRISE
 // ============================================
 
 import type { UserEntity } from '../../entities/auth/user.entity';
 
-export interface IUserRepository {
-  // ============================================
-  // BASIC CRUD OPERATIONS
-  // ============================================
+export interface UserQueryOptions {
+  limit?: number;
+  offset?: number;
+  include_deleted?: boolean;
+}
 
+export interface UserFilterOptions {
+  is_active?: boolean;
+  organization_id?: string;
+  is_email_verified?: boolean;
+  include_deleted?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface IUserRepository {
+  // Core CRUD operations
   findById(id: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
-  findByIds(ids: string[]): Promise<UserEntity[]>;
-
+  findByIds(ids: readonly string[]): Promise<UserEntity[]>;
   create(user: UserEntity): Promise<UserEntity>;
   update(user: UserEntity): Promise<UserEntity>;
   delete(id: string): Promise<void>;
 
-  // ============================================
-  // MULTI-TENANCY OPERATIONS
-  // ============================================
+  // Organization-specific queries
+  findByOrganizationId(
+    organization_id: string,
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]>;
 
-  findByOrganizationId(organizationId: string): Promise<UserEntity[]>;
-
-  // ============================================
-  // SOFT DELETE OPERATIONS
-  // ============================================
-
+  // Soft delete operations
   softDelete(id: string): Promise<void>;
-  restore(id: string): Promise<UserEntity>;
+  restore(id: string): Promise<UserEntity | null>;
 
-  // ============================================
-  // QUERY OPERATIONS
-  // ============================================
+  // Search and filtering
+  findMany(options: UserFilterOptions): Promise<UserEntity[]>;
+  findByEmailPattern(pattern: string, options?: UserQueryOptions): Promise<UserEntity[]>;
 
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-    isActive?: boolean;
-  }): Promise<UserEntity[]>;
+  // Authentication-specific
+  findForAuthentication(email: string): Promise<UserEntity | null>;
 
-  findByEmailPattern(pattern: string, limit?: number): Promise<UserEntity[]>;
-
-  findRecentlyActive(days?: number, limit?: number): Promise<UserEntity[]>;
-
-  // ============================================
-  // BUSINESS OPERATIONS
-  // ============================================
-
-  findByLoginCredentials(email: string): Promise<UserEntity | null>;
-
-  findUnverifiedUsers(olderThanHours?: number): Promise<UserEntity[]>;
-
+  // Maintenance operations
+  findUnverifiedUsers(older_than_hours?: number): Promise<UserEntity[]>;
   findLockedUsers(): Promise<UserEntity[]>;
 
-  findInactiveUsers(olderThanDays?: number): Promise<UserEntity[]>;
+  // Batch operations
+  createMany(users: readonly UserEntity[]): Promise<UserEntity[]>;
+  updateMany(users: readonly UserEntity[]): Promise<UserEntity[]>;
+  deleteMany(ids: readonly string[]): Promise<void>;
 
-  // ============================================
-  // ANALYTICS & REPORTING
-  // ============================================
-
-  countTotal(): Promise<number>;
-  countActive(): Promise<number>;
-  countVerified(): Promise<number>;
-
-  getRegistrationStats(days?: number): Promise<
-    {
-      date: string;
-      count: number;
-    }[]
-  >;
-
-  // ============================================
-  // BULK OPERATIONS
-  // ============================================
-
-  createMany(users: UserEntity[]): Promise<UserEntity[]>;
-  updateMany(users: UserEntity[]): Promise<UserEntity[]>;
-  deleteMany(ids: string[]): Promise<void>;
-
-  // ============================================
-  // EXISTENCE CHECKS
-  // ============================================
-
+  // Existence checks
   existsByEmail(email: string): Promise<boolean>;
   existsById(id: string): Promise<boolean>;
+
+  // Statistics
+  count(filters?: Pick<UserFilterOptions, 'is_active' | 'organization_id'>): Promise<number>;
 }

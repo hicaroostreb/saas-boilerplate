@@ -1,232 +1,124 @@
+// packages/database/src/schemas/business/contact.schema.ts
 // ============================================
-// CONTACT SCHEMA - SRP: APENAS CONTACT TABLE
-// ============================================
-
-import {
-  boolean,
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core';
-import { users } from '../auth/user.schema';
-import { organizations } from './organization.schema';
-
-// ============================================
-// ENUMS
+// CONTACTS SCHEMA - ENTERPRISE CRM (FIXED ENUM)
 // ============================================
 
-export const contactTypeEnum = pgEnum('contact_type', [
-  'lead',
-  'customer',
-  'partner',
-  'vendor',
-  'employee',
-  'other',
+import { boolean, index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+
+// Contact enums
+export const contact_source_enum = pgEnum('contact_source', [
+  'website',
+  'referral',
+  'social_media',
+  'email_campaign',
+  'cold_outreach',
+  'event',
+  'import',
+  'api',
+  'manual',
 ]);
 
-export const contactStatusEnum = pgEnum('contact_status', [
+export const contact_status_enum = pgEnum('contact_status', [
   'active',
   'inactive',
   'archived',
-  'blocked',
+  'deleted',
 ]);
 
-// ============================================
-// CONTACT TABLE DEFINITION
-// ============================================
+// ADDED MISSING ENUM
+export const contact_priority_enum = pgEnum('contact_priority', [
+  'low',
+  'medium',
+  'high',
+  'urgent',
+]);
 
 export const contacts = pgTable(
   'contacts',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-
-    // Relations
-    organizationId: text('organization_id')
-      .notNull()
-      .references(() => organizations.id, { onDelete: 'cascade' }),
-    createdBy: text('created_by')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    assignedTo: text('assigned_to').references(() => users.id),
-
-    // Basic info
-    firstName: varchar('first_name', { length: 100 }),
-    lastName: varchar('last_name', { length: 100 }),
-    fullName: varchar('full_name', { length: 200 }).notNull(), // Computed or manual
-
-    // Contact details
-    email: varchar('email', { length: 255 }),
-    phone: varchar('phone', { length: 20 }),
-    mobile: varchar('mobile', { length: 20 }),
-
-    // Company info
-    companyName: varchar('company_name', { length: 200 }),
-    jobTitle: varchar('job_title', { length: 100 }),
-    department: varchar('department', { length: 100 }),
-
-    // Address
-    address: jsonb('address').$type<{
-      street?: string;
-      city?: string;
-      state?: string;
-      zipCode?: string;
-      country?: string;
-    }>(),
-
-    // Social & web
-    website: varchar('website', { length: 255 }),
-    linkedinUrl: varchar('linkedin_url', { length: 255 }),
-    twitterHandle: varchar('twitter_handle', { length: 50 }),
-
+    id: text('id').primaryKey(),
+    organization_id: text('organization_id').notNull(),
+    
+    // Assignment
+    created_by: text('created_by').notNull(),
+    assigned_to: text('assigned_to'),
+    
+    // Basic information
+    full_name: text('full_name').notNull(),
+    first_name: text('first_name'),
+    last_name: text('last_name'),
+    email: text('email'),
+    phone: text('phone'),
+    
+    // Company information
+    company: text('company'),
+    job_title: text('job_title'),
+    
     // Classification
-    type: contactTypeEnum('type').default('lead').notNull(),
-    status: contactStatusEnum('status').default('active').notNull(),
-
-    // Relationship
-    source: varchar('source', { length: 100 }), // How we got this contact
-    // ✅ FIXED: Self-reference with proper typing
-    referredBy: text('referred_by'),
-
-    // Business details
-    tags: jsonb('tags').$type<string[]>(),
-    notes: text('notes'),
-
-    // Preferences
-    emailOptIn: boolean('email_opt_in').default(true).notNull(),
-    smsOptIn: boolean('sms_opt_in').default(false).notNull(),
-    marketingOptIn: boolean('marketing_opt_in').default(false).notNull(),
-
-    // Activity tracking
-    lastContactedAt: timestamp('last_contacted_at', { mode: 'date' }),
-    lastContactMethod: varchar('last_contact_method', { length: 50 }),
-    nextFollowUpAt: timestamp('next_follow_up_at', { mode: 'date' }),
-
-    // Custom fields
-    customFields: jsonb('custom_fields').$type<Record<string, any>>(),
-
+    source: contact_source_enum('source'),
+    status: contact_status_enum('status').notNull().default('active'),
+    priority: contact_priority_enum('priority').notNull().default('medium'),
+    
     // Metadata
-    metadata: jsonb('metadata').$type<Record<string, any>>(),
-
+    tags: text('tags'), // JSON array
+    notes: text('notes'),
+    address: text('address'), // JSON object
+    social_profiles: text('social_profiles'), // JSON object
+    custom_fields: text('custom_fields'), // JSON object
+    
+    // Activity tracking
+    last_contacted_at: timestamp('last_contacted_at'),
+    next_follow_up_at: timestamp('next_follow_up_at'),
+    
+    // Classification flags
+    is_lead: boolean('is_lead').notNull().default(false),
+    is_customer: boolean('is_customer').notNull().default(false),
+    is_archived: boolean('is_archived').notNull().default(false),
+    
     // Timestamps
-    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
-    deletedAt: timestamp('deleted_at', { mode: 'date' }),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+    deleted_at: timestamp('deleted_at'), // Soft delete
   },
-  table => ({
-    // Indexes for performance
-    orgIdx: index('contact_org_idx').on(table.organizationId),
-    createdByIdx: index('contact_created_by_idx').on(table.createdBy),
-    assignedToIdx: index('contact_assigned_to_idx').on(table.assignedTo),
-    emailIdx: index('contact_email_idx').on(table.email),
-    fullNameIdx: index('contact_full_name_idx').on(table.fullName),
-    companyIdx: index('contact_company_idx').on(table.companyName),
-    typeIdx: index('contact_type_idx').on(table.type),
-    statusIdx: index('contact_status_idx').on(table.status),
-    createdAtIdx: index('contact_created_at_idx').on(table.createdAt),
-    lastContactedIdx: index('contact_last_contacted_idx').on(
-      table.lastContactedAt
-    ),
-    nextFollowUpIdx: index('contact_next_follow_up_idx').on(
-      table.nextFollowUpAt
-    ),
-    referredByIdx: index('contact_referred_by_idx').on(table.referredBy),
-
+  (table) => ({
+    // Organization and assignment
+    orgIdx: index('contacts_org_idx').on(table.organization_id),
+    createdByIdx: index('contacts_created_by_idx').on(table.created_by),
+    assignedToIdx: index('contacts_assigned_to_idx').on(table.assigned_to),
+    
+    // Contact information
+    emailIdx: index('contacts_email_idx').on(table.email),
+    phoneIdx: index('contacts_phone_idx').on(table.phone),
+    companyIdx: index('contacts_company_idx').on(table.company),
+    
+    // Classification
+    statusIdx: index('contacts_status_idx').on(table.status),
+    priorityIdx: index('contacts_priority_idx').on(table.priority),
+    sourceIdx: index('contacts_source_idx').on(table.source),
+    
+    // Activity tracking
+    lastContactedIdx: index('contacts_last_contacted_idx').on(table.last_contacted_at),
+    nextFollowUpIdx: index('contacts_next_follow_up_idx').on(table.next_follow_up_at),
+    
+    // Flags
+    isLeadIdx: index('contacts_is_lead_idx').on(table.is_lead),
+    isCustomerIdx: index('contacts_is_customer_idx').on(table.is_customer),
+    isArchivedIdx: index('contacts_is_archived_idx').on(table.is_archived),
+    
     // Composite indexes
-    orgTypeIdx: index('contact_org_type_idx').on(
-      table.organizationId,
-      table.type
-    ),
-    orgStatusIdx: index('contact_org_status_idx').on(
-      table.organizationId,
-      table.status
-    ),
-    nameEmailIdx: index('contact_name_email_idx').on(
-      table.fullName,
-      table.email
-    ),
+    orgStatusIdx: index('contacts_org_status_idx').on(table.organization_id, table.status),
+    assignedStatusIdx: index('contacts_assigned_status_idx').on(table.assigned_to, table.status),
+    
+    // Timestamps
+    createdIdx: index('contacts_created_idx').on(table.created_at),
+    updatedIdx: index('contacts_updated_idx').on(table.updated_at),
+    deletedIdx: index('contacts_deleted_idx').on(table.deleted_at),
   })
 );
 
-// ============================================
-// CONTACT TYPES
-// ============================================
-
+// Types
 export type Contact = typeof contacts.$inferSelect;
 export type CreateContact = typeof contacts.$inferInsert;
-
-// Enum types
-export type ContactType = (typeof contactTypeEnum.enumValues)[number];
-export type ContactStatus = (typeof contactStatusEnum.enumValues)[number];
-
-// Contact with organization info
-export type ContactWithOrganization = Contact & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-};
-
-// Contact with creator info
-export type ContactWithCreator = Contact & {
-  creator: {
-    id: string;
-    name: string | null;
-    email: string;
-  };
-};
-
-// Contact with assigned user
-export type ContactWithAssignee = Contact & {
-  assignee?: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-};
-
-// Full contact info
-export type FullContact = Contact & {
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  creator: {
-    id: string;
-    name: string | null;
-    email: string;
-  };
-  assignee?: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-  referrer?: {
-    id: string;
-    fullName: string;
-  };
-};
-
-// Contact summary for lists
-export type ContactSummary = Pick<
-  Contact,
-  | 'id'
-  | 'fullName'
-  | 'email'
-  | 'phone'
-  | 'companyName'
-  | 'jobTitle'
-  | 'type'
-  | 'status'
-  | 'lastContactedAt'
-  | 'createdAt'
->;
+export type ContactSource = typeof contact_source_enum.enumValues[number];
+export type ContactStatus = typeof contact_status_enum.enumValues[number];
+export type ContactPriority = typeof contact_priority_enum.enumValues[number];

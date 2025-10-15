@@ -1,100 +1,28 @@
 // packages/database/src/repositories/contracts/organization.repository.interface.ts
-
 // ============================================
-// ORGANIZATION REPOSITORY CONTRACT - SRP: APENAS ORGANIZATION INTERFACE
-// Enterprise Multi-Tenancy and Soft Delete
+// ORGANIZATION REPOSITORY CONTRACT - ENTERPRISE
 // ============================================
-
-import type { CreateOrganization, Organization } from '../../schemas/business';
 
 export interface IOrganizationRepository {
-  // ============================================
-  // BASIC CRUD OPERATIONS
-  // ============================================
-
-  findById(id: string): Promise<Organization | null>;
-  findBySlug(slug: string): Promise<Organization | null>;
-  findByIds(ids: string[]): Promise<Organization[]>;
-
-  create(data: CreateOrganization): Promise<Organization>;
-  update(id: string, data: Partial<Organization>): Promise<Organization>;
+  // Core CRUD operations
+  findById(id: string): Promise<any | null>;
+  findBySlug(slug: string): Promise<any | null>;
+  create(organization: any): Promise<any>;
+  update(organization: any): Promise<any>;
   delete(id: string): Promise<void>;
 
-  // ============================================
-  // MULTI-TENANCY OPERATIONS
-  // ============================================
+  // Multi-tenant operations
+  findByTenantId(tenant_id: string): Promise<any[]>;
+  findPublicOrganizations(): Promise<any[]>;
 
-  findByTenantId(tenantId: string): Promise<Organization | null>;
+  // Search and filtering
+  findMany(options: any): Promise<any[]>;
+  count(filters?: any): Promise<number>;
 
-  // ============================================
-  // SOFT DELETE OPERATIONS
-  // ============================================
+  // Membership related
+  findUserOrganizations(user_id: string): Promise<any[]>;
 
+  // Soft delete operations
   softDelete(id: string): Promise<void>;
-  restore(id: string): Promise<Organization>;
-
-  // ============================================
-  // QUERY OPERATIONS
-  // ============================================
-
-  findByOwnerId(ownerId: string): Promise<Organization[]>;
-
-  findByMemberId(userId: string): Promise<Organization[]>;
-
-  findPublic(options?: {
-    limit?: number;
-    offset?: number;
-    search?: string;
-  }): Promise<Organization[]>;
-
-  findByPlanType(planType: string): Promise<Organization[]>;
-
-  // ============================================
-  // BUSINESS OPERATIONS
-  // ============================================
-
-  findAvailableSlug(baseSlug: string): Promise<string>;
-
-  findByIndustry(industry: string, limit?: number): Promise<Organization[]>;
-
-  findExpiringSoon(days?: number): Promise<Organization[]>;
-
-  findOverLimit(
-    limitType: 'members' | 'projects' | 'storage'
-  ): Promise<Organization[]>;
-
-  // ============================================
-  // ANALYTICS & REPORTING
-  // ============================================
-
-  countTotal(): Promise<number>;
-  countActive(): Promise<number>;
-  countByPlan(): Promise<Record<string, number>>;
-
-  getGrowthStats(days?: number): Promise<
-    {
-      date: string;
-      count: number;
-    }[]
-  >;
-
-  // ============================================
-  // SEARCH OPERATIONS
-  // ============================================
-
-  search(
-    query: string,
-    options?: {
-      limit?: number;
-      offset?: number;
-      includePrivate?: boolean;
-    }
-  ): Promise<Organization[]>;
-
-  // ============================================
-  // EXISTENCE CHECKS
-  // ============================================
-
-  existsBySlug(slug: string): Promise<boolean>;
-  existsById(id: string): Promise<boolean>;
+  restore(id: string): Promise<any | null>;
 }

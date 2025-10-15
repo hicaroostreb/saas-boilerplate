@@ -1,12 +1,7 @@
-// packages/auth/src/lib/nextauth/config.ts - CONFIG WITHOUT SECRET
-
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
 export const authConfig: NextAuthConfig = {
-  // ✅ SECRET: Moved to handlers.ts where NextAuth is instantiated
-
-  // ✅ JWT: Required for Credentials provider
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -28,25 +23,6 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user?.id) {
         token.sub = user.id;
-
-        // ✅ Manual session tracking
-        try {
-          const { SessionRepository } = await import(
-            '../../adapters/repositories/session.repository'
-          );
-          const sessionRepo = new SessionRepository();
-
-          await sessionRepo.create({
-            userId: user.id,
-            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            ipAddress: undefined,
-            userAgent: undefined,
-          });
-
-          console.warn('✅ Manual session created for user:', user.id);
-        } catch (error) {
-          console.error('❌ Failed to create manual session:', error);
-        }
       }
       return token;
     },
@@ -65,22 +41,35 @@ export const authConfig: NextAuthConfig = {
         }
 
         try {
-          const { signInFlow } = await import('../../core/flows/sign-in.flow');
+          // Usar SignInHandler da Clean Architecture
+          const { SignInHandler } = await import(
+            '../../application/commands/SignInHandler'
+          );
+          const { DrizzleUserRepository } = await import(
+            '../../infrastructure/repositories/DrizzleUserRepository'
+          );
+          const { BcryptPasswordHasher } = await import(
+            '../../infrastructure/services/BcryptPasswordHasher'
+          );
 
-          const result = await signInFlow({
+          const userRepository = new DrizzleUserRepository();
+          const passwordHasher = new BcryptPasswordHasher();
+          const signInHandler = new SignInHandler(
+            userRepository,
+            passwordHasher
+          );
+
+          // ✅ Método correto: execute (não handle)
+          // ✅ Retorna UserProfileDTO diretamente (não { success, data })
+          const userProfile = await signInHandler.execute({
             email: credentials.email as string,
             password: credentials.password as string,
           });
 
-          if (!result.success || !result.data) {
-            console.warn('NextAuth: Sign-in failed:', result.error);
-            return null;
-          }
-
           return {
-            id: result.data.user.id,
-            email: result.data.user.email,
-            name: result.data.user.name,
+            id: userProfile.id,
+            email: userProfile.email,
+            name: userProfile.name,
           };
         } catch (error) {
           console.error('NextAuth: Sign-in error:', error);
