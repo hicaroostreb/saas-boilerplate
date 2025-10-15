@@ -17,7 +17,8 @@
   "references": [
     // Foundation Layer
     { "path": "packages/common" },
-    { "path": "packages/routes" },
+    { "path": "packages/http" },
+    { "path": "packages/shared" },
 
     // Infrastructure Layer
     { "path": "packages/rate-limiter" },

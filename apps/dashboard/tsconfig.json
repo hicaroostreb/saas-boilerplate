@@ -11,7 +11,7 @@
       "@/types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
       "@workspace/common": ["../../packages/common/src"],
-      "@workspace/routes": ["../../packages/routes/src"],
+      "@workspace/http": ["../../packages/http/src"],
       "@workspace/auth": ["../../packages/auth/src"],
       "@workspace/auth/server": ["../../packages/auth/dist/server"],
       "@workspace/database": ["../../packages/database/src"]

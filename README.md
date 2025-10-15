@@ -26,7 +26,7 @@ saas-boilerplate/
     ├── @workspace/database
     ├── @workspace/e2e
     ├── @workspace/rate-limiter
-    ├── @workspace/routes
+    ├── @workspace/http
     ├── @workspace/ui
     └── @workspace/webhooks
 ```

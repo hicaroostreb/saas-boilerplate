@@ -24,7 +24,7 @@
     "@workspace/auth": "workspace:*",
     "@workspace/common": "workspace:*",
     "@workspace/database": "workspace:*",
-    "@workspace/routes": "workspace:*",
+    "@workspace/http": "workspace:*",
     "@workspace/ui": "workspace:*",
     "nanoid": "^5.0.4",
     "next": "^15.5.4",

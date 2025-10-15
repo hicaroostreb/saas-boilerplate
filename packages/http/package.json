@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/routes",
+  "name": "@workspace/http",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -26,11 +26,21 @@
     "test": "echo '⚠️ Tests not configured yet'",
     "clean": "rm -rf dist .turbo node_modules"
   },
-  "dependencies": {},
+  "dependencies": {
+    "next": "^15.0.0",
+    "zod": "^3.22.4"
+  },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
     "@workspace/eslint-config": "workspace:*",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "@types/node": "^20.0.0"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0"
+  },
+  "optionalDependencies": {
+    "@workspace/rate-limiter": "workspace:*"
   }
 }

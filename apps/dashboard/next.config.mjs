@@ -14,7 +14,7 @@ const nextConfig = {
     '@workspace/auth',
     '@workspace/database',
     '@workspace/common',
-    '@workspace/routes',
+    '@workspace/http',
   ],
 
   // Experimental optimizations

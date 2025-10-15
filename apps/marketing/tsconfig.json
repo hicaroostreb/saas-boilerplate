@@ -10,7 +10,7 @@
       "@types/*": ["./src/types/*"],
       "@workspace/ui": ["../../packages/ui/src"],
       "@workspace/common": ["../../packages/common/src"],
-      "@workspace/routes": ["../../packages/routes/src"],
+      "@workspace/http": ["../../packages/http/src"],
       "@workspace/rate-limiter": ["../../packages/rate-limiter/src"]
     },
     "plugins": [
