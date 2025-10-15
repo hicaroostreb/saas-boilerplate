@@ -20,6 +20,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "validate": "npm run typecheck && npm run lint && npm run test",
     "clean": "rm -rf dist .turbo node_modules coverage"
   },
   "dependencies": {

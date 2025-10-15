@@ -1,32 +1,36 @@
-// packages/rate-limiter/src/infrastructure/gateways/memory.gateway.ts
-
-import { RateLimitEntity } from '../../domain/entities/rate-limit.entity.js';
-import { BaseRateLimitRepository } from '../../domain/repositories/rate-limit.repository.js';
-import { RateLimitStorageError } from '../../domain/types/rate-limit.types.js';
+import type { ILogger } from '../../domain/ports/logger.port.js';
+import type {
+  HealthCheckResult,
+  IRateLimitRepository,
+} from '../../domain/ports/rate-limit-repository.port.js';
+import { RateLimitStorageError } from '../../domain/types/errors.js';
+import type { RateLimitRecord } from '../../domain/types/rate-limit.types.js';
 
 interface MemoryEntry {
-  entity: RateLimitEntity;
+  record: RateLimitRecord;
   expiresAt: number;
 }
 
-export class MemoryRateLimitGateway extends BaseRateLimitRepository {
+export interface MemoryGatewayOptions {
+  cleanupIntervalMs?: number;
+  maxEntries?: number;
+  logger?: ILogger;
+}
+
+export class MemoryRateLimitGateway implements IRateLimitRepository {
   private readonly store = new Map<string, MemoryEntry>();
   private cleanupInterval: NodeJS.Timeout | null = null;
   private readonly cleanupIntervalMs: number;
+  private readonly logger?: ILogger;
   private isShuttingDown = false;
 
-  constructor(
-    options: {
-      cleanupIntervalMs?: number;
-      maxEntries?: number;
-    } = {}
-  ) {
-    super();
-    this.cleanupIntervalMs = options.cleanupIntervalMs ?? 60_000; // 1 minute default
+  constructor(options: MemoryGatewayOptions = {}) {
+    this.cleanupIntervalMs = options.cleanupIntervalMs ?? 60_000;
+    this.logger = options.logger;
     this.startPeriodicCleanup();
   }
 
-  async findByKey(key: string): Promise<RateLimitEntity | null> {
+  async findByKey(key: string): Promise<RateLimitRecord | null> {
     try {
       const entry = this.store.get(key);
 
@@ -34,13 +38,12 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
         return null;
       }
 
-      // Check if entry is expired
       if (this.isExpired(entry)) {
         this.store.delete(key);
         return null;
       }
 
-      return entry.entity;
+      return entry.record;
     } catch (error) {
       throw new RateLimitStorageError(
         `Failed to find rate limit by key "${key}": ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -48,27 +51,68 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
     }
   }
 
-  async save(entity: RateLimitEntity): Promise<void> {
+  async save(record: RateLimitRecord, ttlMs: number): Promise<void> {
     try {
       const entry: MemoryEntry = {
-        entity,
-        expiresAt: entity.resetTime + 60_000, // Extra 1 minute buffer for cleanup
+        record,
+        expiresAt: Date.now() + ttlMs,
       };
 
-      this.store.set(entity.key, entry);
+      this.store.set(record.key, entry);
     } catch (error) {
       throw new RateLimitStorageError(
-        `Failed to save rate limit entity for key "${entity.key}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to save rate limit record for key "${record.key}": ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
 
-  async reset(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     try {
       this.store.delete(key);
     } catch (error) {
       throw new RateLimitStorageError(
-        `Failed to reset rate limit for key "${key}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to delete rate limit for key "${key}": ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  async deleteMultiple(keys: string[]): Promise<void> {
+    try {
+      for (const key of keys) {
+        this.store.delete(key);
+      }
+    } catch (error) {
+      throw new RateLimitStorageError(
+        `Failed to delete multiple keys: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  async findByKeys(keys: string[]): Promise<Map<string, RateLimitRecord>> {
+    try {
+      const results = new Map<string, RateLimitRecord>();
+
+      const entries = keys.map(key => {
+        const entry = this.store.get(key);
+        if (!entry || this.isExpired(entry)) {
+          if (entry) {
+            this.store.delete(key);
+          }
+          return { key, record: null };
+        }
+        return { key, record: entry.record };
+      });
+
+      for (const { key, record } of entries) {
+        if (record) {
+          results.set(key, record);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      throw new RateLimitStorageError(
+        `Failed to find multiple keys: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -96,7 +140,6 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
 
   async count(): Promise<number> {
     try {
-      // Clean expired entries first
       await this.cleanup();
       return this.store.size;
     } catch (error) {
@@ -128,7 +171,6 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
 
   async getKeys(pattern?: string): Promise<string[]> {
     try {
-      // Clean expired entries first
       await this.cleanup();
 
       const keys = Array.from(this.store.keys());
@@ -137,36 +179,31 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
         return keys;
       }
 
-      // Simple pattern matching (supports * wildcard)
       const regex = new RegExp(pattern.replace(/\*/g, '.*'));
       return keys.filter(key => regex.test(key));
     } catch (error) {
       throw new RateLimitStorageError(
-        `Failed to get keys with pattern "${pattern}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get keys with pattern "${pattern ?? '*'}": ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
 
-  async healthCheck(): Promise<{
-    connected: boolean;
-    latency: number;
-    error?: string;
-  }> {
+  async healthCheck(): Promise<HealthCheckResult> {
     try {
       const start = Date.now();
 
-      // Test basic operations
       const testKey = `health_check_${Date.now()}`;
-      const testEntity = RateLimitEntity.create({
+      const testRecord: RateLimitRecord = {
         key: testKey,
         count: 1,
         resetTime: Date.now() + 1000,
+        createdAt: Date.now(),
         algorithm: 'fixed-window',
-      });
+      };
 
-      await this.save(testEntity);
+      await this.save(testRecord, 1000);
       await this.findByKey(testKey);
-      await this.reset(testKey);
+      await this.delete(testKey);
 
       const latency = Date.now() - start;
 
@@ -183,90 +220,6 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
     }
   }
 
-  override async resetMultiple(keys: string[]): Promise<void> {
-    try {
-      for (const key of keys) {
-        this.store.delete(key);
-      }
-    } catch (error) {
-      throw new RateLimitStorageError(
-        `Failed to reset multiple keys: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  override async findByKeys(
-    keys: string[]
-  ): Promise<Map<string, RateLimitEntity>> {
-    try {
-      const results = new Map<string, RateLimitEntity>();
-
-      // Collect all entities synchronously to avoid await in loop
-      const entities = keys.map(key => {
-        const entry = this.store.get(key);
-        if (!entry || this.isExpired(entry)) {
-          if (entry) {
-            this.store.delete(key);
-          }
-          return { key, entity: null };
-        }
-        return { key, entity: entry.entity };
-      });
-
-      // Add valid entities to results
-      for (const { key, entity } of entities) {
-        if (entity) {
-          results.set(key, entity);
-        }
-      }
-
-      return results;
-    } catch (error) {
-      throw new RateLimitStorageError(
-        `Failed to find multiple keys: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Get memory usage statistics
-   */
-  getMemoryStats(): {
-    totalEntries: number;
-    memoryUsageBytes: number;
-    oldestEntryAge: number;
-    newestEntryAge: number;
-  } {
-    const now = Date.now();
-    let oldestTime = now;
-    let newestTime = 0;
-    let totalSize = 0;
-
-    for (const [key, entry] of this.store.entries()) {
-      // Rough estimation of memory usage
-      totalSize += key.length * 2; // String overhead
-      totalSize += 200; // Rough entity size
-
-      const createdAt = entry.entity.createdAt;
-      if (createdAt < oldestTime) {
-        oldestTime = createdAt;
-      }
-      if (createdAt > newestTime) {
-        newestTime = createdAt;
-      }
-    }
-
-    return {
-      totalEntries: this.store.size,
-      memoryUsageBytes: totalSize,
-      oldestEntryAge: this.store.size > 0 ? now - oldestTime : 0,
-      newestEntryAge: this.store.size > 0 ? now - newestTime : 0,
-    };
-  }
-
-  /**
-   * Shutdown the gateway and cleanup resources
-   */
   async shutdown(): Promise<void> {
     this.isShuttingDown = true;
 
@@ -281,7 +234,7 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
 
   private isExpired(entry: MemoryEntry, currentTime?: number): boolean {
     const now = currentTime ?? Date.now();
-    return now >= entry.expiresAt || entry.entity.isExpired(now);
+    return now >= entry.expiresAt || now >= entry.record.resetTime;
   }
 
   private startPeriodicCleanup(): void {
@@ -290,11 +243,9 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
     }
 
     this.cleanupInterval = setInterval(() => {
-      // Synchronous cleanup wrapper to avoid Promise in setInterval
       void this.performCleanup();
     }, this.cleanupIntervalMs);
 
-    // Don't keep the process alive just for cleanup
     if (this.cleanupInterval.unref) {
       this.cleanupInterval.unref();
     }
@@ -306,8 +257,9 @@ export class MemoryRateLimitGateway extends BaseRateLimitRepository {
         await this.cleanup();
       }
     } catch (error) {
-      // Silent cleanup - don't throw errors in background cleanup
-      console.warn('Memory gateway cleanup failed:', error);
+      this.logger?.warn('Memory gateway cleanup failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 }

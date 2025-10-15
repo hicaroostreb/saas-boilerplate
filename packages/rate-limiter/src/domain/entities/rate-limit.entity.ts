@@ -1,10 +1,8 @@
-// packages/rate-limiter/src/domain/entities/rate-limit.entity.ts
-
+import { RateLimitValidationError } from '../types/errors.js';
 import {
   type RateLimitAlgorithm,
   type RateLimitRecord,
   RateLimitRecordSchema,
-  RateLimitValidationError,
 } from '../types/rate-limit.types.js';
 
 export class RateLimitEntity {
@@ -37,7 +35,7 @@ export class RateLimitEntity {
     if (!validation.success) {
       const firstError = validation.error.errors[0];
       throw new RateLimitValidationError(
-        `Invalid rate limit entity: ${firstError?.message}`,
+        `Invalid rate limit entity: ${firstError?.message ?? 'Unknown validation error'}`,
         firstError?.path.join('.') ?? 'unknown'
       );
     }
@@ -57,7 +55,7 @@ export class RateLimitEntity {
     if (!validation.success) {
       const firstError = validation.error.errors[0];
       throw new RateLimitValidationError(
-        `Invalid rate limit record: ${firstError?.message}`,
+        `Invalid rate limit record: ${firstError?.message ?? 'Unknown validation error'}`,
         firstError?.path.join('.') ?? 'unknown'
       );
     }
@@ -96,19 +94,6 @@ export class RateLimitEntity {
     return now >= this.resetTime;
   }
 
-  hasExceededLimit(maxRequests: number): boolean {
-    return this.count > maxRequests;
-  }
-
-  getRemainingRequests(maxRequests: number): number {
-    return Math.max(0, maxRequests - this.count);
-  }
-
-  getTimeUntilReset(currentTime?: number): number {
-    const now = currentTime ?? Date.now();
-    return Math.max(0, this.resetTime - now);
-  }
-
   toRecord(): RateLimitRecord {
     return {
       key: this.key,
@@ -117,23 +102,5 @@ export class RateLimitEntity {
       createdAt: this.createdAt,
       algorithm: this.algorithm,
     };
-  }
-
-  toJSON(): RateLimitRecord {
-    return this.toRecord();
-  }
-
-  equals(other: RateLimitEntity): boolean {
-    return (
-      this.key === other.key &&
-      this.count === other.count &&
-      this.resetTime === other.resetTime &&
-      this.createdAt === other.createdAt &&
-      this.algorithm === other.algorithm
-    );
-  }
-
-  toString(): string {
-    return `RateLimitEntity(key=${this.key}, count=${this.count}, resetTime=${this.resetTime}, algorithm=${this.algorithm})`;
   }
 }
