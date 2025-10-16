@@ -89,6 +89,16 @@ CREATE INDEX "users_active_idx" ON "users"("is_active");
 CREATE INDEX "users_created_idx" ON "users"("created_at");
 CREATE INDEX "users_deleted_idx" ON "users"("deleted_at");
 
+-- ✅ ADICIONADO: Email único por tenant (soft delete aware)
+CREATE UNIQUE INDEX "users_tenant_email_unique" 
+  ON "users"("tenant_id", "email") 
+  WHERE "deleted_at" IS NULL;
+
+-- ✅ ADICIONADO: Index otimizado para superadmin
+CREATE INDEX "users_super_admin_idx" 
+  ON "users"("is_super_admin") 
+  WHERE "is_super_admin" = true;
+
 -- Sessions
 CREATE TABLE "sessions" (
   "session_token" TEXT PRIMARY KEY,
@@ -164,7 +174,7 @@ CREATE TABLE "organizations" (
   "id" TEXT PRIMARY KEY,
   "tenant_id" TEXT NOT NULL,
   "name" TEXT NOT NULL,
-  "slug" TEXT NOT NULL UNIQUE,
+  "slug" TEXT NOT NULL,
   "description" TEXT,
   "domain" TEXT,
   "website" TEXT,
@@ -205,6 +215,11 @@ CREATE INDEX "organizations_slug_idx" ON "organizations"("slug");
 CREATE INDEX "organizations_owner_idx" ON "organizations"("owner_id");
 CREATE INDEX "organizations_domain_idx" ON "organizations"("domain");
 CREATE INDEX "organizations_deleted_idx" ON "organizations"("deleted_at");
+
+-- ✅ ADICIONADO: Slug único por tenant em organizations (soft delete aware)
+CREATE UNIQUE INDEX "organizations_tenant_slug_unique" 
+  ON "organizations"("tenant_id", "slug") 
+  WHERE "deleted_at" IS NULL;
 
 -- Memberships
 CREATE TABLE "memberships" (
@@ -307,8 +322,12 @@ CREATE INDEX "projects_tenant_org_idx" ON "projects"("tenant_id", "organization_
 CREATE INDEX "projects_tenant_org_status_idx" ON "projects"("tenant_id", "organization_id", "status");
 CREATE INDEX "projects_tenant_owner_idx" ON "projects"("tenant_id", "owner_id");
 CREATE INDEX "projects_org_idx" ON "projects"("organization_id");
-CREATE INDEX "projects_org_slug_unique_idx" ON "projects"("organization_id", "slug");
 CREATE INDEX "projects_deleted_idx" ON "projects"("deleted_at");
+
+-- ✅ ADICIONADO: Slug único por organization em projects (soft delete aware)
+CREATE UNIQUE INDEX "projects_org_slug_unique" 
+  ON "projects"("organization_id", "slug") 
+  WHERE "deleted_at" IS NULL;
 
 -- Contacts
 CREATE TABLE "contacts" (
@@ -484,3 +503,8 @@ COMMENT ON TABLE "memberships" IS 'User-Organization relationship with RBAC perm
 COMMENT ON TABLE "sessions" IS 'Active user sessions with device tracking';
 COMMENT ON TABLE "auth_audit_logs" IS 'Security audit trail for authentication events';
 COMMENT ON TABLE "activity_logs" IS 'Business activity audit trail';
+COMMENT ON COLUMN "users"."is_super_admin" IS 'Superadmin flag - bypasses RLS policies. Only creatable via CLI.';
+COMMENT ON INDEX "users_tenant_email_unique" IS 'Ensures email uniqueness per tenant (ignores soft-deleted records)';
+COMMENT ON INDEX "users_super_admin_idx" IS 'Optimized index for superadmin queries (partial index)';
+COMMENT ON INDEX "organizations_tenant_slug_unique" IS 'Ensures slug uniqueness per tenant (ignores soft-deleted records)';
+COMMENT ON INDEX "projects_org_slug_unique" IS 'Ensures slug uniqueness per organization (ignores soft-deleted records)';

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 
 /**
  * Service para reset de senha - migrado do PasswordChangeService
+ * ✅ REFATORADO: Usa DatabaseWrapper (RLS automático)
  */
 export class PasswordResetService {
   async resetPassword(
@@ -15,14 +16,13 @@ export class PasswordResetService {
       const newPasswordHash = await hash(newPassword, 12);
 
       const db = await getDb();
-      const [updated] = await db
-        .update(users)
-        .set({
-          password_hash: newPasswordHash,
-          updated_at: new Date(),
-        })
-        .where(eq(users.id, userId))
-        .returning();
+      await db.updateWhere(users, eq(users.id, userId)).set({
+        password_hash: newPasswordHash,
+        updated_at: new Date(),
+      });
+
+      // Verificar se update foi bem-sucedido
+      const [updated] = await db.selectWhere(users, eq(users.id, userId));
 
       if (!updated) {
         return {
@@ -31,7 +31,6 @@ export class PasswordResetService {
         };
       }
 
-      // ✅ Usar console.error em vez de console.log
       console.error(`✅ Password reset for user ${userId} by ${resetBy}`);
       return { success: true };
     } catch (error) {

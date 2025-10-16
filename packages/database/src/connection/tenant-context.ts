@@ -9,6 +9,7 @@ export interface TenantContext {
   tenantId: string;
   userId?: string;
   organizationId?: string;
+  isSuperAdmin?: boolean; // ✅ ADICIONADO: Flag de superadmin para bypass de RLS
   source: 'jwt' | 'session' | 'api_key' | 'system';
   metadata?: Record<string, any>;
 }
@@ -70,6 +71,15 @@ class TenantContextManager {
   }
 
   /**
+   * ✅ ADICIONADO: Verifica se o contexto atual é de superadmin
+   * Superadmins bypassam RLS mas ainda tem tenant context para auditoria
+   */
+  isSuperAdminContext(): boolean {
+    const context = this.getContextOrNull();
+    return context?.isSuperAdmin === true;
+  }
+
+  /**
    * Executa uma função dentro de um contexto de tenant (síncrono)
    */
   run<T>(context: TenantContext, callback: () => T): T {
@@ -95,6 +105,7 @@ class TenantContextManager {
   /**
    * Executa uma função como system (sem tenant - apenas para operações globais)
    * ⚠️ Use com EXTREMO cuidado - bypassa RLS
+   * ⚠️ Diferente de superadmin: system não tem userId, superadmin sim
    */
   runAsSystem<T>(callback: () => T): T {
     const systemContext: TenantContext = {
@@ -130,6 +141,8 @@ class TenantContextManager {
 
   /**
    * Verifica se está executando como system
+   * System = operações de infraestrutura (migrations, seeders)
+   * Superadmin = usuário humano com acesso cross-tenant
    */
   isSystemContext(): boolean {
     const context = this.getContextOrNull();
@@ -151,12 +164,14 @@ class TenantContextManager {
     tenantId: string;
     userId?: string;
     organizationId?: string;
+    isSuperAdmin?: boolean; // ✅ ADICIONADO
     [key: string]: any;
   }): TenantContext {
     return {
       tenantId: payload.tenantId,
       userId: payload.userId,
       organizationId: payload.organizationId,
+      isSuperAdmin: payload.isSuperAdmin ?? false, // ✅ ADICIONADO: Default false
       source: 'jwt',
       metadata: payload,
     };
@@ -169,11 +184,13 @@ class TenantContextManager {
     tenantId: string;
     userId: string;
     organizationId?: string;
+    isSuperAdmin?: boolean; // ✅ ADICIONADO
   }): TenantContext {
     return {
       tenantId: session.tenantId,
       userId: session.userId,
       organizationId: session.organizationId,
+      isSuperAdmin: session.isSuperAdmin ?? false, // ✅ ADICIONADO
       source: 'session',
     };
   }
@@ -189,6 +206,29 @@ class TenantContextManager {
       tenantId: apiKey.tenantId,
       organizationId: apiKey.organizationId,
       source: 'api_key',
+    };
+  }
+
+  /**
+   * ✅ ADICIONADO: Helper para criar contexto de superadmin
+   * Superadmin mantém tenantId original para auditoria, mas seta flag isSuperAdmin
+   *
+   * @param adminUserId - ID do usuário superadmin (obrigatório para auditoria)
+   * @param tenantId - Tenant que o superadmin está acessando (para logging)
+   */
+  static fromSuperAdmin(
+    adminUserId: string,
+    tenantId = '__superadmin__'
+  ): TenantContext {
+    return {
+      tenantId,
+      userId: adminUserId,
+      isSuperAdmin: true,
+      source: 'system',
+      metadata: {
+        superadmin_access: true,
+        accessed_at: new Date().toISOString(),
+      },
     };
   }
 }

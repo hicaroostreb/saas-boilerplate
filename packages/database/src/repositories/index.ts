@@ -1,6 +1,6 @@
 // packages/database/src/repositories/index.ts
 // ============================================
-// REPOSITORIES BARREL EXPORTS (REFACTORED)
+// REPOSITORIES BARREL EXPORTS (REFACTORED - SECURE)
 // ============================================
 
 // Contracts
@@ -36,12 +36,12 @@ export {
   type RepositoryRegistry,
 } from './factory';
 
-// Guards and wrappers
+// Guards
 export { AuthorizationGuard, ForbiddenError } from './authorization-guard';
 
-export {
-  RLSRepositoryWrapper,
-  RLSViolationError,
-  createTenantFilterSQL,
-  validateTenantResult,
-} from './rls-wrapper';
+// ❌ REMOVIDO: export { RLSRepositoryWrapper } - Interno, não deve ser público
+// ❌ REMOVIDO: export { validateTenantResult } - Interno
+// ✅ MANTIDO: RLSViolationError (erro público)
+// ✅ MANTIDO: createTenantFilterSQL (utilitário público)
+
+export { RLSViolationError, createTenantFilterSQL } from './rls-wrapper';

@@ -1,18 +1,21 @@
 // packages/database/src/connection/index.ts
 // ============================================
-// CONNECTION BARREL EXPORTS (REFACTORED)
+// CONNECTION BARREL EXPORTS (REFACTORED - SECURE)
 // ============================================
 
 export {
   DatabaseConnection,
   closeConnection,
-  db,
   getConnectionInfo,
   getDatabaseConnection,
   getDb,
+  getDbRaw,
   healthCheck,
   type Database,
+  type DatabaseWrapper,
 } from './database.connection';
+
+// ❌ REMOVIDO: export { db } - Proxy singleton inseguro
 
 export {
   DatabaseError,

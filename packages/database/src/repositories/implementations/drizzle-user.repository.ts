@@ -4,7 +4,7 @@
 // ============================================
 
 import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
-import type { Database } from '../../connection';
+import type { DatabaseWrapper } from '../../connection';
 import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
 import { UserEntity } from '../../entities/auth/user.entity';
@@ -14,14 +14,13 @@ import type {
   UserFilterOptions,
   UserQueryOptions,
 } from '../contracts/user.repository.interface';
-import { RLSRepositoryWrapper } from '../rls-wrapper';
 
 export class DrizzleUserRepository implements IUserRepository {
-  private rls: RLSRepositoryWrapper;
-
-  constructor(private readonly db: Database) {
-    this.rls = new RLSRepositoryWrapper(db);
-  }
+  /**
+   * ✅ REFATORADO: Recebe DatabaseWrapper (RLS já embutido)
+   * Não precisa mais criar RLSRepositoryWrapper manualmente
+   */
+  constructor(private readonly rls: DatabaseWrapper) {}
 
   private checkBuildTime(): boolean {
     return (

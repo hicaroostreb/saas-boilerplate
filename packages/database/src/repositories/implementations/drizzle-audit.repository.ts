@@ -1,44 +1,42 @@
 // packages/database/src/repositories/implementations/drizzle-audit.repository.ts
 // ============================================
-// DRIZZLE AUDIT REPOSITORY - ENTERPRISE SECURITY MONITORING (FINAL)
+// DRIZZLE AUDIT REPOSITORY - ENTERPRISE SECURITY (REFACTORED)
 // ============================================
 
-import { and, desc, eq, gte, lte } from 'drizzle-orm';
-import type { Database } from '../../connection';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import type { DatabaseWrapper } from '../../connection';
 import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
 import {
   auth_audit_logs,
   type AuthAuditLog,
   type AuthEventType,
-  type CreateAuthAuditLog,
 } from '../../schemas/security';
-import { RLSRepositoryWrapper } from '../rls-wrapper';
 
 export interface IAuditRepository {
-  log(auditData: CreateAuthAuditLog): Promise<AuthAuditLog>;
-  findByUser(userId: string, limit?: number): Promise<AuthAuditLog[]>;
-  findByOrganization(
-    organizationId: string,
-    limit?: number
+  log(entry: Omit<AuthAuditLog, 'id' | 'created_at'>): Promise<void>;
+  findByUserId(
+    userId: string,
+    limit?: number,
+    offset?: number
   ): Promise<AuthAuditLog[]>;
   findByEventType(
     eventType: AuthEventType,
-    limit?: number
+    limit?: number,
+    offset?: number
   ): Promise<AuthAuditLog[]>;
-  findByDateRange(startDate: Date, endDate: Date): Promise<AuthAuditLog[]>;
-  getFailedLogins(userId: string, hours: number): Promise<AuthAuditLog[]>;
-  getSuccessfulLogins(userId: string, limit?: number): Promise<AuthAuditLog[]>;
-  getRecentActivity(userId: string, hours: number): Promise<AuthAuditLog[]>;
-  cleanup(olderThanDays: number): Promise<number>;
+  findByDateRange(
+    startDate: Date,
+    endDate: Date,
+    limit?: number,
+    offset?: number
+  ): Promise<AuthAuditLog[]>;
+  findFailedLoginAttempts(userId: string, since: Date): Promise<AuthAuditLog[]>;
+  count(userId?: string): Promise<number>;
 }
 
 export class DrizzleAuditRepository implements IAuditRepository {
-  private rls: RLSRepositoryWrapper;
-
-  constructor(private readonly db: Database) {
-    this.rls = new RLSRepositoryWrapper(db);
-  }
+  constructor(private readonly rls: DatabaseWrapper) {}
 
   private checkBuildTime(): boolean {
     return (
@@ -48,82 +46,58 @@ export class DrizzleAuditRepository implements IAuditRepository {
     );
   }
 
-  async log(auditData: CreateAuthAuditLog): Promise<AuthAuditLog> {
-    if (this.checkBuildTime()) {
-      return auditData as AuthAuditLog;
-    }
+  async log(entry: Omit<AuthAuditLog, 'id' | 'created_at'>): Promise<void> {
+    if (this.checkBuildTime()) return;
 
     try {
+      const context = tenantContext.getContextOrNull();
+
       await this.rls.insert(auth_audit_logs, {
-        ...auditData,
-        id: auditData.id || crypto.randomUUID(),
-        created_at: auditData.created_at || new Date(),
+        ...entry,
+        id: crypto.randomUUID(),
+        tenant_id: context?.tenantId || null,
+        created_at: new Date(),
+        occurred_at: entry.occurred_at || new Date(),
       });
-
-      const [result] = await this.db
-        .select()
-        .from(auth_audit_logs)
-        .where(eq(auth_audit_logs.id, auditData.id || ''))
-        .limit(1);
-
-      if (!result) {
-        throw new DatabaseError(
-          'Failed to create audit log - no result returned'
-        );
-      }
-
-      return result;
     } catch (error) {
-      throw this.handleDatabaseError(error, 'log');
+      console.error(
+        '[DrizzleAuditRepository] Failed to log audit entry:',
+        error
+      );
     }
   }
 
-  async findByUser(userId: string, limit = 50): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
-
-    try {
-      const result = await this.rls
-        .selectWhere(auth_audit_logs, eq(auth_audit_logs.user_id, userId))
-        .orderBy(desc(auth_audit_logs.occurred_at));
-
-      return limit ? result.slice(0, limit) : result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'findByUser');
-    }
-  }
-
-  async findByOrganization(
-    organizationId: string,
-    limit = 100
+  async findByUserId(
+    userId: string,
+    limit = 50,
+    offset = 0
   ): Promise<AuthAuditLog[]> {
     if (this.checkBuildTime()) return [];
 
     try {
-      const result = await this.rls
-        .selectWhere(
-          auth_audit_logs,
-          eq(auth_audit_logs.organization_id, organizationId)
-        )
-        .orderBy(desc(auth_audit_logs.occurred_at));
-
-      return limit ? result.slice(0, limit) : result;
+      return await this.rls
+        .selectWhere(auth_audit_logs, eq(auth_audit_logs.user_id, userId))
+        .orderBy(desc(auth_audit_logs.occurred_at))
+        .limit(limit)
+        .offset(offset);
     } catch (error) {
-      throw this.handleDatabaseError(error, 'findByOrganization');
+      throw this.handleDatabaseError(error, 'findByUserId');
     }
   }
 
   async findByEventType(
     eventType: AuthEventType,
-    limit = 100
+    limit = 50,
+    offset = 0
   ): Promise<AuthAuditLog[]> {
     if (this.checkBuildTime()) return [];
 
     try {
-      const result = await this.rls
+      return await this.rls
         .selectWhere(auth_audit_logs, eq(auth_audit_logs.event_type, eventType))
-        .orderBy(desc(auth_audit_logs.occurred_at));
-
-      return limit ? result.slice(0, limit) : result;
+        .orderBy(desc(auth_audit_logs.occurred_at))
+        .limit(limit)
+        .offset(offset);
     } catch (error) {
       throw this.handleDatabaseError(error, 'findByEventType');
     }
@@ -131,7 +105,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
 
   async findByDateRange(
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    limit = 100,
+    offset = 0
   ): Promise<AuthAuditLog[]> {
     if (this.checkBuildTime()) return [];
 
@@ -144,101 +120,45 @@ export class DrizzleAuditRepository implements IAuditRepository {
             lte(auth_audit_logs.occurred_at, endDate)
           )!
         )
-        .orderBy(desc(auth_audit_logs.occurred_at));
+        .orderBy(desc(auth_audit_logs.occurred_at))
+        .limit(limit)
+        .offset(offset);
     } catch (error) {
       throw this.handleDatabaseError(error, 'findByDateRange');
     }
   }
 
-  async getFailedLogins(
+  async findFailedLoginAttempts(
     userId: string,
-    hours: number
+    since: Date
   ): Promise<AuthAuditLog[]> {
     if (this.checkBuildTime()) return [];
 
     try {
-      const since = new Date();
-      since.setHours(since.getHours() - hours);
-
       return await this.rls
         .selectWhere(
           auth_audit_logs,
           and(
             eq(auth_audit_logs.user_id, userId),
             eq(auth_audit_logs.event_type, 'login_failure'),
-            eq(auth_audit_logs.is_success, false),
             gte(auth_audit_logs.occurred_at, since)
           )!
         )
         .orderBy(desc(auth_audit_logs.occurred_at));
     } catch (error) {
-      throw this.handleDatabaseError(error, 'getFailedLogins');
+      throw this.handleDatabaseError(error, 'findFailedLoginAttempts');
     }
   }
 
-  async getSuccessfulLogins(
-    userId: string,
-    limit = 10
-  ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
-
-    try {
-      const result = await this.rls
-        .selectWhere(
-          auth_audit_logs,
-          and(
-            eq(auth_audit_logs.user_id, userId),
-            eq(auth_audit_logs.event_type, 'login_success'),
-            eq(auth_audit_logs.is_success, true)
-          )!
-        )
-        .orderBy(desc(auth_audit_logs.occurred_at));
-
-      return limit ? result.slice(0, limit) : result;
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'getSuccessfulLogins');
-    }
-  }
-
-  async getRecentActivity(
-    userId: string,
-    hours: number
-  ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
-
-    try {
-      const since = new Date();
-      since.setHours(since.getHours() - hours);
-
-      return await this.rls
-        .selectWhere(
-          auth_audit_logs,
-          and(
-            eq(auth_audit_logs.user_id, userId),
-            gte(auth_audit_logs.occurred_at, since)
-          )!
-        )
-        .orderBy(desc(auth_audit_logs.occurred_at));
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'getRecentActivity');
-    }
-  }
-
-  async cleanup(olderThanDays: number): Promise<number> {
+  async count(userId?: string): Promise<number> {
     if (this.checkBuildTime()) return 0;
 
     try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+      const condition = userId ? eq(auth_audit_logs.user_id, userId) : sql`1=1`;
 
-      await this.rls.deleteWhere(
-        auth_audit_logs,
-        lte(auth_audit_logs.created_at, cutoffDate)
-      );
-
-      return 0;
+      return await this.rls.count(auth_audit_logs, condition);
     } catch (error) {
-      throw this.handleDatabaseError(error, 'cleanup');
+      throw this.handleDatabaseError(error, 'count');
     }
   }
 
@@ -249,27 +169,13 @@ export class DrizzleAuditRepository implements IAuditRepository {
     const err = error as {
       code?: string;
       message?: string;
-      constraint?: string;
     };
 
     console.error(`[DrizzleAuditRepository.${operation}] Database error:`, {
       code: err.code,
       message: err.message?.substring(0, 200),
-      constraint: err.constraint,
     });
 
-    if (err.code === '23505') {
-      return new DatabaseError(
-        'Audit log constraint violation',
-        err.code,
-        err.constraint
-      );
-    }
-
-    return new DatabaseError(
-      `Audit operation failed: ${operation}`,
-      err.code,
-      err.constraint
-    );
+    return new DatabaseError(`Audit operation failed: ${operation}`, err.code);
   }
 }
