@@ -13,6 +13,7 @@ import {
   type RateLimitType,
   type RateLimitWindow,
 } from '../../schemas/security';
+import { logger } from '../../utils/logger';
 
 export interface IRateLimitRepository {
   checkLimit(
@@ -123,7 +124,9 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
   }
 
   async increment(type: RateLimitType, identifier: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       const now = new Date();
@@ -153,7 +156,9 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
   }
 
   async reset(type: RateLimitType, identifier: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       await this.rls.deleteWhere(
@@ -166,7 +171,9 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
   }
 
   async cleanup(): Promise<number> {
-    if (this.checkBuildTime()) return 0;
+    if (this.checkBuildTime()) {
+      return 0;
+    }
 
     try {
       const now = new Date();
@@ -277,7 +284,8 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
       message?: string;
     };
 
-    console.error(`[DrizzleRateLimitRepository.${operation}] Database error:`, {
+    logger.error('Rate limit database operation failed', {
+      operation,
       code: err.code,
       message: err.message?.substring(0, 200),
     });

@@ -12,6 +12,7 @@ import {
   type AuthAuditLog,
   type AuthEventType,
 } from '../../schemas/security';
+import { logger } from '../../utils/logger';
 
 export interface IAuditRepository {
   log(entry: Omit<AuthAuditLog, 'id' | 'created_at'>): Promise<void>;
@@ -47,7 +48,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
   }
 
   async log(entry: Omit<AuthAuditLog, 'id' | 'created_at'>): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       const context = tenantContext.getContextOrNull();
@@ -60,10 +63,10 @@ export class DrizzleAuditRepository implements IAuditRepository {
         occurred_at: entry.occurred_at || new Date(),
       });
     } catch (error) {
-      console.error(
-        '[DrizzleAuditRepository] Failed to log audit entry:',
-        error
-      );
+      logger.error('Failed to log audit entry', {
+        error: error instanceof Error ? error.message : String(error),
+        event_type: entry.event_type,
+      });
     }
   }
 
@@ -72,7 +75,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
     limit = 50,
     offset = 0
   ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -90,7 +95,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
     limit = 50,
     offset = 0
   ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -109,7 +116,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
     limit = 100,
     offset = 0
   ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -132,7 +141,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
     userId: string,
     since: Date
   ): Promise<AuthAuditLog[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -151,7 +162,9 @@ export class DrizzleAuditRepository implements IAuditRepository {
   }
 
   async count(userId?: string): Promise<number> {
-    if (this.checkBuildTime()) return 0;
+    if (this.checkBuildTime()) {
+      return 0;
+    }
 
     try {
       const condition = userId ? eq(auth_audit_logs.user_id, userId) : sql`1=1`;
@@ -171,7 +184,8 @@ export class DrizzleAuditRepository implements IAuditRepository {
       message?: string;
     };
 
-    console.error(`[DrizzleAuditRepository.${operation}] Database error:`, {
+    logger.error('Audit database operation failed', {
+      operation,
       code: err.code,
       message: err.message?.substring(0, 200),
     });

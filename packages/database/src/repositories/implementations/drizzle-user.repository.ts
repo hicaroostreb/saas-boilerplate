@@ -9,6 +9,7 @@ import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
 import { UserEntity } from '../../entities/auth/user.entity';
 import { users, type User } from '../../schemas/auth';
+import { logger } from '../../utils/logger';
 import type {
   IUserRepository,
   UserFilterOptions,
@@ -176,7 +177,7 @@ export class DrizzleUserRepository implements IUserRepository {
       await this.rls.softDelete(users, eq(users.id, id));
 
       // Log crítico: user deletion sempre deve ser auditado
-      console.warn(
+      logger.warn(
         `[AUDIT] User ${id} deleted by ${requestingUserId} (isSystemAdmin: ${isSystemAdmin})`
       );
     } catch (error) {
@@ -210,7 +211,7 @@ export class DrizzleUserRepository implements IUserRepository {
 
       await this.rls.softDelete(users, eq(users.id, id));
 
-      console.error(
+      logger.error(
         `[CRITICAL AUDIT] User ${id} administratively deleted by ${adminUserId}`
       );
     } catch (error) {
@@ -322,7 +323,7 @@ export class DrizzleUserRepository implements IUserRepository {
   ): Promise<UserEntity[]> {
     if (this.checkBuildTime()) return [];
 
-    console.warn(
+    logger.warn(
       '[DrizzleUserRepository] findByOrganizationId not implemented - users.organization_id removed'
     );
     return [];
@@ -468,7 +469,7 @@ export class DrizzleUserRepository implements IUserRepository {
       constraint?: string;
     };
 
-    console.error(`[DrizzleUserRepository.${operation}] Database error:`, {
+    logger.error(`[DrizzleUserRepository.${operation}] Database error:`, {
       code: err.code,
       message: err.message?.substring(0, 200),
       constraint: err.constraint,
