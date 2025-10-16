@@ -3,7 +3,7 @@
 // DRIZZLE USER REPOSITORY - ENTERPRISE MULTI-TENANT (REFACTORED)
 // ============================================
 
-import { and, desc, eq, gte, inArray, isNull, like } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Database } from '../../connection';
 import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
@@ -62,6 +62,29 @@ export class DrizzleUserRepository implements IUserRepository {
     }
   }
 
+  async findAll(options?: UserQueryOptions): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+
+    try {
+      let query = this.rls
+        .selectWhere(users, isNull(users.deleted_at))
+        .orderBy(desc(users.created_at));
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.offset(options.offset);
+      }
+
+      const result = await query;
+      return result.map((user: User) => UserEntity.fromDatabase(user));
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'findAll');
+    }
+  }
+
   async findByIds(ids: readonly string[]): Promise<UserEntity[]> {
     if (this.checkBuildTime()) return [];
     if (ids.length === 0) return [];
@@ -117,26 +140,83 @@ export class DrizzleUserRepository implements IUserRepository {
     });
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(
+    id: string,
+    requestingUserId: string,
+    isSystemAdmin = false
+  ): Promise<void> {
     if (this.checkBuildTime()) return;
 
     try {
+      // Self-delete or system admin
+      if (requestingUserId !== id && !isSystemAdmin) {
+        throw new DatabaseError(
+          'Forbidden: Users can only delete their own account. Contact support for assistance.',
+          'FORBIDDEN',
+          'user_delete_forbidden'
+        );
+      }
+
+      // Buscar user para verificar proteções
+      const targetUser = await this.findById(id);
+
+      if (!targetUser) {
+        throw new DatabaseError('User not found or already deleted');
+      }
+
+      // Proteger super admins de delete por outros
+      if (targetUser.isSuperAdmin && requestingUserId !== id) {
+        throw new DatabaseError(
+          'Forbidden: Cannot delete super admin accounts',
+          'FORBIDDEN',
+          'super_admin_protected'
+        );
+      }
+
+      // Soft delete para manter audit trail
       await this.rls.softDelete(users, eq(users.id, id));
+
+      // Log crítico: user deletion sempre deve ser auditado
+      console.warn(
+        `[AUDIT] User ${id} deleted by ${requestingUserId} (isSystemAdmin: ${isSystemAdmin})`
+      );
     } catch (error) {
       throw this.handleDatabaseError(error, 'delete');
     }
   }
 
-  async findByOrganizationId(
-    _organization_id: string,
-    _options?: UserQueryOptions
-  ): Promise<UserEntity[]> {
-    if (this.checkBuildTime()) return [];
+  async adminDelete(id: string, adminUserId: string): Promise<void> {
+    if (this.checkBuildTime()) return;
 
-    console.warn(
-      '[DrizzleUserRepository] findByOrganizationId not implemented - users.organization_id removed'
-    );
-    return [];
+    try {
+      // Verificar se requester é system admin
+      const context = tenantContext.getContextOrNull();
+      const isSystemContext =
+        context?.source === 'system' || tenantContext.isSystemContext();
+
+      if (!isSystemContext) {
+        throw new DatabaseError(
+          'Forbidden: Only system administrators can delete users',
+          'FORBIDDEN',
+          'admin_delete_forbidden'
+        );
+      }
+
+      // Buscar user
+      const targetUser = await this.findById(id);
+
+      if (!targetUser) {
+        throw new DatabaseError('User not found or already deleted');
+      }
+
+      await this.rls.softDelete(users, eq(users.id, id));
+
+      console.error(
+        `[CRITICAL AUDIT] User ${id} administratively deleted by ${adminUserId}`
+      );
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'adminDelete');
+    }
   }
 
   async softDelete(id: string): Promise<void> {
@@ -164,63 +244,89 @@ export class DrizzleUserRepository implements IUserRepository {
     if (this.checkBuildTime()) return [];
 
     try {
-      const conditions = [
-        options.include_deleted ? undefined : isNull(users.deleted_at),
-        options.is_active !== undefined
-          ? eq(users.is_active, options.is_active)
-          : undefined,
-        options.is_email_verified !== undefined
-          ? eq(users.is_email_verified, options.is_email_verified)
-          : undefined,
-      ].filter(Boolean);
+      const conditions = [];
 
-      const finalConditions =
-        conditions.length > 0 ? and(...conditions) : undefined;
+      if (!options.include_deleted) {
+        conditions.push(isNull(users.deleted_at));
+      }
 
-      const baseQuery = finalConditions
-        ? this.rls.selectWhere(users, finalConditions)
-        : this.rls.select(users);
+      if (options.is_active !== undefined) {
+        conditions.push(eq(users.is_active, options.is_active));
+      }
 
-      let result = await baseQuery.orderBy(desc(users.created_at));
+      if (options.is_email_verified !== undefined) {
+        conditions.push(eq(users.is_email_verified, options.is_email_verified));
+      }
+
+      let query =
+        conditions.length > 0
+          ? this.rls.selectWhere(users, and(...conditions)!)
+          : this.rls.selectWhere(users, sql`1=1`);
+
+      query = query.orderBy(desc(users.created_at));
 
       if (options.limit) {
-        result = result.slice(0, options.limit);
+        query = query.limit(options.limit);
       }
 
       if (options.offset) {
-        result = result.slice(options.offset);
+        query = query.offset(options.offset);
       }
 
+      const result = await query;
       return result.map((user: User) => UserEntity.fromDatabase(user));
     } catch (error) {
       throw this.handleDatabaseError(error, 'findMany');
     }
   }
 
-  async findByEmailPattern(
-    pattern: string,
+  async search(
+    query: string,
     options?: UserQueryOptions
   ): Promise<UserEntity[]> {
     if (this.checkBuildTime()) return [];
 
     try {
-      const conditions = and(
-        like(users.email, `%${pattern}%`),
-        options?.include_deleted ? undefined : isNull(users.deleted_at)
-      )!;
+      const searchPattern = `%${query.toLowerCase().trim()}%`;
 
-      let result = await this.rls
-        .selectWhere(users, conditions)
-        .orderBy(users.email);
+      let dbQuery = this.rls
+        .selectWhere(
+          users,
+          and(
+            or(
+              ilike(users.name, searchPattern),
+              ilike(users.email, searchPattern)
+            )!,
+            isNull(users.deleted_at)
+          )!
+        )
+        .orderBy(users.name);
 
       if (options?.limit) {
-        result = result.slice(0, options.limit);
+        dbQuery = dbQuery.limit(options.limit);
       }
 
+      if (options?.offset) {
+        dbQuery = dbQuery.offset(options.offset);
+      }
+
+      const result = await dbQuery;
       return result.map((user: User) => UserEntity.fromDatabase(user));
     } catch (error) {
-      throw this.handleDatabaseError(error, 'findByEmailPattern');
+      throw this.handleDatabaseError(error, 'search');
     }
+  }
+
+  async findByOrganizationId(
+    _organization_id: string,
+    _options?: UserQueryOptions
+  ): Promise<UserEntity[]> {
+    if (this.checkBuildTime()) return [];
+
+    console.warn(
+      '[DrizzleUserRepository] findByOrganizationId not implemented - users.organization_id removed'
+    );
+    return [];
   }
 
   async findForAuthentication(email: string): Promise<UserEntity | null> {
@@ -244,47 +350,43 @@ export class DrizzleUserRepository implements IUserRepository {
     }
   }
 
-  async findUnverifiedUsers(older_than_hours = 24): Promise<UserEntity[]> {
-    if (this.checkBuildTime()) return [];
+  async count(options?: UserQueryOptions): Promise<number> {
+    if (this.checkBuildTime()) return 0;
 
     try {
-      const cutoff_date = new Date(
-        Date.now() - older_than_hours * 60 * 60 * 1000
-      );
-
-      const result = await this.rls
-        .selectWhere(
-          users,
-          and(
-            eq(users.is_email_verified, false),
-            gte(users.created_at, cutoff_date),
-            isNull(users.deleted_at)
-          )!
-        )
-        .orderBy(desc(users.created_at));
-
-      return result.map((user: User) => UserEntity.fromDatabase(user));
+      return await this.rls.count(users, isNull(users.deleted_at));
     } catch (error) {
-      throw this.handleDatabaseError(error, 'findUnverifiedUsers');
+      throw this.handleDatabaseError(error, 'count');
     }
   }
 
-  async findLockedUsers(): Promise<UserEntity[]> {
-    if (this.checkBuildTime()) return [];
+  async exists(id: string): Promise<boolean> {
+    if (this.checkBuildTime()) return false;
 
     try {
-      const now = new Date();
-
-      const result = await this.rls
-        .selectWhere(
-          users,
-          and(gte(users.locked_until, now), isNull(users.deleted_at))!
-        )
-        .orderBy(desc(users.locked_until));
-
-      return result.map((user: User) => UserEntity.fromDatabase(user));
+      return await this.rls.exists(
+        users,
+        and(eq(users.id, id), isNull(users.deleted_at))!
+      );
     } catch (error) {
-      throw this.handleDatabaseError(error, 'findLockedUsers');
+      throw this.handleDatabaseError(error, 'exists');
+    }
+  }
+
+  async existsById(id: string): Promise<boolean> {
+    return this.exists(id);
+  }
+
+  async existsByEmail(email: string): Promise<boolean> {
+    if (this.checkBuildTime()) return false;
+
+    try {
+      return await this.rls.exists(
+        users,
+        and(eq(users.email, email.toLowerCase()), isNull(users.deleted_at))!
+      );
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'existsByEmail');
     }
   }
 
@@ -304,23 +406,26 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   async updateMany(
-    user_entities: readonly UserEntity[]
+    user_updates: ReadonlyArray<{
+      id: string;
+      data: Partial<Omit<User, 'id' | 'tenant_id'>>;
+    }>
   ): Promise<UserEntity[]> {
-    if (this.checkBuildTime()) return [...user_entities];
-    if (user_entities.length === 0) return [];
+    if (this.checkBuildTime()) return [];
+    if (user_updates.length === 0) return [];
 
     try {
       return await this.rls.transaction(async tx => {
         const updated_users: UserEntity[] = [];
 
-        for (const user of user_entities) {
+        for (const { id, data } of user_updates) {
           await tx
             .update(users)
-            .set({ ...user.toDatabase(), updated_at: new Date() })
+            .set({ ...data, updated_at: new Date() })
             .where(
               and(
                 eq(users.tenant_id, tenantContext.getTenantId()),
-                eq(users.id, user.id),
+                eq(users.id, id),
                 isNull(users.deleted_at)
               )!
             );
@@ -328,7 +433,7 @@ export class DrizzleUserRepository implements IUserRepository {
           const [result] = await tx
             .select()
             .from(users)
-            .where(eq(users.id, user.id))
+            .where(eq(users.id, id))
             .limit(1);
 
           if (result) {
@@ -351,52 +456,6 @@ export class DrizzleUserRepository implements IUserRepository {
       await this.rls.softDelete(users, inArray(users.id, [...ids]));
     } catch (error) {
       throw this.handleDatabaseError(error, 'deleteMany');
-    }
-  }
-
-  async existsByEmail(email: string): Promise<boolean> {
-    if (this.checkBuildTime()) return false;
-
-    try {
-      return await this.rls.exists(
-        users,
-        and(eq(users.email, email.toLowerCase()), isNull(users.deleted_at))!
-      );
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'existsByEmail');
-    }
-  }
-
-  async existsById(id: string): Promise<boolean> {
-    if (this.checkBuildTime()) return false;
-
-    try {
-      return await this.rls.exists(
-        users,
-        and(eq(users.id, id), isNull(users.deleted_at))!
-      );
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'existsById');
-    }
-  }
-
-  async count(filters?: Pick<UserFilterOptions, 'is_active'>): Promise<number> {
-    if (this.checkBuildTime()) return 0;
-
-    try {
-      const conditions = [
-        isNull(users.deleted_at),
-        filters?.is_active !== undefined
-          ? eq(users.is_active, filters.is_active)
-          : undefined,
-      ].filter(Boolean);
-
-      const finalConditions =
-        conditions.length > 0 ? and(...conditions) : undefined;
-
-      return await this.rls.count(users, finalConditions);
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'count');
     }
   }
 
@@ -434,6 +493,10 @@ export class DrizzleUserRepository implements IUserRepository {
         err.code,
         err.constraint
       );
+    }
+
+    if (err.code === 'FORBIDDEN') {
+      return error as DatabaseError;
     }
 
     return new DatabaseError(

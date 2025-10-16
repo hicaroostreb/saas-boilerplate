@@ -208,9 +208,16 @@ export class DrizzleRateLimitRepository implements IRateLimitRepository {
     }
 
     return this.rls.transactionWithRLS(async tx => {
+      // Garantir tenant_id (pode ser NULL para system-level limits)
+      const tenant_id =
+        rateLimit.tenant_id ?? tenantContext.getTenantIdOrNull();
+
       const [result] = await tx
         .insert(rate_limits)
-        .values(rateLimit)
+        .values({
+          ...rateLimit,
+          tenant_id,
+        })
         .returning();
 
       if (!result) {

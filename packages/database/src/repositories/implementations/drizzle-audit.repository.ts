@@ -6,6 +6,7 @@
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import type { Database } from '../../connection';
 import { DatabaseError } from '../../connection';
+import { tenantContext } from '../../connection/tenant-context';
 import {
   auth_audit_logs,
   type AuthAuditLog,
