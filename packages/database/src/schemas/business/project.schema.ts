@@ -1,9 +1,17 @@
 // packages/database/src/schemas/business/project.schema.ts
 // ============================================
-// PROJECTS SCHEMA - ENTERPRISE PROJECT MANAGEMENT (FIXED ENUMS)
+// PROJECTS SCHEMA - ENTERPRISE PROJECT MANAGEMENT (REFACTORED)
 // ============================================
 
-import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 import { organizations } from './organization.schema';
 
 // Project enums
@@ -22,7 +30,6 @@ export const project_priority_enum = pgEnum('project_priority', [
   'urgent',
 ]);
 
-// ADDED MISSING ENUM
 export const project_visibility_enum = pgEnum('project_visibility', [
   'public',
   'organization',
@@ -33,100 +40,158 @@ export const projects = pgTable(
   'projects',
   {
     id: text('id').primaryKey(),
+    tenant_id: text('tenant_id').notNull(), // ✅ ADICIONADO
     organization_id: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    
+
     // Basic information
     name: text('name').notNull(),
     slug: text('slug').notNull(),
     description: text('description'),
-    
+
     // Status and priority
     status: project_status_enum('status').notNull().default('active'),
     priority: project_priority_enum('priority').notNull().default('medium'),
-    visibility: project_visibility_enum('visibility').notNull().default('organization'),
-    
+    visibility: project_visibility_enum('visibility')
+      .notNull()
+      .default('organization'),
+
     // Branding and display
     color: text('color'),
     icon: text('icon'),
     cover_image_url: text('cover_image_url'),
-    
+
     // Ownership and management
     owner_id: text('owner_id').notNull(),
-    
+
     // Timeline
     start_date: timestamp('start_date'),
     end_date: timestamp('end_date'),
     due_date: timestamp('due_date'),
-    
+
     // Progress tracking
     progress_percentage: integer('progress_percentage').default(0),
-    
+
     // Settings
     allow_comments: boolean('allow_comments').notNull().default(true),
     require_approval: boolean('require_approval').notNull().default(false),
-    enable_notifications: boolean('enable_notifications').notNull().default(true),
-    
+    enable_notifications: boolean('enable_notifications')
+      .notNull()
+      .default(true),
+
     // Budget
     budget: integer('budget'), // In cents
     currency: text('currency').default('USD'),
-    
+
     // External integration
     external_url: text('external_url'),
     repository_url: text('repository_url'),
-    
+
     // Metadata
     tags: text('tags'), // JSON array
-    
+
+    // ✅ ADICIONADO - Custom fields extensíveis
+    custom_fields: text('custom_fields'), // JSON string
+
+    // ✅ ADICIONADO - Tracking de modificações
+    created_by: text('created_by'),
+    updated_by: text('updated_by'),
+
     // Analytics
     view_count: integer('view_count').notNull().default(0),
     last_viewed_at: timestamp('last_viewed_at'),
-    
+
     // Timestamps
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
     archived_at: timestamp('archived_at'),
-    deleted_at: timestamp('deleted_at'), // Soft delete
+    deleted_at: timestamp('deleted_at'),
   },
-  (table) => ({
+  table => ({
+    // ✅ REFATORADO - tenant_id sempre primeiro
+    tenantOrgIdx: index('projects_tenant_org_idx').on(
+      table.tenant_id,
+      table.organization_id
+    ),
+    tenantOrgStatusIdx: index('projects_tenant_org_status_idx').on(
+      table.tenant_id,
+      table.organization_id,
+      table.status
+    ),
+    tenantOrgVisibilityIdx: index('projects_tenant_org_visibility_idx').on(
+      table.tenant_id,
+      table.organization_id,
+      table.visibility
+    ),
+    tenantOwnerIdx: index('projects_tenant_owner_idx').on(
+      table.tenant_id,
+      table.owner_id
+    ),
+
     // Organization and owner relationships
     orgIdx: index('projects_org_idx').on(table.organization_id),
     ownerIdx: index('projects_owner_idx').on(table.owner_id),
-    
+
     // Unique constraint per organization
-    orgSlugUniqueIdx: index('projects_org_slug_unique_idx').on(table.organization_id, table.slug),
-    
+    orgSlugUniqueIdx: index('projects_org_slug_unique_idx').on(
+      table.organization_id,
+      table.slug
+    ),
+
     // Performance indexes
     slugIdx: index('projects_slug_idx').on(table.slug),
     nameIdx: index('projects_name_idx').on(table.name),
-    
+
     // Status and priority
     statusIdx: index('projects_status_idx').on(table.status),
     priorityIdx: index('projects_priority_idx').on(table.priority),
     visibilityIdx: index('projects_visibility_idx').on(table.visibility),
-    
+
     // Timeline indexes
     startDateIdx: index('projects_start_date_idx').on(table.start_date),
     endDateIdx: index('projects_end_date_idx').on(table.end_date),
     dueDateIdx: index('projects_due_date_idx').on(table.due_date),
-    
+
     // Soft delete
     archivedIdx: index('projects_archived_idx').on(table.archived_at),
     deletedIdx: index('projects_deleted_idx').on(table.deleted_at),
-    
+
     // Composite indexes for common queries
-    orgStatusIdx: index('projects_org_status_idx').on(table.organization_id, table.status),
-    orgVisibilityIdx: index('projects_org_visibility_idx').on(table.organization_id, table.visibility),
-    ownerStatusIdx: index('projects_owner_status_idx').on(table.owner_id, table.status),
-    orgActiveIdx: index('projects_org_active_idx').on(table.organization_id, table.status, table.deleted_at),
-    orgDueDateIdx: index('projects_org_due_date_idx').on(table.organization_id, table.due_date),
-    statusDueDateIdx: index('projects_status_due_date_idx').on(table.status, table.due_date),
-    
+    orgStatusIdx: index('projects_org_status_idx').on(
+      table.organization_id,
+      table.status
+    ),
+    orgVisibilityIdx: index('projects_org_visibility_idx').on(
+      table.organization_id,
+      table.visibility
+    ),
+    ownerStatusIdx: index('projects_owner_status_idx').on(
+      table.owner_id,
+      table.status
+    ),
+    orgActiveIdx: index('projects_org_active_idx').on(
+      table.organization_id,
+      table.status,
+      table.deleted_at
+    ),
+    orgDueDateIdx: index('projects_org_due_date_idx').on(
+      table.organization_id,
+      table.due_date
+    ),
+    statusDueDateIdx: index('projects_status_due_date_idx').on(
+      table.status,
+      table.due_date
+    ),
+
     // Analytics indexes
     viewCountIdx: index('projects_view_count_idx').on(table.view_count),
     lastViewedIdx: index('projects_last_viewed_idx').on(table.last_viewed_at),
-    
+
+    // Tracking indexes
+    createdByIdx: index('projects_created_by_idx').on(table.created_by),
+    updatedByIdx: index('projects_updated_by_idx').on(table.updated_by),
+
     // Timestamps
     createdIdx: index('projects_created_idx').on(table.created_at),
     updatedIdx: index('projects_updated_idx').on(table.updated_at),
@@ -136,6 +201,40 @@ export const projects = pgTable(
 // Types
 export type Project = typeof projects.$inferSelect;
 export type CreateProject = typeof projects.$inferInsert;
-export type ProjectStatus = typeof project_status_enum.enumValues[number];
-export type ProjectPriority = typeof project_priority_enum.enumValues[number];
-export type ProjectVisibility = typeof project_visibility_enum.enumValues[number];
+export type ProjectStatus = (typeof project_status_enum.enumValues)[number];
+export type ProjectPriority = (typeof project_priority_enum.enumValues)[number];
+export type ProjectVisibility =
+  (typeof project_visibility_enum.enumValues)[number];
+
+// ✅ NOVO - Custom fields helpers
+export function parseProjectCustomFields(
+  project: Project
+): Record<string, any> {
+  if (!project.custom_fields) return {};
+  try {
+    return JSON.parse(project.custom_fields);
+  } catch {
+    return {};
+  }
+}
+
+export function serializeProjectCustomFields(
+  fields: Record<string, any>
+): string {
+  return JSON.stringify(fields);
+}
+
+// ✅ NOVO - Tags helpers
+export function parseProjectTags(project: Project): string[] {
+  if (!project.tags) return [];
+  try {
+    const parsed = JSON.parse(project.tags);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function serializeProjectTags(tags: string[]): string {
+  return JSON.stringify(tags);
+}

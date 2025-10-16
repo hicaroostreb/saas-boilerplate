@@ -65,8 +65,7 @@ export class DrizzleOrganizationRepository
         plan_type: organization.planType as
           | 'free'
           | 'professional'
-          | 'enterprise', // ✅ Tipo específico
-        member_limit: organization.memberLimit,
+          | 'enterprise',
         is_active: organization.isActive,
         is_verified: organization.isVerified,
         created_at: organization.createdAt,
@@ -154,10 +153,13 @@ export class DrizzleOrganizationRepository
     }
   }
 
-  // ✅ Tipo específico do Drizzle
   private mapToDomainEntity(
     dbOrg: typeof organizations.$inferSelect
   ): Organization {
+    // member_limit foi removido do schema - usar valor padrão ou extrair de settings
+    const settings = dbOrg.settings ? JSON.parse(dbOrg.settings) : {};
+    const memberLimit = settings.limits?.members ?? 10;
+
     return Organization.reconstitute({
       id: dbOrg.id,
       tenantId: dbOrg.tenant_id,
@@ -168,7 +170,7 @@ export class DrizzleOrganizationRepository
       isActive: dbOrg.is_active ?? true,
       isVerified: dbOrg.is_verified ?? false,
       planType: dbOrg.plan_type ?? 'free',
-      memberLimit: dbOrg.member_limit ?? 10,
+      memberLimit,
       createdAt: dbOrg.created_at,
       updatedAt: dbOrg.updated_at,
     });

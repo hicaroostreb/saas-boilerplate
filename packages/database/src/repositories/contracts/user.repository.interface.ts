@@ -1,19 +1,20 @@
 // packages/database/src/repositories/contracts/user.repository.interface.ts
 // ============================================
-// USER REPOSITORY CONTRACT - ENTERPRISE
+// USER REPOSITORY CONTRACT - ENTERPRISE MULTI-TENANT
 // ============================================
 
-import type { UserEntity } from '../../entities/auth/user.entity';
+import type { UserEntity } from '../../entities';
 
 export interface UserQueryOptions {
   limit?: number;
   offset?: number;
+  order_by?: 'name' | 'email' | 'created_at';
+  order_direction?: 'asc' | 'desc';
   include_deleted?: boolean;
 }
 
 export interface UserFilterOptions {
   is_active?: boolean;
-  organization_id?: string;
   is_email_verified?: boolean;
   include_deleted?: boolean;
   limit?: number;
@@ -21,44 +22,61 @@ export interface UserFilterOptions {
 }
 
 export interface IUserRepository {
-  // Core CRUD operations
+  // Core CRUD
   findById(id: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
-  findByIds(ids: readonly string[]): Promise<UserEntity[]>;
+  findAll(options?: UserQueryOptions): Promise<UserEntity[]>;
   create(user: UserEntity): Promise<UserEntity>;
   update(user: UserEntity): Promise<UserEntity>;
-  delete(id: string): Promise<void>;
 
-  // Organization-specific queries
-  findByOrganizationId(
-    organization_id: string,
-    options?: UserQueryOptions
-  ): Promise<UserEntity[]>;
+  /**
+   * Delete user account (self-delete or system admin)
+   * @param id - User ID to delete
+   * @param requestingUserId - ID of user requesting deletion
+   * @param isSystemAdmin - Whether requester is system admin (default: false)
+   * @throws DatabaseError with code 'FORBIDDEN' if unauthorized
+   */
+  delete(
+    id: string,
+    requestingUserId: string,
+    isSystemAdmin?: boolean
+  ): Promise<void>;
 
-  // Soft delete operations
+  /**
+   * Administrative delete (system context required)
+   * @param id - User ID to delete
+   * @param adminUserId - ID of system admin performing deletion
+   * @throws DatabaseError with code 'FORBIDDEN' if not system context
+   */
+  adminDelete(id: string, adminUserId: string): Promise<void>;
+
+  // Soft delete operations (legacy - prefer delete() which does soft delete)
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<UserEntity | null>;
 
   // Search and filtering
   findMany(options: UserFilterOptions): Promise<UserEntity[]>;
-  findByEmailPattern(pattern: string, options?: UserQueryOptions): Promise<UserEntity[]>;
+  search(query: string, options?: UserQueryOptions): Promise<UserEntity[]>;
+  findByOrganizationId(
+    organization_id: string,
+    options?: UserQueryOptions
+  ): Promise<UserEntity[]>;
 
-  // Authentication-specific
-  findForAuthentication(email: string): Promise<UserEntity | null>;
-
-  // Maintenance operations
-  findUnverifiedUsers(older_than_hours?: number): Promise<UserEntity[]>;
-  findLockedUsers(): Promise<UserEntity[]>;
+  // Aggregation
+  count(options?: UserQueryOptions): Promise<number>;
 
   // Batch operations
   createMany(users: readonly UserEntity[]): Promise<UserEntity[]>;
-  updateMany(users: readonly UserEntity[]): Promise<UserEntity[]>;
+  updateMany(
+    updates: ReadonlyArray<{
+      id: string;
+      data: Partial<Omit<UserEntity, 'id' | 'tenant_id'>>;
+    }>
+  ): Promise<UserEntity[]>;
   deleteMany(ids: readonly string[]): Promise<void>;
 
   // Existence checks
   existsByEmail(email: string): Promise<boolean>;
   existsById(id: string): Promise<boolean>;
-
-  // Statistics
-  count(filters?: Pick<UserFilterOptions, 'is_active' | 'organization_id'>): Promise<number>;
+  exists(id: string): Promise<boolean>;
 }

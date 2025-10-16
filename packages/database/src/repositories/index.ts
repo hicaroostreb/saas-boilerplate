@@ -1,30 +1,47 @@
 // packages/database/src/repositories/index.ts
 // ============================================
-// REPOSITORIES BARREL EXPORTS (FIXED)
+// REPOSITORIES BARREL EXPORTS (REFACTORED)
 // ============================================
 
-// Factory and registry
+// Contracts
+export type {
+  IOrganizationRepository,
+  ISessionRepository,
+  IUserRepository,
+} from './contracts';
+
+// Implementations
+export { DrizzleUserRepository } from './implementations/drizzle-user.repository';
+
+export { DrizzleSessionRepository } from './implementations/drizzle-session.repository';
+
 export {
-  createRepositoryFactory,
+  DrizzleOrganizationRepository,
+  QuotaExceededError,
+} from './implementations/drizzle-organization.repository';
+
+export { DrizzleAuditRepository } from './implementations/drizzle-audit.repository';
+
+export type { IAuditRepository } from './implementations/drizzle-audit.repository';
+
+export { DrizzleRateLimitRepository } from './implementations/drizzle-rate-limit.repository';
+
+export type { IRateLimitRepository } from './implementations/drizzle-rate-limit.repository';
+
+// Factory
+export {
   createRepositories,
+  createRepositoryFactory,
   type RepositoryFactory,
   type RepositoryRegistry,
 } from './factory';
 
-// Contracts (only existing ones)
-export type {
-  IUserRepository,
-  ISessionRepository,
-  IOrganizationRepository,
-  IAuditRepository,
-  IRateLimitRepository,
-} from './contracts';
+// Guards and wrappers
+export { AuthorizationGuard, ForbiddenError } from './authorization-guard';
 
-// Implementations
 export {
-  DrizzleUserRepository,
-  DrizzleSessionRepository,
-  DrizzleOrganizationRepository,
-  DrizzleAuditRepository,
-  DrizzleRateLimitRepository,
-} from './implementations';
+  RLSRepositoryWrapper,
+  RLSViolationError,
+  createTenantFilterSQL,
+  validateTenantResult,
+} from './rls-wrapper';

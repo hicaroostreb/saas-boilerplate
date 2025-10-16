@@ -1,8 +1,17 @@
 // packages/database/src/entities/index.ts
 // ============================================
-// ENTITIES BARREL EXPORTS (FIXED)
+// ENTITIES BARREL EXPORTS
 // ============================================
 
+export { UserEntity } from './auth';
+export type { PublicUser, UserProfile } from './auth/user.entity';
+
 export {
-  UserEntity,
-} from './auth';
+  MembershipEntity,
+  OrganizationEntity,
+  type MemberPermission,
+  type OrganizationLimits,
+  type OrganizationQuotaStatus,
+  type OrganizationUsage,
+  type ResourceType,
+} from './business';

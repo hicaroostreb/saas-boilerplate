@@ -1,4 +1,5 @@
 import { getDb, invitations, type CreateInvitation } from '@workspace/database';
+import { tenantContext } from '@workspace/database/connection';
 import { eq } from 'drizzle-orm';
 import { Invitation } from '../../domain/entities/Invitation';
 import type { InvitationRepositoryPort } from '../../domain/ports/InvitationRepositoryPort';
@@ -10,9 +11,11 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async create(invitation: Invitation): Promise<Invitation> {
     try {
       const db = await getDb();
+      const tenantId = tenantContext.getTenantIdOrNull() ?? 'system-tenant';
 
       const createData: CreateInvitation = {
         id: invitation.id,
+        tenant_id: tenantId,
         organization_id: invitation.organizationId,
         invited_by: invitation.invitedBy,
         email: invitation.email.value,
@@ -24,7 +27,7 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
           | 'accepted'
           | 'rejected'
           | 'expired'
-          | 'cancelled', // ✅ Schema exato
+          | 'cancelled',
         expires_at: invitation.expiresAt,
         created_at: invitation.createdAt,
         updated_at: invitation.updatedAt,
@@ -93,7 +96,7 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
             | 'accepted'
             | 'rejected'
             | 'expired'
-            | 'cancelled', // ✅ Schema exato
+            | 'cancelled',
           updated_at: invitation.updatedAt,
         })
         .where(eq(invitations.id, invitation.id))

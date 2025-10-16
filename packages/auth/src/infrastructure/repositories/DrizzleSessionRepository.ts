@@ -1,4 +1,5 @@
 import { getDb, sessions } from '@workspace/database';
+import { tenantContext } from '@workspace/database/connection';
 import { and, eq, ne } from 'drizzle-orm';
 import type { Session } from '../../domain/entities/Session';
 import type { SessionRepositoryPort } from '../../domain/ports/SessionRepositoryPort';
@@ -11,16 +12,17 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
   async create(session: Session): Promise<void> {
     try {
       const db = await getDb();
+      const tenantId = tenantContext.getTenantIdOrNull() ?? 'system-tenant';
 
-      // Usar APENAS campos que existem na tabela sessions
       await db.insert(sessions).values({
+        tenant_id: tenantId,
         session_token: session.sessionToken,
         user_id: session.userId,
         expires: session.expires,
         created_at: new Date(),
         last_accessed_at: new Date(),
-        ip_address: null, // Pode ser definido posteriormente
-        user_agent: null, // Pode ser definido posteriormente
+        ip_address: null,
+        user_agent: null,
       });
 
       console.warn(

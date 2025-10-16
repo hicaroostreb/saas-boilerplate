@@ -1,6 +1,6 @@
 // packages/database/src/schemas/business/invitation.schema.ts
 // ============================================
-// INVITATION SCHEMA - ENTERPRISE INVITATIONS (FIXED NULL SAFETY)
+// INVITATION SCHEMA - ENTERPRISE INVITATIONS (REFACTORED)
 // ============================================
 
 import { index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
@@ -18,56 +18,83 @@ export const invitations = pgTable(
   'invitations',
   {
     id: text('id').primaryKey(),
-    
+    tenant_id: text('tenant_id').notNull(), // ✅ ADICIONADO
+
     // Context
     organization_id: text('organization_id').notNull(),
     invited_by: text('invited_by').notNull(),
-    
+
     // Invitation details
     email: text('email').notNull(),
     role: text('role').notNull(),
     message: text('message'),
-    
+
     // Token and security
     token: text('token').notNull(),
-    
+
     // Status and responses
     status: invitation_status_enum('status').default('pending').notNull(),
     accepted_by: text('accepted_by'),
     accepted_at: timestamp('accepted_at'),
     rejected_at: timestamp('rejected_at'),
-    
+
     // Expiry
     expires_at: timestamp('expires_at').notNull(),
-    
+
     // Tracking
     sent_at: timestamp('sent_at'),
     reminder_sent_at: timestamp('reminder_sent_at'),
-    
+
     // Timestamps
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => ({
+  table => ({
+    // ✅ REFATORADO - tenant_id sempre primeiro
+    tenantOrgIdx: index('invitations_tenant_org_idx').on(
+      table.tenant_id,
+      table.organization_id
+    ),
+    tenantEmailIdx: index('invitations_tenant_email_idx').on(
+      table.tenant_id,
+      table.email
+    ),
+    tenantOrgStatusIdx: index('invitations_tenant_org_status_idx').on(
+      table.tenant_id,
+      table.organization_id,
+      table.status
+    ),
+    tenantEmailStatusIdx: index('invitations_tenant_email_status_idx').on(
+      table.tenant_id,
+      table.email,
+      table.status
+    ),
+
     // Primary access patterns
     orgIdx: index('invitations_org_idx').on(table.organization_id),
     emailIdx: index('invitations_email_idx').on(table.email),
     tokenIdx: index('invitations_token_idx').on(table.token),
     invitedByIdx: index('invitations_invited_by_idx').on(table.invited_by),
-    
+
     // Status and expiry
     statusIdx: index('invitations_status_idx').on(table.status),
     expiresIdx: index('invitations_expires_idx').on(table.expires_at),
-    
+
     // Response tracking
     acceptedByIdx: index('invitations_accepted_by_idx').on(table.accepted_by),
     acceptedAtIdx: index('invitations_accepted_at_idx').on(table.accepted_at),
     rejectedAtIdx: index('invitations_rejected_at_idx').on(table.rejected_at),
-    
+
     // Composite indexes
-    orgStatusIdx: index('invitations_org_status_idx').on(table.organization_id, table.status),
-    emailStatusIdx: index('invitations_email_status_idx').on(table.email, table.status),
-    
+    orgStatusIdx: index('invitations_org_status_idx').on(
+      table.organization_id,
+      table.status
+    ),
+    emailStatusIdx: index('invitations_email_status_idx').on(
+      table.email,
+      table.status
+    ),
+
     // Timestamps
     createdIdx: index('invitations_created_idx').on(table.created_at),
     updatedIdx: index('invitations_updated_idx').on(table.updated_at),
@@ -79,31 +106,31 @@ export const invitations = pgTable(
 // Types
 export type Invitation = typeof invitations.$inferSelect;
 export type CreateInvitation = typeof invitations.$inferInsert;
-export type InvitationStatus = typeof invitation_status_enum.enumValues[number];
+export type InvitationStatus =
+  (typeof invitation_status_enum.enumValues)[number];
 
 // Token generation
 export function generateInvitationToken(length = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let token = '';
-  
+
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     const array = new Uint8Array(length);
     crypto.getRandomValues(array);
-    
+
     for (let i = 0; i < length; i++) {
-      // Fixed null safety
       const arrayValue = array[i];
       if (arrayValue !== undefined) {
         token += chars[arrayValue % chars.length];
       }
     }
   } else {
-    // Fallback
     for (let i = 0; i < length; i++) {
       token += chars[Math.floor(Math.random() * chars.length)];
     }
   }
-  
+
   return token;
 }
 
@@ -124,14 +151,17 @@ export function getInvitationExpiryTime(invitation: Invitation): number {
   return Math.max(0, invitation.expires_at.getTime() - Date.now());
 }
 
-export function shouldSendReminder(invitation: Invitation, reminderAfterHours = 72): boolean {
+export function shouldSendReminder(
+  invitation: Invitation,
+  reminderAfterHours = 72
+): boolean {
   if (invitation.status !== 'pending') return false;
   if (isInvitationExpired(invitation)) return false;
   if (invitation.reminder_sent_at) return false;
-  
+
   const reminderTime = new Date(invitation.created_at);
   reminderTime.setHours(reminderTime.getHours() + reminderAfterHours);
-  
+
   return new Date() >= reminderTime;
 }
 

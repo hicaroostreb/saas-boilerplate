@@ -1,12 +1,20 @@
 // packages/database/src/schemas/security/index.ts
 // ============================================
-// SECURITY SCHEMAS BARREL EXPORTS (COMPLETE)
+// SECURITY SCHEMAS BARREL EXPORTS (REFACTORED)
 // ============================================
 
 export {
   auth_audit_logs,
   auth_event_type_enum,
   auth_risk_level_enum,
+  calculateRiskScore,
+  getEventSeverity,
+  getRiskLevel,
+  isCriticalEvent,
+  isSecurityEvent,
+  parseLocation,
+  parseMetadata,
+  parseRiskFactors,
   type AuthAuditLog,
   type AuthEventType,
   type AuthRiskLevel,
@@ -14,32 +22,40 @@ export {
 } from './auth-audit-log.schema';
 
 export {
-  password_reset_status_enum,  // ESTAVA FALTANDO!
+  MAX_RESET_ATTEMPTS,
+  PASSWORD_RESET_EXPIRY_HOURS,
+  PASSWORD_RESET_TOKEN_LENGTH,
+  RATE_LIMIT_HOURS,
+  createPasswordResetToken,
+  generatePasswordResetToken,
+  hashPasswordResetToken,
+  isTokenExpired,
+  isTokenRateLimited,
+  isTokenRevoked,
+  isTokenUsed,
+  password_reset_status_enum,
   password_reset_tokens,
+  shouldRateLimit,
+  validatePasswordResetToken,
   type CreatePasswordResetToken,
   type PasswordResetStatus,
   type PasswordResetToken,
   type TokenValidationResult,
-  PASSWORD_RESET_TOKEN_LENGTH,
-  PASSWORD_RESET_EXPIRY_HOURS,
-  MAX_RESET_ATTEMPTS,
-  RATE_LIMIT_HOURS,
-  generatePasswordResetToken,
-  hashPasswordResetToken,
-  createPasswordResetToken,
-  validatePasswordResetToken,
-  isTokenExpired,
-  isTokenUsed,
-  isTokenRevoked,
-  isTokenRateLimited,
-  shouldRateLimit,
-  markTokenAsUsed,
-  incrementAttemptCount,
-  revokeToken,
-  shouldCleanupToken,
 } from './password-reset-token.schema';
 
 export {
+  calculateWindowBounds,
+  checkRateLimit,
+  createAPIKeyIdentifier,
+  createIPIdentifier,
+  createIdentifier,
+  createOrganizationIdentifier,
+  createUserIdentifier,
+  createWindowReset,
+  getRemainingRequests,
+  getRetryAfterSeconds,
+  isRateLimitExceeded,
+  isWindowExpired,
   rate_limit_type_enum,
   rate_limit_window_enum,
   rate_limits,

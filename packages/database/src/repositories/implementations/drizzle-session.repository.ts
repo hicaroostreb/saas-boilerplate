@@ -1,56 +1,63 @@
 // packages/database/src/repositories/implementations/drizzle-session.repository.ts
 // ============================================
-// DRIZZLE SESSION REPOSITORY - ENTERPRISE BUILD SAFE
+// DRIZZLE SESSION REPOSITORY - ENTERPRISE MULTI-TENANT (REFACTORED)
 // ============================================
 
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  lt,
-  ne,
-} from 'drizzle-orm';
+import { and, desc, eq, gt, lt, ne } from 'drizzle-orm';
 import type { Database } from '../../connection';
-import { DatabaseError } from '../../connection';
+import { DatabaseError, tenantContext } from '../../connection';
 import { sessions, type Session } from '../../schemas/auth';
-import type { 
+import type {
+  CreateSessionData,
   ISessionRepository,
   SessionData,
-  CreateSessionData,
   SessionListItem,
 } from '../contracts/session.repository.interface';
+import { RLSRepositoryWrapper } from '../rls-wrapper';
 
 export class DrizzleSessionRepository implements ISessionRepository {
-  constructor(private readonly db: Database) {}
+  private rls: RLSRepositoryWrapper;
+
+  constructor(private readonly db: Database) {
+    this.rls = new RLSRepositoryWrapper(db);
+  }
 
   private checkBuildTime(): boolean {
-    return process.env.NODE_ENV === 'production' && 
-           (process.env.NEXT_PHASE === 'phase-production-build' || 
-            process.env.CI === 'true');
+    return (
+      process.env.NODE_ENV === 'production' &&
+      (process.env.NEXT_PHASE === 'phase-production-build' ||
+        process.env.CI === 'true')
+    );
   }
 
   async create(data: CreateSessionData): Promise<SessionData> {
     if (this.checkBuildTime()) {
       return {
         session_token: data.session_token ?? 'build-mock',
+        tenant_id: '',
         user_id: data.user_id,
         expires: data.expires,
         created_at: new Date(),
         last_accessed_at: new Date(),
         ip_address: null,
         user_agent: null,
+        device_type: null,
+        device_name: null,
+        browser: null,
+        os: null,
+        location: null,
       };
     }
-    
-    try {
+
+    return this.rls.transactionWithRLS(async tx => {
       const session_token = data.session_token ?? crypto.randomUUID();
       const now = new Date();
+      const tenant_id = tenantContext.getTenantId();
 
-      const [result] = await this.db
+      const [result] = await tx
         .insert(sessions)
         .values({
+          tenant_id,
           session_token,
           user_id: data.user_id,
           expires: data.expires,
@@ -58,30 +65,34 @@ export class DrizzleSessionRepository implements ISessionRepository {
           last_accessed_at: now,
           ip_address: data.ip_address ?? null,
           user_agent: data.user_agent ?? null,
+          device_type: data.device_type ?? null,
+          device_name: data.device_name ?? null,
+          browser: data.browser ?? null,
+          os: data.os ?? null,
+          location: data.location ?? null,
         })
         .returning();
 
       if (!result) {
-        throw new DatabaseError('Failed to create session - no result returned');
+        throw new DatabaseError(
+          'Failed to create session - no result returned'
+        );
       }
 
       return this.mapToSessionData(result);
-    } catch (error) {
-      throw this.handleDatabaseError(error, 'create');
-    }
+    });
   }
 
   async findByToken(session_token: string): Promise<SessionData | null> {
     if (this.checkBuildTime()) return null;
-    
-    try {
-      const [result] = await this.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.session_token, session_token))
-        .limit(1);
 
-      return result ? this.mapToSessionData(result) : null;
+    try {
+      const result = await this.rls.selectWhere(
+        sessions,
+        eq(sessions.session_token, session_token)
+      );
+
+      return result[0] ? this.mapToSessionData(result[0]) : null;
     } catch (error) {
       throw this.handleDatabaseError(error, 'findByToken');
     }
@@ -89,12 +100,11 @@ export class DrizzleSessionRepository implements ISessionRepository {
 
   async updateLastAccessed(session_token: string): Promise<void> {
     if (this.checkBuildTime()) return;
-    
+
     try {
-      await this.db
-        .update(sessions)
-        .set({ last_accessed_at: new Date() })
-        .where(eq(sessions.session_token, session_token));
+      await this.rls
+        .updateWhere(sessions, eq(sessions.session_token, session_token))
+        .set({ last_accessed_at: new Date() });
     } catch (error) {
       throw this.handleDatabaseError(error, 'updateLastAccessed');
     }
@@ -102,11 +112,12 @@ export class DrizzleSessionRepository implements ISessionRepository {
 
   async deleteSession(session_token: string): Promise<void> {
     if (this.checkBuildTime()) return;
-    
+
     try {
-      await this.db
-        .delete(sessions)
-        .where(eq(sessions.session_token, session_token));
+      await this.rls.deleteWhere(
+        sessions,
+        eq(sessions.session_token, session_token)
+      );
     } catch (error) {
       throw this.handleDatabaseError(error, 'deleteSession');
     }
@@ -114,22 +125,20 @@ export class DrizzleSessionRepository implements ISessionRepository {
 
   async findActiveByUser(user_id: string): Promise<SessionListItem[]> {
     if (this.checkBuildTime()) return [];
-    
+
     try {
       const now = new Date();
-      
-      const result = await this.db
-        .select()
-        .from(sessions)
-        .where(
-          and(
-            eq(sessions.user_id, user_id),
-            gt(sessions.expires, now)
-          )
+
+      const result = await this.rls
+        .selectWhere(
+          sessions,
+          and(eq(sessions.user_id, user_id), gt(sessions.expires, now))!
         )
         .orderBy(desc(sessions.last_accessed_at));
 
-      return result.map((session: Session) => this.mapToSessionListItem(session));
+      return result.map((session: Session) =>
+        this.mapToSessionListItem(session)
+      );
     } catch (error) {
       throw this.handleDatabaseError(error, 'findActiveByUser');
     }
@@ -137,42 +146,33 @@ export class DrizzleSessionRepository implements ISessionRepository {
 
   async countActiveForUser(user_id: string): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
       const now = new Date();
-      
-      const result = await this.db
-        .select({ count: count() })
-        .from(sessions)
-        .where(
-          and(
-            eq(sessions.user_id, user_id),
-            gt(sessions.expires, now)
-          )
-        );
 
-      return result[0]?.count ?? 0;
+      return await this.rls.count(
+        sessions,
+        and(eq(sessions.user_id, user_id), gt(sessions.expires, now))!
+      );
     } catch (error) {
       throw this.handleDatabaseError(error, 'countActiveForUser');
     }
   }
 
   async deleteAllForUser(
-    user_id: string, 
+    user_id: string,
     except_session_token?: string
   ): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
       const conditions = [eq(sessions.user_id, user_id)];
-      
+
       if (except_session_token) {
         conditions.push(ne(sessions.session_token, except_session_token));
       }
 
-      await this.db
-        .delete(sessions)
-        .where(and(...conditions));
+      await this.rls.deleteWhere(sessions, and(...conditions)!);
 
       return 0;
     } catch (error) {
@@ -182,13 +182,11 @@ export class DrizzleSessionRepository implements ISessionRepository {
 
   async deleteExpired(): Promise<number> {
     if (this.checkBuildTime()) return 0;
-    
+
     try {
       const now = new Date();
-      
-      await this.db
-        .delete(sessions)
-        .where(lt(sessions.expires, now));
+
+      await this.rls.deleteWhere(sessions, lt(sessions.expires, now));
 
       return 0;
     } catch (error) {
@@ -196,15 +194,56 @@ export class DrizzleSessionRepository implements ISessionRepository {
     }
   }
 
+  async updateDeviceInfo(
+    session_token: string,
+    deviceInfo: {
+      device_type?: string;
+      device_name?: string;
+      browser?: string;
+      os?: string;
+    }
+  ): Promise<void> {
+    if (this.checkBuildTime()) return;
+
+    try {
+      await this.rls
+        .updateWhere(sessions, eq(sessions.session_token, session_token))
+        .set(deviceInfo);
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'updateDeviceInfo');
+    }
+  }
+
+  async updateLocation(
+    session_token: string,
+    location: { country?: string; city?: string; lat?: number; lon?: number }
+  ): Promise<void> {
+    if (this.checkBuildTime()) return;
+
+    try {
+      await this.rls
+        .updateWhere(sessions, eq(sessions.session_token, session_token))
+        .set({ location: JSON.stringify(location) });
+    } catch (error) {
+      throw this.handleDatabaseError(error, 'updateLocation');
+    }
+  }
+
   private mapToSessionData(session: Session): SessionData {
     return {
       session_token: session.session_token,
+      tenant_id: session.tenant_id,
       user_id: session.user_id,
       expires: session.expires,
       created_at: session.created_at,
       last_accessed_at: session.last_accessed_at,
       ip_address: session.ip_address,
       user_agent: session.user_agent,
+      device_type: session.device_type,
+      device_name: session.device_name,
+      browser: session.browser,
+      os: session.os,
+      location: session.location,
     };
   }
 
@@ -216,6 +255,10 @@ export class DrizzleSessionRepository implements ISessionRepository {
       session_token: session.session_token,
       ip_address: session.ip_address,
       user_agent: session.user_agent,
+      device_type: session.device_type,
+      device_name: session.device_name,
+      browser: session.browser,
+      os: session.os,
       last_accessed_at: session.last_accessed_at,
       created_at: session.created_at,
       expires: session.expires,
@@ -223,8 +266,15 @@ export class DrizzleSessionRepository implements ISessionRepository {
     };
   }
 
-  private handleDatabaseError(error: unknown, operation: string): DatabaseError {
-    const err = error as { code?: string; message?: string; constraint?: string };
+  private handleDatabaseError(
+    error: unknown,
+    operation: string
+  ): DatabaseError {
+    const err = error as {
+      code?: string;
+      message?: string;
+      constraint?: string;
+    };
 
     console.error(`[DrizzleSessionRepository.${operation}] Database error:`, {
       code: err.code,
@@ -241,11 +291,7 @@ export class DrizzleSessionRepository implements ISessionRepository {
     }
 
     if (err.code === '23503') {
-      return new DatabaseError(
-        'User not found',
-        err.code,
-        err.constraint
-      );
+      return new DatabaseError('User not found', err.code, err.constraint);
     }
 
     return new DatabaseError(
