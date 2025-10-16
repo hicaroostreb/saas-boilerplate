@@ -1,11 +1,12 @@
 // packages/database/src/connection/database.connection.ts
 // ============================================
-// DATABASE CONNECTION - SUPABASE POOLER (FIXED)
+// DATABASE CONNECTION - SUPABASE POOLER (ENTERPRISE)
 // ============================================
 
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { RLSRepositoryWrapper } from '../repositories/rls-wrapper';
 
 // Schema imports
 import * as activitySchemas from '../schemas/activity';
@@ -21,6 +22,8 @@ const allSchemas = {
 };
 
 export type Database = PostgresJsDatabase<typeof allSchemas>;
+// ✅ ADICIONADO: Tipo seguro que força uso de RLS wrapper
+export type DatabaseWrapper = RLSRepositoryWrapper;
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection | null = null;
@@ -95,11 +98,24 @@ export class DatabaseConnection {
     }
   }
 
-  getDb(): Database {
+  /**
+   * ✅ ADICIONADO: Retorna wrapper RLS seguro
+   * Este é o método padrão para acesso ao banco em aplicações
+   */
+  getWrapper(): DatabaseWrapper {
     if (!this.drizzleDb) {
-      throw new Error(
-        'Database not initialized. Call await getDb() instead of db directly.'
-      );
+      throw new Error('Database not initialized. Call await getDb() first.');
+    }
+    return new RLSRepositoryWrapper(this.drizzleDb);
+  }
+
+  /**
+   * Retorna instância raw do Drizzle (sem RLS wrapper)
+   * ⚠️ USO INTERNO - Apenas para migrations, seeders e testes
+   */
+  getDbRaw(): Database {
+    if (!this.drizzleDb) {
+      throw new Error('Database not initialized. Call await getDb() first.');
     }
     return this.drizzleDb;
   }
@@ -137,23 +153,48 @@ export class DatabaseConnection {
 }
 
 // ============================================
-// EXPORTS
+// EXPORTS SEGUROS
 // ============================================
 
 export const getDatabaseConnection = () => DatabaseConnection.getInstance();
 
-// ✅ ASYNC function - conecta automaticamente
-export const getDb = async (): Promise<Database> => {
+/**
+ * ✅ PRINCIPAL: Retorna wrapper RLS seguro
+ * Use este método em TODA aplicação (APIs, services, repositories)
+ *
+ * Exemplo:
+ * ```
+ * const db = await getDb();
+ * const repos = await createRepositories(db);
+ * const users = await repos.user.findAll(); // Automaticamente filtrado por tenant
+ * ```
+ */
+export const getDb = async (): Promise<DatabaseWrapper> => {
   const connection = getDatabaseConnection();
-  return connection.connect();
+  await connection.connect();
+  return connection.getWrapper();
 };
 
-// ✅ Proxy que lança erro se usar direto (força uso de await getDb())
-export const db = new Proxy({} as Database, {
-  get() {
-    throw new Error('Do not access db directly. Use: const db = await getDb()');
-  },
-});
+/**
+ * ✅ ADICIONADO: Acesso raw ao database (SEM RLS wrapper)
+ * ⚠️ APENAS para migrations, seeders e scripts de infraestrutura
+ * ⚠️ NUNCA use em código de aplicação (APIs, services)
+ *
+ * Exemplo válido:
+ * ```
+ * // scripts/seed.ts
+ * const db = await getDbRaw();
+ * await db.insert(users).values([...]); // Sem tenant_id automático
+ * ```
+ */
+export const getDbRaw = async (): Promise<Database> => {
+  const connection = getDatabaseConnection();
+  await connection.connect();
+  return connection.getDbRaw();
+};
+
+// ❌ REMOVIDO: Proxy db singleton (inseguro)
+// Forçar uso de await getDb() ou await getDbRaw()
 
 export const healthCheck = async () => {
   return getDatabaseConnection().healthCheck();

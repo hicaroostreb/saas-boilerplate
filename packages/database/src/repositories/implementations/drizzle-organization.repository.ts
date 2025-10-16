@@ -4,7 +4,7 @@
 // ============================================
 
 import { and, desc, eq, isNull, like, sql } from 'drizzle-orm';
-import type { Database } from '../../connection';
+import type { DatabaseWrapper } from '../../connection';
 import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
 import {
@@ -15,7 +15,6 @@ import {
 } from '../../schemas';
 import { AuthorizationGuard } from '../authorization-guard';
 import type { IOrganizationRepository } from '../contracts/organization.repository.interface';
-import { RLSRepositoryWrapper } from '../rls-wrapper';
 
 export class QuotaExceededError extends Error {
   constructor(
@@ -31,12 +30,14 @@ export class QuotaExceededError extends Error {
 }
 
 export class DrizzleOrganizationRepository implements IOrganizationRepository {
-  private rls: RLSRepositoryWrapper;
   private guard: AuthorizationGuard;
 
-  constructor(private readonly db: Database) {
-    this.rls = new RLSRepositoryWrapper(db);
-    this.guard = new AuthorizationGuard(db);
+  constructor(private readonly rls: DatabaseWrapper) {
+    this.guard = new AuthorizationGuard(rls);
+  }
+
+  private get db() {
+    return (this.rls as any).db;
   }
 
   private checkBuildTime(): boolean {
@@ -55,7 +56,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         organizations,
         and(eq(organizations.id, id), isNull(organizations.deleted_at))!
       );
-
       return result[0] || null;
     } catch (error) {
       throw this.handleDatabaseError(error, 'findById');
@@ -70,19 +70,17 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         organizations,
         and(eq(organizations.slug, slug), isNull(organizations.deleted_at))!
       );
-
       return result[0] || null;
     } catch (error) {
       throw this.handleDatabaseError(error, 'findBySlug');
     }
   }
 
-  async findByTenantId(tenant_id: string): Promise<Organization[]> {
+  async findByTenantId(tenantId: string): Promise<Organization[]> {
     if (this.checkBuildTime()) return [];
 
     try {
-      tenantContext.validateTenant(tenant_id);
-
+      tenantContext.validateTenant(tenantId);
       return await this.rls
         .selectWhere(organizations, isNull(organizations.deleted_at))
         .orderBy(desc(organizations.created_at));
@@ -110,7 +108,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     }
   }
 
-  async findUserOrganizations(user_id: string): Promise<Organization[]> {
+  async findUserOrganizations(userId: string): Promise<Organization[]> {
     if (this.checkBuildTime()) return [];
 
     try {
@@ -118,7 +116,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         .selectWhere(
           organizations,
           and(
-            eq(organizations.owner_id, user_id),
+            eq(organizations.owner_id, userId),
             isNull(organizations.deleted_at)
           )!
         )
@@ -143,11 +141,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       const now = new Date();
       const [result] = await tx
         .insert(organizations)
-        .values({
-          ...organization,
-          created_at: now,
-          updated_at: now,
-        })
+        .values({ ...organization, created_at: now, updated_at: now })
         .returning();
 
       if (!result) {
@@ -203,7 +197,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       if (requestingUserId) {
         await this.guard.requireOwner(requestingUserId, id);
       }
-
       await this.rls.softDelete(organizations, eq(organizations.id, id));
     } catch (error) {
       throw this.handleDatabaseError(error, 'delete');
@@ -217,7 +210,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       if (requestingUserId) {
         await this.guard.requireOwner(requestingUserId, id);
       }
-
       await this.rls.softDelete(organizations, eq(organizations.id, id));
     } catch (error) {
       throw this.handleDatabaseError(error, 'softDelete');
@@ -228,11 +220,11 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     if (this.checkBuildTime()) return null;
 
     try {
-      const result = await this.rls.restore(
+      const [result] = await this.rls.restore(
         organizations,
         eq(organizations.id, id)
       );
-      return result[0] || null;
+      return result || null;
     } catch (error) {
       throw this.handleDatabaseError(error, 'restore');
     }
@@ -314,7 +306,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
 
       const finalConditions =
         conditions.length > 0 ? and(...conditions) : undefined;
-
       return await this.rls.count(organizations, finalConditions);
     } catch (error) {
       throw this.handleDatabaseError(error, 'count');
@@ -337,7 +328,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     }
   }
 
-  async findByOwner(owner_id: string): Promise<Organization[]> {
+  async findByOwner(ownerId: string): Promise<Organization[]> {
     if (this.checkBuildTime()) return [];
 
     try {
@@ -345,7 +336,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         .selectWhere(
           organizations,
           and(
-            eq(organizations.owner_id, owner_id),
+            eq(organizations.owner_id, ownerId),
             isNull(organizations.deleted_at)
           )!
         )
@@ -357,7 +348,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
 
   async updatePlan(
     id: string,
-    plan_type: string,
+    planType: string,
     requestingUserId?: string
   ): Promise<Organization | null> {
     if (this.checkBuildTime()) return null;
@@ -377,7 +368,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
           and(eq(organizations.id, id), isNull(organizations.deleted_at))!
         )
         .set({
-          plan_type: plan_type as any,
+          plan_type: planType as any,
           updated_at: new Date(),
         });
 
@@ -449,7 +440,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       if (!org) return false;
 
       const { members_used } = await this.getUsageStats(organizationId);
-
       const settings = org.settings ? JSON.parse(org.settings) : {};
       const memberLimit = settings.limits?.members || 10;
 
@@ -467,7 +457,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       if (!org) return false;
 
       const { projects_used } = await this.getUsageStats(organizationId);
-
       const settings = org.settings ? JSON.parse(org.settings) : {};
       const projectLimit = settings.limits?.projects || 5;
 
@@ -479,7 +468,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
 
   async validateMemberQuota(organizationId: string): Promise<void> {
     const canAdd = await this.canAddMember(organizationId);
-
     if (!canAdd) {
       const org = await this.findById(organizationId);
       const stats = await this.getUsageStats(organizationId);
@@ -498,7 +486,6 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
 
   async validateProjectQuota(organizationId: string): Promise<void> {
     const canAdd = await this.canAddProject(organizationId);
-
     if (!canAdd) {
       const org = await this.findById(organizationId);
       const stats = await this.getUsageStats(organizationId);

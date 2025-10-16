@@ -7,6 +7,7 @@ import type { EnhancedSessionData } from '../../types/session.types';
 
 /**
  * Implementação concreta do SessionRepositoryPort usando Drizzle
+ * ✅ REFATORADO: Usa DatabaseWrapper (RLS automático)
  */
 export class DrizzleSessionRepository implements SessionRepositoryPort {
   async create(session: Session): Promise<void> {
@@ -14,7 +15,7 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
       const db = await getDb();
       const tenantId = tenantContext.getTenantIdOrNull() ?? 'system-tenant';
 
-      await db.insert(sessions).values({
+      await db.insert(sessions, {
         tenant_id: tenantId,
         session_token: session.sessionToken,
         user_id: session.userId,
@@ -37,11 +38,10 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
   async findByToken(token: string): Promise<EnhancedSessionData | null> {
     try {
       const db = await getDb();
-      const [session] = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.session_token, token))
-        .limit(1);
+      const [session] = await db.selectWhere(
+        sessions,
+        eq(sessions.session_token, token)
+      );
 
       if (!session) {
         return null;
@@ -66,8 +66,7 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
   ): Promise<void> {
     try {
       const db = await getDb();
-
-      await db.delete(sessions).where(eq(sessions.session_token, token));
+      await db.deleteWhere(sessions, eq(sessions.session_token, token));
 
       console.error(`✅ Session deleted: ${token} by ${revokedBy} (${reason})`);
     } catch (error) {
@@ -91,10 +90,12 @@ export class DrizzleSessionRepository implements SessionRepositoryPort {
         conditions.push(ne(sessions.session_token, exceptToken));
       }
 
-      const deletedSessions = await db
-        .delete(sessions)
-        .where(and(...conditions))
-        .returning({ count: sessions.session_token });
+      const condition = and(...conditions);
+      if (!condition) {
+        return 0;
+      }
+
+      const deletedSessions = await db.deleteWhere(sessions, condition);
 
       const affectedRows = deletedSessions.length;
       console.error(

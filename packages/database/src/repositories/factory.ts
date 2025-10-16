@@ -1,15 +1,11 @@
 // packages/database/src/repositories/factory.ts
 // ============================================
-// REPOSITORY FACTORY - ENTERPRISE DI PATTERN (REFACTORED)
+// REPOSITORY FACTORY - ENTERPRISE DI PATTERN (FINAL)
 // ============================================
 
-import type { Database } from '../connection';
+import type { DatabaseWrapper } from '../connection';
 import { AuthorizationGuard } from './authorization-guard';
-import type {
-  IOrganizationRepository,
-  ISessionRepository,
-  IUserRepository,
-} from './contracts';
+import type { IOrganizationRepository, IUserRepository } from './contracts';
 import {
   DrizzleAuditRepository,
   type IAuditRepository,
@@ -19,18 +15,19 @@ import {
   DrizzleRateLimitRepository,
   type IRateLimitRepository,
 } from './implementations/drizzle-rate-limit.repository';
-import { DrizzleSessionRepository } from './implementations/drizzle-session.repository';
+import {
+  DrizzleSessionRepository,
+  type ISessionRepository, // ✅ CORRIGIDO: Import da implementação
+} from './implementations/drizzle-session.repository';
 import { DrizzleUserRepository } from './implementations/drizzle-user.repository';
-import { RLSRepositoryWrapper } from './rls-wrapper';
 
 export interface RepositoryRegistry {
-  userRepository: IUserRepository;
-  sessionRepository: ISessionRepository;
-  organizationRepository: IOrganizationRepository;
-  auditRepository: IAuditRepository;
-  rateLimitRepository: IRateLimitRepository;
+  user: IUserRepository;
+  session: ISessionRepository;
+  organization: IOrganizationRepository;
+  audit: IAuditRepository;
+  rateLimit: IRateLimitRepository;
   authorizationGuard: AuthorizationGuard;
-  rlsWrapper: RLSRepositoryWrapper;
 }
 
 export interface RepositoryFactory {
@@ -40,53 +37,49 @@ export interface RepositoryFactory {
   createAuditRepository(): IAuditRepository;
   createRateLimitRepository(): IRateLimitRepository;
   createAuthorizationGuard(): AuthorizationGuard;
-  createRLSWrapper(): RLSRepositoryWrapper;
 }
 
-export function createRepositoryFactory(database: Database): RepositoryFactory {
+export function createRepositoryFactory(
+  rls: DatabaseWrapper
+): RepositoryFactory {
   return {
     createUserRepository(): IUserRepository {
-      return new DrizzleUserRepository(database);
+      return new DrizzleUserRepository(rls);
     },
 
     createSessionRepository(): ISessionRepository {
-      return new DrizzleSessionRepository(database);
+      return new DrizzleSessionRepository(rls);
     },
 
     createOrganizationRepository(): IOrganizationRepository {
-      return new DrizzleOrganizationRepository(database);
+      return new DrizzleOrganizationRepository(rls);
     },
 
     createAuditRepository(): IAuditRepository {
-      return new DrizzleAuditRepository(database);
+      return new DrizzleAuditRepository(rls);
     },
 
     createRateLimitRepository(): IRateLimitRepository {
-      return new DrizzleRateLimitRepository(database);
+      return new DrizzleRateLimitRepository(rls);
     },
 
     createAuthorizationGuard(): AuthorizationGuard {
-      return new AuthorizationGuard(database);
-    },
-
-    createRLSWrapper(): RLSRepositoryWrapper {
-      return new RLSRepositoryWrapper(database);
+      return new AuthorizationGuard(rls);
     },
   };
 }
 
 export async function createRepositories(
-  database: Database
+  rls: DatabaseWrapper
 ): Promise<RepositoryRegistry> {
-  const factory = createRepositoryFactory(database);
+  const factory = createRepositoryFactory(rls);
 
   return {
-    userRepository: factory.createUserRepository(),
-    sessionRepository: factory.createSessionRepository(),
-    organizationRepository: factory.createOrganizationRepository(),
-    auditRepository: factory.createAuditRepository(),
-    rateLimitRepository: factory.createRateLimitRepository(),
+    user: factory.createUserRepository(),
+    session: factory.createSessionRepository(),
+    organization: factory.createOrganizationRepository(),
+    audit: factory.createAuditRepository(),
+    rateLimit: factory.createRateLimitRepository(),
     authorizationGuard: factory.createAuthorizationGuard(),
-    rlsWrapper: factory.createRLSWrapper(),
   };
 }

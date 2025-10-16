@@ -14,7 +14,7 @@ console.log(
 );
 console.log('');
 
-import { getConnectionInfo, getDb, healthCheck } from '../connection';
+import { getConnectionInfo, getDbRaw, healthCheck } from '../connection';
 
 async function testConnection() {
   console.log('Testing Supabase connection...\n');
@@ -34,7 +34,7 @@ async function testConnection() {
 
     // 3. Query database
     console.log('[3/5] Database Info:');
-    const db = await getDb();
+    const db = await getDbRaw(); // ✅ CORRIGIDO: usar getDbRaw para scripts
 
     const dbInfo = await db.execute(sql`
       SELECT 
@@ -83,7 +83,7 @@ async function testConnection() {
     });
     console.log('');
 
-    console.log('SUCCESS! All tests passed! Database is ready!\n');
+    console.log('✅ SUCCESS! All tests passed! Database is ready!\n');
     console.log('Summary:');
     console.log(`   - Connection: ${info.type} (${info.pooling})`);
     console.log(`   - Latency: ${health.latency_ms}ms`);
@@ -93,7 +93,7 @@ async function testConnection() {
 
     process.exit(0);
   } catch (error) {
-    console.error('ERROR: Test failed:', error);
+    console.error('❌ ERROR: Test failed:', error);
     process.exit(1);
   }
 }

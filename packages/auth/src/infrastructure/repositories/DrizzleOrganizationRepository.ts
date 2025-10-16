@@ -4,12 +4,13 @@ import {
   organizations,
   type CreateOrganization,
 } from '@workspace/database';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Organization } from '../../domain/entities/Organization';
 import type { OrganizationRepositoryPort } from '../../domain/ports/OrganizationRepositoryPort';
 
 /**
  * Implementação concreta do OrganizationRepositoryPort usando Drizzle
+ * ✅ REFATORADO: Usa DatabaseWrapper (RLS automático)
  */
 export class DrizzleOrganizationRepository
   implements OrganizationRepositoryPort
@@ -17,11 +18,15 @@ export class DrizzleOrganizationRepository
   async findById(id: string): Promise<Organization | null> {
     try {
       const db = await getDb();
-      const [dbOrg] = await db
-        .select()
-        .from(organizations)
-        .where(and(eq(organizations.id, id), isNull(organizations.deleted_at)))
-        .limit(1);
+      const condition = and(
+        eq(organizations.id, id),
+        isNull(organizations.deleted_at)
+      );
+      if (!condition) {
+        return null;
+      }
+
+      const [dbOrg] = await db.selectWhere(organizations, condition);
 
       return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
     } catch (error) {
@@ -33,13 +38,15 @@ export class DrizzleOrganizationRepository
   async findBySlug(slug: string): Promise<Organization | null> {
     try {
       const db = await getDb();
-      const [dbOrg] = await db
-        .select()
-        .from(organizations)
-        .where(
-          and(eq(organizations.slug, slug), isNull(organizations.deleted_at))
-        )
-        .limit(1);
+      const condition = and(
+        eq(organizations.slug, slug),
+        isNull(organizations.deleted_at)
+      );
+      if (!condition) {
+        return null;
+      }
+
+      const [dbOrg] = await db.selectWhere(organizations, condition);
 
       return dbOrg ? this.mapToDomainEntity(dbOrg) : null;
     } catch (error) {
@@ -72,10 +79,7 @@ export class DrizzleOrganizationRepository
         updated_at: organization.updatedAt,
       };
 
-      const [dbOrg] = await db
-        .insert(organizations)
-        .values(createData)
-        .returning();
+      const [dbOrg] = await db.insert(organizations, createData);
 
       if (!dbOrg) {
         throw new Error('Failed to create organization');
@@ -91,15 +95,17 @@ export class DrizzleOrganizationRepository
   async existsBySlug(slug: string): Promise<boolean> {
     try {
       const db = await getDb();
-      const [result] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(organizations)
-        .where(
-          and(eq(organizations.slug, slug), isNull(organizations.deleted_at))
-        )
-        .limit(1);
+      const condition = and(
+        eq(organizations.slug, slug),
+        isNull(organizations.deleted_at)
+      );
+      if (!condition) {
+        return false;
+      }
 
-      return Number(result?.count ?? 0) > 0;
+      const count = await db.count(organizations, condition);
+
+      return count > 0;
     } catch (error) {
       console.error(
         '❌ DrizzleOrganizationRepository existsBySlug error:',
@@ -119,7 +125,11 @@ export class DrizzleOrganizationRepository
     try {
       const db = await getDb();
 
-      const userOrgs = await db
+      // ✅ SOLUÇÃO: Usar (db as any).db para acessar db interno
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dbRaw = (db as any).db;
+
+      const userOrgs = await dbRaw
         .select({
           organization: organizations,
           role: memberships.role,
@@ -139,7 +149,13 @@ export class DrizzleOrganizationRepository
         )
         .orderBy(desc(memberships.created_at));
 
-      return userOrgs.map(userOrg => ({
+      return (
+        userOrgs as Array<{
+          organization: typeof organizations.$inferSelect;
+          role: string;
+          status: string;
+        }>
+      ).map(userOrg => ({
         organization: this.mapToDomainEntity(userOrg.organization),
         role: userOrg.role,
         status: userOrg.status,

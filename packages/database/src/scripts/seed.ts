@@ -5,7 +5,7 @@
 
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { getDb } from '../connection/index.js';
+import { getDbRaw } from '../connection/index.js';
 import { developmentSeeder } from '../seeders/development.js';
 import { productionSeeder } from '../seeders/production.js';
 import { runTestingSeed } from '../seeders/testing.js';
@@ -33,46 +33,46 @@ async function runSeed(): Promise<SeedResult> {
   const startTime = Date.now();
 
   try {
-    console.log('SEEDER: Starting execution...');
+    console.log('🌱 SEEDER: Starting execution...');
 
-    // Verificar conexão com database
-    const db = await getDb();
-    console.log('Database connection initialized successfully');
+    // ✅ CORRIGIDO: Usar getDbRaw para seeders
+    const db = await getDbRaw();
+    console.log('✅ Database connection initialized successfully');
 
     const environment = (process.env.NODE_ENV || 'development') as
       | 'development'
       | 'testing'
       | 'production';
 
-    console.log('Starting database seeding...');
+    console.log('🚀 Starting database seeding...');
     console.log(`   Environment: ${environment}`);
     console.log(`   Database: Connected`);
     console.log('');
 
     let recordsCreated = 0;
 
-    switch (environment) {
-      case 'production':
-        console.log('Running production seed...');
-        recordsCreated = await productionSeeder(db);
-        break;
+    // Determinar ambiente
+    const isProduction = environment === 'production';
+    const isTesting = environment === 'testing';
 
-      case 'testing':
-        console.log('Running testing seed...');
-        recordsCreated = await runTestingSeed(db);
-        break;
-
-      case 'development':
-      default:
-        console.log('Running development seed...');
-        recordsCreated = await developmentSeeder(db);
-        break;
+    if (isProduction) {
+      console.log('🏭 Running production seed...');
+      recordsCreated = await productionSeeder(db);
+      console.log('🏭 Production seeding completed');
+    } else if (isTesting) {
+      console.log('🧪 Running testing seed...');
+      recordsCreated = await runTestingSeed(db);
+      console.log('🧪 Test seeding completed');
+    } else {
+      console.log('🏗️ Running development seed...');
+      recordsCreated = await developmentSeeder(db);
+      console.log('🏗️ Development seeding completed');
     }
 
     const duration = Date.now() - startTime;
 
     console.log('');
-    console.log('Seeding completed successfully!');
+    console.log('✅ Seeding completed successfully!');
     console.log(`   Records created: ${recordsCreated}`);
     console.log(`   Duration: ${duration}ms`);
 
@@ -88,7 +88,7 @@ async function runSeed(): Promise<SeedResult> {
       error instanceof Error ? error.message : 'Unknown error';
 
     console.error('');
-    console.error('Seeding failed!');
+    console.error('❌ Seeding failed!');
     console.error(`   Error: ${errorMessage}`);
     console.error(`   Duration: ${duration}ms`);
 
@@ -109,14 +109,14 @@ async function runSeed(): Promise<SeedResult> {
 }
 
 // EXECUÇÃO DIRETA
-console.log('SEEDER: Starting execution...');
+console.log('🌱 SEEDER: Starting execution...');
 runSeed()
   .then(result => {
-    console.log('SEEDER: Execution completed');
+    console.log('🌱 SEEDER: Execution completed');
     process.exit(result.success ? 0 : 1);
   })
   .catch(error => {
-    console.error('SEEDER: Fatal error:', error);
+    console.error('❌ SEEDER: Fatal error:', error);
     process.exit(1);
   });
 

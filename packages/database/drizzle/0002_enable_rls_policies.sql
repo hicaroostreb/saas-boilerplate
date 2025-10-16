@@ -1,6 +1,7 @@
 -- Migration: 0002_enable_rls_policies
--- Description: Enable Row-Level Security policies for Supabase
+-- Description: Enable Row-Level Security policies with superadmin bypass
 -- Created: 2025-10-15
+-- Updated: 2025-10-16 (Added superadmin bypass support)
 
 -- ============================================
 -- ENABLE RLS ON ALL TENANT TABLES
@@ -21,7 +22,7 @@ ALTER TABLE "rate_limits" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "activity_logs" ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
--- CREATE TENANT ISOLATION FUNCTION
+-- TENANT ISOLATION FUNCTIONS
 -- ============================================
 
 CREATE OR REPLACE FUNCTION current_tenant_id()
@@ -32,76 +33,92 @@ RETURNS TEXT AS $$
   );
 $$ LANGUAGE SQL STABLE;
 
+CREATE OR REPLACE FUNCTION current_user_is_super_admin()
+RETURNS BOOLEAN AS $$
+  SELECT COALESCE(
+    current_setting('app.is_super_admin', true)::boolean,
+    false
+  );
+$$ LANGUAGE SQL STABLE;
+
 COMMENT ON FUNCTION current_tenant_id IS 'Returns current tenant_id from session variable or JWT claims';
+COMMENT ON FUNCTION current_user_is_super_admin IS 'Returns true if current user is super admin (bypasses RLS)';
 
 -- ============================================
--- CREATE TENANT ISOLATION POLICIES
+-- RLS POLICIES WITH SUPERADMIN BYPASS
 -- ============================================
 
--- Users policies
+-- Users
 CREATE POLICY "users_tenant_isolation" ON "users"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Sessions policies
+-- Sessions
 CREATE POLICY "sessions_tenant_isolation" ON "sessions"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Accounts policies
+-- Accounts
 CREATE POLICY "accounts_tenant_isolation" ON "accounts"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Organizations policies
+-- Organizations
 CREATE POLICY "organizations_tenant_isolation" ON "organizations"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Memberships policies
+-- Memberships
 CREATE POLICY "memberships_tenant_isolation" ON "memberships"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Invitations policies
+-- Invitations
 CREATE POLICY "invitations_tenant_isolation" ON "invitations"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Projects policies
+-- Projects
 CREATE POLICY "projects_tenant_isolation" ON "projects"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Contacts policies
+-- Contacts
 CREATE POLICY "contacts_tenant_isolation" ON "contacts"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Auth audit logs policies (nullable tenant_id for system events)
-CREATE POLICY "auth_audit_logs_tenant_isolation" ON "auth_audit_logs"
-  FOR ALL
-  USING (tenant_id IS NULL OR tenant_id = current_tenant_id());
-
--- Password reset tokens policies
-CREATE POLICY "password_reset_tokens_tenant_isolation" ON "password_reset_tokens"
-  FOR ALL
-  USING (tenant_id IS NULL OR tenant_id = current_tenant_id());
-
--- Rate limits policies
-CREATE POLICY "rate_limits_tenant_isolation" ON "rate_limits"
-  FOR ALL
-  USING (tenant_id IS NULL OR tenant_id = current_tenant_id());
-
--- Activity logs policies
+-- Activity logs
 CREATE POLICY "activity_logs_tenant_isolation" ON "activity_logs"
   FOR ALL
-  USING (tenant_id = current_tenant_id());
+  USING (tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
 
--- Verification tokens policies
+-- Auth audit logs (nullable tenant for system events)
+CREATE POLICY "auth_audit_logs_tenant_isolation" ON "auth_audit_logs"
+  FOR ALL
+  USING (tenant_id IS NULL OR tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
+
+-- Password reset tokens
+CREATE POLICY "password_reset_tokens_tenant_isolation" ON "password_reset_tokens"
+  FOR ALL
+  USING (tenant_id IS NULL OR tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
+
+-- Rate limits
+CREATE POLICY "rate_limits_tenant_isolation" ON "rate_limits"
+  FOR ALL
+  USING (tenant_id IS NULL OR tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
+
+-- Verification tokens
 CREATE POLICY "verification_tokens_tenant_isolation" ON "verification_tokens"
   FOR ALL
-  USING (tenant_id IS NULL OR tenant_id = current_tenant_id());
+  USING (tenant_id IS NULL OR tenant_id = current_tenant_id() OR current_user_is_super_admin() = true);
+
+-- ============================================
+-- SECURITY NOTES
+-- ============================================
+
+COMMENT ON POLICY "users_tenant_isolation" ON "users" IS 'Isolates users by tenant_id. Superadmins can access all tenants.';
+COMMENT ON POLICY "organizations_tenant_isolation" ON "organizations" IS 'Isolates organizations by tenant_id. Superadmins can access all tenants.';
 
 -- ============================================
 -- SUCCESS MESSAGE
@@ -111,4 +128,6 @@ DO $$
 BEGIN 
   RAISE NOTICE '✅ RLS policies applied successfully on 13 tables';
   RAISE NOTICE '🔒 Multi-tenant isolation is now enforced at database level';
+  RAISE NOTICE '🔓 Superadmin bypass enabled via current_user_is_super_admin()';
+  RAISE NOTICE '⚠️  Use SET LOCAL app.is_super_admin = true in transactions for bypass';
 END $$;

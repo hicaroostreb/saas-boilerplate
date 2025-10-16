@@ -7,21 +7,21 @@ import type { UserRepositoryPort } from '../../domain/ports/UserRepositoryPort';
 /**
  * Implementação concreta do UserRepositoryPort usando Drizzle
  * Única camada com acesso ao @workspace/database
+ * ✅ REFATORADO: Usa DatabaseWrapper (RLS automático)
  */
 export class DrizzleUserRepository implements UserRepositoryPort {
   async findByEmail(email: string): Promise<User | null> {
     try {
       const db = await getDb();
-      const [dbUser] = await db
-        .select()
-        .from(users)
-        .where(
-          and(
-            eq(users.email, email.toLowerCase().trim()),
-            isNull(users.deleted_at)
-          )
-        )
-        .limit(1);
+      const condition = and(
+        eq(users.email, email.toLowerCase().trim()),
+        isNull(users.deleted_at)
+      );
+      if (!condition) {
+        return null;
+      }
+
+      const [dbUser] = await db.selectWhere(users, condition);
 
       return dbUser ? this.mapToDomainEntity(dbUser) : null;
     } catch (error) {
@@ -33,11 +33,12 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async findById(userId: string): Promise<User | null> {
     try {
       const db = await getDb();
-      const [dbUser] = await db
-        .select()
-        .from(users)
-        .where(and(eq(users.id, userId), isNull(users.deleted_at)))
-        .limit(1);
+      const condition = and(eq(users.id, userId), isNull(users.deleted_at));
+      if (!condition) {
+        return null;
+      }
+
+      const [dbUser] = await db.selectWhere(users, condition);
 
       return dbUser ? this.mapToDomainEntity(dbUser) : null;
     } catch (error) {
@@ -62,7 +63,7 @@ export class DrizzleUserRepository implements UserRepositoryPort {
         updated_at: user.updatedAt,
       };
 
-      const [dbUser] = await db.insert(users).values(createData).returning();
+      const [dbUser] = await db.insert(users, createData);
 
       if (!dbUser) {
         throw new Error('Failed to create user');
@@ -78,13 +79,10 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async updateLastLogin(userId: string): Promise<void> {
     try {
       const db = await getDb();
-      await db
-        .update(users)
-        .set({
-          last_login_at: new Date(),
-          updated_at: new Date(),
-        })
-        .where(eq(users.id, userId));
+      await db.updateWhere(users, eq(users.id, userId)).set({
+        last_login_at: new Date(),
+        updated_at: new Date(),
+      });
     } catch (error) {
       console.error('❌ DrizzleUserRepository updateLastLogin error:', error);
     }
@@ -93,13 +91,10 @@ export class DrizzleUserRepository implements UserRepositoryPort {
   async incrementLoginAttempts(userId: string): Promise<void> {
     try {
       const db = await getDb();
-      await db
-        .update(users)
-        .set({
-          login_attempts: sql`COALESCE(${users.login_attempts}, 0) + 1`,
-          updated_at: new Date(),
-        })
-        .where(eq(users.id, userId));
+      await db.updateWhere(users, eq(users.id, userId)).set({
+        login_attempts: sql`COALESCE(${users.login_attempts}, 0) + 1`,
+        updated_at: new Date(),
+      });
     } catch (error) {
       console.error(
         '❌ DrizzleUserRepository incrementLoginAttempts error:',

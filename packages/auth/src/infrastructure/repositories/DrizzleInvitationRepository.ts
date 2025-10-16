@@ -6,6 +6,7 @@ import type { InvitationRepositoryPort } from '../../domain/ports/InvitationRepo
 
 /**
  * Implementação concreta do InvitationRepositoryPort usando Drizzle
+ * ✅ REFATORADO: Usa DatabaseWrapper (RLS automático)
  */
 export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async create(invitation: Invitation): Promise<Invitation> {
@@ -33,10 +34,7 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
         updated_at: invitation.updatedAt,
       };
 
-      const [dbInvitation] = await db
-        .insert(invitations)
-        .values(createData)
-        .returning();
+      const [dbInvitation] = await db.insert(invitations, createData);
 
       if (!dbInvitation) {
         throw new Error('Failed to create invitation');
@@ -52,11 +50,10 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async findByToken(token: string): Promise<Invitation | null> {
     try {
       const db = await getDb();
-      const [dbInvitation] = await db
-        .select()
-        .from(invitations)
-        .where(eq(invitations.token, token))
-        .limit(1);
+      const [dbInvitation] = await db.selectWhere(
+        invitations,
+        eq(invitations.token, token)
+      );
 
       return dbInvitation ? this.mapToDomainEntity(dbInvitation) : null;
     } catch (error) {
@@ -68,13 +65,14 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
   async findByOrganization(organizationId: string): Promise<Invitation[]> {
     try {
       const db = await getDb();
-      const dbInvitations = await db
-        .select()
-        .from(invitations)
-        .where(eq(invitations.organization_id, organizationId))
-        .orderBy(invitations.created_at);
+      const dbInvitations = await db.selectWhere(
+        invitations,
+        eq(invitations.organization_id, organizationId)
+      );
 
-      return dbInvitations.map(invite => this.mapToDomainEntity(invite));
+      return dbInvitations.map((invite: typeof invitations.$inferSelect) =>
+        this.mapToDomainEntity(invite)
+      );
     } catch (error) {
       console.error(
         '❌ DrizzleInvitationRepository findByOrganization error:',
@@ -88,19 +86,21 @@ export class DrizzleInvitationRepository implements InvitationRepositoryPort {
     try {
       const db = await getDb();
 
-      const [updated] = await db
-        .update(invitations)
-        .set({
-          status: invitation.status as
-            | 'pending'
-            | 'accepted'
-            | 'rejected'
-            | 'expired'
-            | 'cancelled',
-          updated_at: invitation.updatedAt,
-        })
-        .where(eq(invitations.id, invitation.id))
-        .returning();
+      await db.updateWhere(invitations, eq(invitations.id, invitation.id)).set({
+        status: invitation.status as
+          | 'pending'
+          | 'accepted'
+          | 'rejected'
+          | 'expired'
+          | 'cancelled',
+        updated_at: invitation.updatedAt,
+      });
+
+      // Buscar updated record
+      const [updated] = await db.selectWhere(
+        invitations,
+        eq(invitations.id, invitation.id)
+      );
 
       if (!updated) {
         throw new Error('Invitation not found or update failed');

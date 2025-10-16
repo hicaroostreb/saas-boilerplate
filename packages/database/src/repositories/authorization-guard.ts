@@ -1,10 +1,10 @@
 // packages/database/src/repositories/authorization-guard.ts
 // ============================================
-// AUTHORIZATION GUARD - ENTERPRISE PERMISSION VALIDATION
+// AUTHORIZATION GUARD - ENTERPRISE PERMISSION VALIDATION (FINAL)
 // ============================================
 
 import { and, eq } from 'drizzle-orm';
-import type { Database } from '../connection';
+import type { DatabaseWrapper } from '../connection';
 import { tenantContext } from '../connection/tenant-context';
 import type { MemberRole, Membership } from '../schemas/business';
 import { memberships } from '../schemas/business';
@@ -22,11 +22,12 @@ export class ForbiddenError extends Error {
 }
 
 export class AuthorizationGuard {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly rls: DatabaseWrapper) {}
 
-  /**
-   * Verifica se usuário tem permissão específica em uma organização
-   */
+  private get db() {
+    return (this.rls as any).db;
+  }
+
   async hasPermission(
     userId: string,
     organizationId: string,
@@ -40,7 +41,12 @@ export class AuthorizationGuard {
       | 'can_delete_organization'
     >
   ): Promise<boolean> {
-    const { tenantId } = tenantContext.getContext();
+    const context = tenantContext.getContext();
+    if (context.isSuperAdmin) {
+      return true;
+    }
+
+    const { tenantId } = context;
 
     const [membership] = await this.db
       .select()
@@ -59,7 +65,6 @@ export class AuthorizationGuard {
       return false;
     }
 
-    // Owners e admins têm todas as permissões
     if (membership.role === 'owner' || membership.role === 'admin') {
       return true;
     }
@@ -67,9 +72,6 @@ export class AuthorizationGuard {
     return membership[permission] === true;
   }
 
-  /**
-   * Requer permissão - lança ForbiddenError se não tiver
-   */
   async requirePermission(
     userId: string,
     organizationId: string,
@@ -99,9 +101,6 @@ export class AuthorizationGuard {
     }
   }
 
-  /**
-   * Verifica se usuário pode gerenciar tipo de recurso
-   */
   async canManageResource(
     userId: string,
     organizationId: string,
@@ -121,9 +120,6 @@ export class AuthorizationGuard {
     );
   }
 
-  /**
-   * Requer gerenciamento de recurso
-   */
   async requireManageResource(
     userId: string,
     organizationId: string,
@@ -145,15 +141,17 @@ export class AuthorizationGuard {
     }
   }
 
-  /**
-   * Verifica se usuário tem role mínima requerida
-   */
   async hasMinimumRole(
     userId: string,
     organizationId: string,
     minimumRole: MemberRole
   ): Promise<boolean> {
-    const { tenantId } = tenantContext.getContext();
+    const context = tenantContext.getContext();
+    if (context.isSuperAdmin) {
+      return true;
+    }
+
+    const { tenantId } = context;
 
     const roleHierarchy: Record<MemberRole, number> = {
       owner: 5,
@@ -180,12 +178,11 @@ export class AuthorizationGuard {
       return false;
     }
 
-    return roleHierarchy[membership.role] >= roleHierarchy[minimumRole];
+    // ✅ CORRIGIDO: Type assertion para MemberRole
+    const userRole = membership.role as MemberRole;
+    return roleHierarchy[userRole] >= roleHierarchy[minimumRole];
   }
 
-  /**
-   * Requer role mínima
-   */
   async requireMinimumRole(
     userId: string,
     organizationId: string,
@@ -207,11 +204,13 @@ export class AuthorizationGuard {
     }
   }
 
-  /**
-   * Verifica se usuário é owner da organização
-   */
   async isOwner(userId: string, organizationId: string): Promise<boolean> {
-    const { tenantId } = tenantContext.getContext();
+    const context = tenantContext.getContext();
+    if (context.isSuperAdmin) {
+      return true;
+    }
+
+    const { tenantId } = context;
 
     const [membership] = await this.db
       .select()
@@ -230,9 +229,6 @@ export class AuthorizationGuard {
     return !!membership;
   }
 
-  /**
-   * Requer ownership
-   */
   async requireOwner(userId: string, organizationId: string): Promise<void> {
     const isOwner = await this.isOwner(userId, organizationId);
 
@@ -246,14 +242,16 @@ export class AuthorizationGuard {
     }
   }
 
-  /**
-   * Verifica se usuário é membro ativo
-   */
   async isActiveMember(
     userId: string,
     organizationId: string
   ): Promise<boolean> {
-    const { tenantId } = tenantContext.getContext();
+    const context = tenantContext.getContext();
+    if (context.isSuperAdmin) {
+      return true;
+    }
+
+    const { tenantId } = context;
 
     const [membership] = await this.db
       .select()
@@ -271,9 +269,6 @@ export class AuthorizationGuard {
     return !!membership;
   }
 
-  /**
-   * Requer membership ativo
-   */
   async requireActiveMember(
     userId: string,
     organizationId: string
@@ -289,14 +284,16 @@ export class AuthorizationGuard {
     }
   }
 
-  /**
-   * Obtém membership do usuário (com cache potencial)
-   */
   async getMembership(
     userId: string,
     organizationId: string
   ): Promise<Membership | null> {
-    const { tenantId } = tenantContext.getContext();
+    const context = tenantContext.getContext();
+    if (context.isSuperAdmin) {
+      return null;
+    }
+
+    const { tenantId } = context;
 
     const [membership] = await this.db
       .select()
@@ -313,22 +310,17 @@ export class AuthorizationGuard {
     return membership || null;
   }
 
-  /**
-   * Valida operação em recurso (owner ou permissão específica)
-   */
   async validateResourceOperation(
     userId: string,
     organizationId: string,
     operation: 'create' | 'read' | 'update' | 'delete',
     resourceType: 'projects' | 'members' | 'billing' | 'settings'
   ): Promise<void> {
-    // Read é permitido para todos membros ativos
     if (operation === 'read') {
       await this.requireActiveMember(userId, organizationId);
       return;
     }
 
-    // Outras operações requerem permissão específica
     await this.requireManageResource(userId, organizationId, resourceType);
   }
 }
