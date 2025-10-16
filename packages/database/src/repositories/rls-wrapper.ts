@@ -37,12 +37,10 @@ export class RLSRepositoryWrapper {
     table: T,
     additionalConditions?: SQL
   ): SQL {
-    // ✅ ADICIONADO: Bypass para system context
     if (tenantContext.isSystemContext()) {
       return additionalConditions || sql`true`;
     }
 
-    // ✅ ADICIONADO: Bypass para superadmin context
     if (tenantContext.isSuperAdminContext()) {
       return additionalConditions || sql`true`;
     }
@@ -102,13 +100,10 @@ export class RLSRepositoryWrapper {
   }
 
   async insert<T extends PgTable>(table: T, values: any | any[]) {
-    // System context não injeta tenant_id automaticamente
     if (tenantContext.isSystemContext()) {
       return this.db.insert(table as any).values(values);
     }
 
-    // ✅ ADICIONADO: Superadmin ainda injeta tenant_id (para auditoria)
-    // Se superadmin quer criar em outro tenant, deve passar tenant_id explícito
     if (tenantContext.isSuperAdminContext()) {
       const { tenantId } = tenantContext.getContext();
 
@@ -116,8 +111,6 @@ export class RLSRepositoryWrapper {
         return this.db.insert(table as any).values(values);
       }
 
-      // Se valores já têm tenant_id, usa ele (superadmin pode especificar)
-      // Se não tem, usa o tenant_id do contexto
       const valuesWithTenant = Array.isArray(values)
         ? values.map(v => ({ tenant_id: tenantId, ...v }))
         : { tenant_id: tenantId, ...values };
@@ -157,7 +150,7 @@ export class RLSRepositoryWrapper {
 
   /**
    * Transação com RLS enforced no PostgreSQL
-   * ✅ ADICIONADO: Seta app.is_super_admin para bypass de policies
+   * ✅ CORRIGIDO: Usa sql.raw() ao invés de placeholders
    */
   async transactionWithRLS<T>(
     callback: (tx: Database) => Promise<T>
@@ -171,12 +164,15 @@ export class RLSRepositoryWrapper {
     }
 
     return this.db.transaction(async tx => {
-      // Seta tenant_id para RLS policies
-      await tx.execute(sql`SET LOCAL app.tenant_id = ${context.tenantId}`);
-
-      // ✅ ADICIONADO: Seta flag de superadmin para bypass de policies
+      // ✅ CORRIGIDO: PostgreSQL não aceita placeholders em SET LOCAL
       await tx.execute(
-        sql`SET LOCAL app.is_super_admin = ${context.isSuperAdmin ?? false}`
+        sql.raw(`SET LOCAL app.tenant_id = '${context.tenantId}'`)
+      );
+
+      await tx.execute(
+        sql.raw(
+          `SET LOCAL app.is_super_admin = ${context.isSuperAdmin ?? false}`
+        )
       );
 
       return tenantContext.runAsync(context, () => callback(tx));
@@ -206,21 +202,15 @@ export class RLSRepositoryWrapper {
     return !!result?.exists;
   }
 
-  /**
-   * Valida que um resource pertence ao tenant atual
-   * ✅ ADICIONADO: Bypass para system e superadmin
-   */
   async validateTenantOwnership<T extends PgTable>(
     table: T,
     resourceId: string,
     idColumn: string = 'id'
   ): Promise<void> {
-    // ✅ ADICIONADO: Bypass para system context
     if (tenantContext.isSystemContext()) {
       return;
     }
 
-    // ✅ ADICIONADO: Bypass para superadmin context
     if (tenantContext.isSuperAdminContext()) {
       return;
     }
@@ -254,7 +244,9 @@ export class RLSRepositoryWrapper {
     values: any[],
     batchSize = 100
   ): Promise<void> {
-    if (values.length === 0) return;
+    if (values.length === 0) {
+      return;
+    }
 
     for (let i = 0; i < values.length; i += batchSize) {
       const batch = values.slice(i, i + batchSize);
@@ -289,17 +281,14 @@ export function createTenantFilterSQL(tenantId: string): SQL {
   return sql`tenant_id = ${tenantId}`;
 }
 
-/**
- * Valida que resultado de query contém apenas dados do tenant esperado
- * ✅ ADICIONADO: Bypass para superadmin
- */
 export function validateTenantResult<T extends { tenant_id?: string | null }>(
   result: T | T[] | null | undefined,
   expectedTenantId: string
 ): void {
-  if (!result) return;
+  if (!result) {
+    return;
+  }
 
-  // ✅ ADICIONADO: Bypass validação para superadmin
   const context = tenantContext.getContextOrNull();
   if (context?.isSuperAdmin) {
     return;

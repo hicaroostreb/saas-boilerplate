@@ -3,11 +3,12 @@
 // DRIZZLE SESSION REPOSITORY - ENTERPRISE MULTI-TENANT (REFACTORED)
 // ============================================
 
-import { and, desc, eq, gt, lt } from 'drizzle-orm'; // ✅ Adicionar lt
+import { and, desc, eq, gt, lt } from 'drizzle-orm';
 import type { DatabaseWrapper } from '../../connection';
 import { DatabaseError } from '../../connection';
 import { tenantContext } from '../../connection/tenant-context';
 import { sessions, type Session } from '../../schemas/auth';
+import { logger } from '../../utils/logger';
 
 export interface ISessionRepository {
   findByToken(sessionToken: string): Promise<Session | null>;
@@ -35,7 +36,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async findByToken(sessionToken: string): Promise<Session | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     try {
       const result = await this.rls
@@ -49,7 +52,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async findByUserId(userId: string): Promise<Session[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       const result = await this.rls
@@ -63,7 +68,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async findActiveByUserId(userId: string): Promise<Session[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       const now = new Date();
@@ -82,7 +89,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async create(session: Session): Promise<Session> {
-    if (this.checkBuildTime()) return session;
+    if (this.checkBuildTime()) {
+      return session;
+    }
 
     return this.rls.transactionWithRLS(async tx => {
       const [result] = await tx.insert(sessions).values(session).returning();
@@ -101,7 +110,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
     sessionToken: string,
     data: Partial<Session>
   ): Promise<Session | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     return this.rls.transactionWithRLS(async tx => {
       const [result] = await tx
@@ -115,7 +126,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async updateLastAccessed(sessionToken: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       await this.rls
@@ -127,7 +140,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async delete(sessionToken: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       await this.rls.deleteWhere(
@@ -140,7 +155,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async deleteByUserId(userId: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       await this.rls.deleteWhere(sessions, eq(sessions.user_id, userId));
@@ -150,13 +167,14 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async deleteExpired(): Promise<number> {
-    if (this.checkBuildTime()) return 0;
+    if (this.checkBuildTime()) {
+      return 0;
+    }
 
     try {
       const now = new Date();
       const { tenantId } = tenantContext.getContext();
 
-      // ✅ CORRIGIDO: Deletar sessões expiradas (expires < now)
       const deleted = await this.rls.deleteWhere(
         sessions,
         and(eq(sessions.tenant_id, tenantId), lt(sessions.expires, now))!
@@ -169,7 +187,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async count(userId?: string): Promise<number> {
-    if (this.checkBuildTime()) return 0;
+    if (this.checkBuildTime()) {
+      return 0;
+    }
 
     try {
       const condition = userId ? eq(sessions.user_id, userId) : undefined;
@@ -180,7 +200,9 @@ export class DrizzleSessionRepository implements ISessionRepository {
   }
 
   async exists(sessionToken: string): Promise<boolean> {
-    if (this.checkBuildTime()) return false;
+    if (this.checkBuildTime()) {
+      return false;
+    }
 
     try {
       return await this.rls.exists(
@@ -202,7 +224,8 @@ export class DrizzleSessionRepository implements ISessionRepository {
       constraint?: string;
     };
 
-    console.error(`[DrizzleSessionRepository.${operation}] Database error:`, {
+    logger.error('Session database operation failed', {
+      operation,
       code: err.code,
       message: err.message?.substring(0, 200),
       constraint: err.constraint,

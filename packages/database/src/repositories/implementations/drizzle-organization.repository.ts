@@ -13,6 +13,7 @@ import {
   projects,
   type Organization,
 } from '../../schemas';
+import { logger } from '../../utils/logger';
 import { AuthorizationGuard } from '../authorization-guard';
 import type { IOrganizationRepository } from '../contracts/organization.repository.interface';
 
@@ -49,7 +50,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findById(id: string): Promise<Organization | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     try {
       const result = await this.rls.selectWhere(
@@ -63,7 +66,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findBySlug(slug: string): Promise<Organization | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     try {
       const result = await this.rls.selectWhere(
@@ -77,7 +82,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findByTenantId(tenantId: string): Promise<Organization[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       tenantContext.validateTenant(tenantId);
@@ -90,7 +97,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findPublicOrganizations(): Promise<Organization[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -109,7 +118,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findUserOrganizations(userId: string): Promise<Organization[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -158,7 +169,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     organization: Organization,
     requestingUserId?: string
   ): Promise<Organization> {
-    if (this.checkBuildTime()) return organization;
+    if (this.checkBuildTime()) {
+      return organization;
+    }
 
     return this.rls.transactionWithRLS(async tx => {
       if (requestingUserId) {
@@ -191,7 +204,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async delete(id: string, requestingUserId?: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       if (requestingUserId) {
@@ -204,7 +219,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async softDelete(id: string, requestingUserId?: string): Promise<void> {
-    if (this.checkBuildTime()) return;
+    if (this.checkBuildTime()) {
+      return;
+    }
 
     try {
       if (requestingUserId) {
@@ -217,7 +234,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async restore(id: string): Promise<Organization | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     try {
       const [result] = await this.rls.restore(
@@ -239,7 +258,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     offset?: number;
     include_deleted?: boolean;
   }): Promise<Organization[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       const conditions = [
@@ -288,7 +309,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     is_public?: boolean;
     plan_type?: string;
   }): Promise<number> {
-    if (this.checkBuildTime()) return 0;
+    if (this.checkBuildTime()) {
+      return 0;
+    }
 
     try {
       const conditions = [
@@ -313,7 +336,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async existsBySlug(slug: string, excludeId?: string): Promise<boolean> {
-    if (this.checkBuildTime()) return false;
+    if (this.checkBuildTime()) {
+      return false;
+    }
 
     try {
       const conditions = [
@@ -329,7 +354,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async findByOwner(ownerId: string): Promise<Organization[]> {
-    if (this.checkBuildTime()) return [];
+    if (this.checkBuildTime()) {
+      return [];
+    }
 
     try {
       return await this.rls
@@ -351,7 +378,9 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
     planType: string,
     requestingUserId?: string
   ): Promise<Organization | null> {
-    if (this.checkBuildTime()) return null;
+    if (this.checkBuildTime()) {
+      return null;
+    }
 
     try {
       if (requestingUserId) {
@@ -433,11 +462,15 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async canAddMember(organizationId: string): Promise<boolean> {
-    if (this.checkBuildTime()) return true;
+    if (this.checkBuildTime()) {
+      return true;
+    }
 
     try {
       const org = await this.findById(organizationId);
-      if (!org) return false;
+      if (!org) {
+        return false;
+      }
 
       const { members_used } = await this.getUsageStats(organizationId);
       const settings = org.settings ? JSON.parse(org.settings) : {};
@@ -450,11 +483,15 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async canAddProject(organizationId: string): Promise<boolean> {
-    if (this.checkBuildTime()) return true;
+    if (this.checkBuildTime()) {
+      return true;
+    }
 
     try {
       const org = await this.findById(organizationId);
-      if (!org) return false;
+      if (!org) {
+        return false;
+      }
 
       const { projects_used } = await this.getUsageStats(organizationId);
       const settings = org.settings ? JSON.parse(org.settings) : {};
@@ -512,14 +549,12 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
       constraint?: string;
     };
 
-    console.error(
-      `[DrizzleOrganizationRepository.${operation}] Database error:`,
-      {
-        code: err.code,
-        message: err.message?.substring(0, 200),
-        constraint: err.constraint,
-      }
-    );
+    logger.error('Organization database operation failed', {
+      operation,
+      code: err.code,
+      message: err.message?.substring(0, 200),
+      constraint: err.constraint,
+    });
 
     if (err.code === '23505') {
       return new DatabaseError(

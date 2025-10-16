@@ -116,3 +116,8 @@ export type {
   Session,
   User,
 } from './schemas';
+
+// ============================================
+// UTILITIES
+// ============================================
+export { createTenantLogger, logger, type ILogger } from './utils/logger';
